@@ -1,0 +1,7 @@
+<!-- @dsCard group="Game HUD" height=220 -->
+<div id="root" style="padding:16px"></div>
+<script>
+var D=window.DeepTime,h=React.createElement;
+var content=h(React.Fragment,null,h("div",{style:{width:360}},h(D.Hud,{lives:3,level:12,score:"18,450",coins:240})));
+ReactDOM.createRoot(document.getElementById("root")).render(content);
+</script>

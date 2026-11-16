@@ -1,0 +1,7 @@
+<!-- @dsCard group="Overlays" height=220 -->
+<div id="root" style="padding:16px"></div>
+<script>
+var D=window.DeepTime,h=React.createElement;
+var content=h(React.Fragment,null,h(D.Modal,{inline:true,title:"Leave level?",actions:[h(D.Button,{key:1,variant:"primary"},"Keep playing"),h(D.Button,{key:2,variant:"secondary"},"Leave")]},"Your progress on this level will be lost."));
+ReactDOM.createRoot(document.getElementById("root")).render(content);
+</script>

@@ -1,0 +1,62 @@
+<!-- @dsCard height=320 -->
+<style>
+html,body{margin:0}
+.cover{width:960px;height:320px;background:var(--bg-0);position:relative;overflow:hidden;font-family:var(--font-sans)}
+.cover svg{position:absolute;inset:0}
+.cover h1{position:absolute;left:32px;bottom:64px;margin:0;font-weight:800;font-size:112px;line-height:.95;color:var(--text)}
+.cover p{position:absolute;left:32px;bottom:28px;margin:0;font-size:14px;line-height:20px;color:var(--text-dim);max-width:440px}
+.b-action{fill:var(--action)}.b-reward{fill:var(--reward)}.b-surface{fill:var(--surface)}.b-info{fill:var(--info)}
+.g-lava{fill:var(--gem-lava)}.g-amber{fill:var(--gem-amber)}.g-jade{fill:var(--gem-jade)}.g-ice{fill:var(--gem-ice)}.g-geode{fill:var(--gem-geode)}.g-bone{fill:var(--gem-bone)}
+.blk{rx:var(--radius-md)}
+</style>
+<div class="cover">
+<svg width="960" height="320" viewBox="0 0 960 320" aria-hidden="true">
+<!-- blocks: action 96x96 at (504,24), reward 48x48 at (600,24)... surface slab 144x48 bleeding off right edge, info 48x96 at (504,120)
+     arrangement: staggered stack of full-value blocks at the left of the right zone, bleeding off the top-left of the pattern grid.
+     pattern: six gem shapes (diamond, hexagon, rounded square, circle, triangle, star) on a 48px pitch, from the six gem tokens; chosen because the shapes ARE the Dino Match pieces and the game is told apart by shape.
+     scales: 48px pitch = space-7, 16px radius = radius-md, 8px = radius-sm. -->
+<rect class="b-action blk" x="504" y="24" width="96" height="96"/>
+<rect class="b-reward blk" x="608" y="24" width="48" height="48"/>
+<rect class="b-info blk" x="504" y="128" width="48" height="96"/>
+<rect class="b-surface blk" x="816" y="248" width="144" height="48"/>
+<rect class="g-jade" x="696" y="24" width="32" height="32" rx="8"/>
+<polygon class="g-geode" points="760,24 776,56 744,56"/>
+<polygon class="g-lava" points="808,24 824,40 808,56 792,40"/>
+<rect class="g-jade" x="840" y="24" width="32" height="32" rx="8"/>
+<polygon class="g-geode" points="904,24 920,56 888,56"/>
+<polygon class="g-lava" points="952,24 968,40 952,56 936,40"/>
+<polygon class="g-bone" points="712.0,72.0 716.2,82.2 727.2,83.1 718.8,90.2 721.4,100.9 712.0,95.2 702.6,100.9 705.2,90.2 696.8,83.1 707.8,82.2"/>
+<polygon class="g-amber" points="773.9,96.0 760.0,104.0 746.1,96.0 746.1,80.0 760.0,72.0 773.9,80.0"/>
+<circle class="g-ice" cx="808" cy="88" r="16"/>
+<polygon class="g-bone" points="856.0,72.0 860.2,82.2 871.2,83.1 862.8,90.2 865.4,100.9 856.0,95.2 846.6,100.9 849.2,90.2 840.8,83.1 851.8,82.2"/>
+<polygon class="g-amber" points="917.9,96.0 904.0,104.0 890.1,96.0 890.1,80.0 904.0,72.0 917.9,80.0"/>
+<circle class="g-ice" cx="952" cy="88" r="16"/>
+<polygon class="g-lava" points="664,120 680,136 664,152 648,136"/>
+<rect class="g-jade" x="696" y="120" width="32" height="32" rx="8"/>
+<polygon class="g-geode" points="760,120 776,152 744,152"/>
+<polygon class="g-lava" points="808,120 824,136 808,152 792,136"/>
+<rect class="g-jade" x="840" y="120" width="32" height="32" rx="8"/>
+<polygon class="g-geode" points="904,120 920,152 888,152"/>
+<polygon class="g-lava" points="952,120 968,136 952,152 936,136"/>
+<polygon class="g-amber" points="629.9,192.0 616.0,200.0 602.1,192.0 602.1,176.0 616.0,168.0 629.9,176.0"/>
+<circle class="g-ice" cx="664" cy="184" r="16"/>
+<polygon class="g-bone" points="712.0,168.0 716.2,178.2 727.2,179.1 718.8,186.2 721.4,196.9 712.0,191.2 702.6,196.9 705.2,186.2 696.8,179.1 707.8,178.2"/>
+<polygon class="g-amber" points="773.9,192.0 760.0,200.0 746.1,192.0 746.1,176.0 760.0,168.0 773.9,176.0"/>
+<circle class="g-ice" cx="808" cy="184" r="16"/>
+<polygon class="g-bone" points="856.0,168.0 860.2,178.2 871.2,179.1 862.8,186.2 865.4,196.9 856.0,191.2 846.6,196.9 849.2,186.2 840.8,179.1 851.8,178.2"/>
+<polygon class="g-amber" points="917.9,192.0 904.0,200.0 890.1,192.0 890.1,176.0 904.0,168.0 917.9,176.0"/>
+<circle class="g-ice" cx="952" cy="184" r="16"/>
+<polygon class="g-geode" points="616,216 632,248 600,248"/>
+<polygon class="g-lava" points="664,216 680,232 664,248 648,232"/>
+<rect class="g-jade" x="696" y="216" width="32" height="32" rx="8"/>
+<polygon class="g-geode" points="760,216 776,248 744,248"/>
+<circle class="g-ice" cx="520" cy="280" r="16"/>
+<polygon class="g-bone" points="568.0,264.0 572.2,274.2 583.2,275.1 574.8,282.2 577.4,292.9 568.0,287.2 558.6,292.9 561.2,282.2 552.8,275.1 563.8,274.2"/>
+<polygon class="g-amber" points="629.9,288.0 616.0,296.0 602.1,288.0 602.1,272.0 616.0,264.0 629.9,272.0"/>
+<circle class="g-ice" cx="664" cy="280" r="16"/>
+<polygon class="g-bone" points="712.0,264.0 716.2,274.2 727.2,275.1 718.8,282.2 721.4,292.9 712.0,287.2 702.6,292.9 705.2,282.2 696.8,275.1 707.8,274.2"/>
+<polygon class="g-amber" points="773.9,288.0 760.0,296.0 746.1,288.0 746.1,272.0 760.0,264.0 773.9,272.0"/>
+</svg>
+<h1>Deep<br>Time</h1>
+<p>Ten eras of Earth, one calm and honest design system.</p>
+</div>

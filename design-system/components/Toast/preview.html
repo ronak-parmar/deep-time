@@ -1,0 +1,7 @@
+<!-- @dsCard group="Overlays" height=220 -->
+<div id="root" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:16px"></div>
+<script>
+var D=window.DeepTime,h=React.createElement;
+var content=h(React.Fragment,null,h(D.Toast,{tone:"success",message:"Progress saved"}),h(D.Toast,{tone:"info",message:"Ad choices updated"}),h(D.Toast,{tone:"error",message:"Could not sign in"}));
+ReactDOM.createRoot(document.getElementById("root")).render(content);
+</script>

@@ -1,0 +1,84 @@
+/* Deep Time component styles. All values come from tokens (CSS custom properties). */
+.dt-num{font-variant-numeric:tabular-nums}
+.dt-glyph{flex:none}
+
+.dt-btn{min-height:var(--touch-target,48px);padding:0 var(--space-5,24px);border-radius:var(--radius-md,16px);border:2px solid transparent;cursor:pointer;color:var(--text);transition:transform var(--duration-feedback,120ms) var(--ease-out),background var(--duration-ui,220ms) var(--ease-out)}
+.dt-btn:active:not(:disabled){transform:scale(.97)}
+.dt-btn:disabled{opacity:.45;cursor:not-allowed}
+.dt-btn--primary{background:var(--action);color:var(--on-action)}
+.dt-btn--secondary{background:var(--surface);border-color:var(--border-strong)}
+.dt-btn--danger{background:var(--danger);color:var(--on-danger)}
+.dt-btn--full{width:100%}
+.dt-btn:focus-visible,.dt-reward:focus-visible,.dt-ad__close:focus-visible{outline:3px solid var(--focus-ring);outline-offset:3px}
+
+.dt-reward{display:flex;align-items:center;gap:var(--space-3,12px);width:100%;min-height:56px;padding:var(--space-2,8px) var(--space-4,16px);border:0;border-radius:var(--radius-md,16px);background:var(--reward);color:var(--on-reward);text-align:left;cursor:pointer}
+.dt-reward__text{display:flex;flex-direction:column;flex:1}
+.dt-reward:disabled{opacity:.45;cursor:not-allowed}
+.dt-adtag{padding:2px 6px;border-radius:var(--radius-sm,8px);border:1.5px solid currentColor;letter-spacing:.06em}
+
+.dt-hud{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2,8px);height:var(--hud-height,56px);padding:0 var(--space-4,16px);background:var(--bg-1);border-bottom:1px solid var(--hairline);z-index:var(--z-hud,10)}
+.dt-counter{display:inline-flex;align-items:center;gap:6px;color:var(--text)}
+.dt-counter--lives .dt-glyph{color:var(--danger)}
+.dt-counter--coins .dt-glyph{color:var(--action)}
+.dt-counter--score .dt-glyph{color:var(--info)}
+.dt-counter--level .dt-glyph{color:var(--violet)}
+
+.dt-gem{display:block}
+.dt-block{position:relative;border-radius:6px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.dt-block__notches{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:3px}
+.dt-block__notch{width:4px;height:10px;border-radius:2px;background:rgba(0,0,0,.45)}
+.dt-block__cracks{position:absolute;inset:0}
+
+.dt-ad{display:flex;flex-direction:column;background:var(--bg-0);border:1px solid var(--hairline);border-radius:var(--radius-md,16px);overflow:hidden}
+.dt-ad__bar{display:flex;align-items:center;gap:var(--space-3,12px);padding:var(--space-2,8px) var(--space-3,12px);background:var(--bg-1)}
+.dt-ad__status{flex:1;color:var(--text-dim)}
+.dt-ad__close{width:var(--touch-target,48px);height:var(--touch-target,48px);display:grid;place-items:center;border-radius:var(--radius-pill,999px);border:2px solid var(--border-strong);background:var(--surface);color:var(--text);cursor:pointer}
+.dt-ad__close:disabled{opacity:.4;cursor:not-allowed}
+.dt-ad__media{flex:1;min-height:200px;display:grid;place-items:center;color:var(--text-dim);background:var(--surface)}
+
+.dt-result{display:flex;flex-direction:column;gap:var(--space-5,24px);padding:var(--space-5,24px);background:var(--bg-1);border-radius:var(--radius-md,16px)}
+.dt-result__head{display:flex;flex-direction:column;align-items:center;gap:var(--space-3,12px);text-align:center}
+.dt-result__title,.dt-result__score,.dt-result__detail{margin:0}
+.dt-result__detail{color:var(--text-dim)}
+.dt-result__actions{display:flex;flex-direction:column;gap:var(--space-3,12px)}
+.dt-stars{display:flex;gap:var(--space-2,8px)}
+.dt-star{fill:var(--surface);stroke:var(--border-strong);stroke-width:1.5;stroke-linejoin:round}
+.dt-star--on{fill:var(--action);stroke:var(--action)}
+
+.dt-player{display:flex;flex-direction:column;gap:var(--space-3,12px);padding:var(--space-4,16px);background:var(--bg-1);border-radius:var(--radius-md,16px)}
+.dt-player__frame{aspect-ratio:9/16;max-height:420px;border-radius:var(--radius-md,16px);overflow:hidden;background:var(--bg-0);display:grid;place-items:center}
+.dt-player__era{color:var(--info);text-transform:uppercase;letter-spacing:.08em}
+.dt-player__caption{margin:4px 0 0}
+.dt-player__foot{display:flex;align-items:center;gap:var(--space-3,12px)}
+.dt-progress{flex:1;height:8px;border-radius:var(--radius-pill,999px);background:var(--surface);overflow:hidden}
+.dt-progress__bar{height:100%;background:var(--action);transition:width var(--duration-ui,220ms) linear}
+
+.dt-sheet{display:flex;flex-direction:column;gap:var(--space-4,16px);padding:var(--space-5,24px);background:var(--bg-1);border-top:1px solid var(--border-strong);border-radius:var(--radius-md,16px) var(--radius-md,16px) 0 0}
+.dt-sheet__title,.dt-sheet__body{margin:0}
+.dt-sheet__body{color:var(--text-dim)}
+.dt-sheet__actions{display:flex;gap:var(--space-3,12px)}
+.dt-sheet__actions .dt-btn{flex:1}
+
+.dt-modal{position:fixed;inset:0;display:grid;place-items:center;padding:var(--space-4,16px);background:rgba(11,18,32,.8);z-index:var(--z-modal,200)}
+.dt-modal--inline{position:relative;min-height:320px}
+.dt-modal__card{width:100%;max-width:360px;display:flex;flex-direction:column;gap:var(--space-4,16px);padding:var(--space-5,24px);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-md,16px)}
+.dt-modal__title{margin:0}
+.dt-modal__actions{display:flex;flex-direction:column;gap:var(--space-3,12px)}
+
+.dt-toast{display:inline-flex;align-items:center;gap:var(--space-2,8px);padding:var(--space-3,12px) var(--space-4,16px);border-radius:var(--radius-pill,999px);background:var(--surface);border:1.5px solid var(--border-strong);color:var(--text)}
+.dt-toast--success .dt-glyph{color:var(--reward)}
+.dt-toast--error{border-color:var(--danger)}
+.dt-toast--error .dt-glyph{color:var(--danger)}
+.dt-toast--info .dt-glyph{color:var(--info)}
+
+@media (prefers-reduced-motion:reduce){.dt-btn,.dt-progress__bar{transition:none}.dt-btn:active:not(:disabled){transform:none}}
+:root, [data-era="cambrian"]{--era-sky-top:var(--era-cambrian-sky-top);--era-sky-bottom:var(--era-cambrian-sky-bottom);--era-field:var(--era-cambrian-field);--era-tier-1:var(--era-cambrian-tier-1);--era-tier-2:var(--era-cambrian-tier-2);--era-tier-3:var(--era-cambrian-tier-3);--era-tier-4:var(--era-cambrian-tier-4);--era-tier-5:var(--era-cambrian-tier-5);}
+[data-era="devonian"]{--era-sky-top:var(--era-devonian-sky-top);--era-sky-bottom:var(--era-devonian-sky-bottom);--era-field:var(--era-devonian-field);--era-tier-1:var(--era-devonian-tier-1);--era-tier-2:var(--era-devonian-tier-2);--era-tier-3:var(--era-devonian-tier-3);--era-tier-4:var(--era-devonian-tier-4);--era-tier-5:var(--era-devonian-tier-5);}
+[data-era="carboniferous"]{--era-sky-top:var(--era-carboniferous-sky-top);--era-sky-bottom:var(--era-carboniferous-sky-bottom);--era-field:var(--era-carboniferous-field);--era-tier-1:var(--era-carboniferous-tier-1);--era-tier-2:var(--era-carboniferous-tier-2);--era-tier-3:var(--era-carboniferous-tier-3);--era-tier-4:var(--era-carboniferous-tier-4);--era-tier-5:var(--era-carboniferous-tier-5);}
+[data-era="permian"]{--era-sky-top:var(--era-permian-sky-top);--era-sky-bottom:var(--era-permian-sky-bottom);--era-field:var(--era-permian-field);--era-tier-1:var(--era-permian-tier-1);--era-tier-2:var(--era-permian-tier-2);--era-tier-3:var(--era-permian-tier-3);--era-tier-4:var(--era-permian-tier-4);--era-tier-5:var(--era-permian-tier-5);}
+[data-era="triassic"]{--era-sky-top:var(--era-triassic-sky-top);--era-sky-bottom:var(--era-triassic-sky-bottom);--era-field:var(--era-triassic-field);--era-tier-1:var(--era-triassic-tier-1);--era-tier-2:var(--era-triassic-tier-2);--era-tier-3:var(--era-triassic-tier-3);--era-tier-4:var(--era-triassic-tier-4);--era-tier-5:var(--era-triassic-tier-5);}
+[data-era="jurassic"]{--era-sky-top:var(--era-jurassic-sky-top);--era-sky-bottom:var(--era-jurassic-sky-bottom);--era-field:var(--era-jurassic-field);--era-tier-1:var(--era-jurassic-tier-1);--era-tier-2:var(--era-jurassic-tier-2);--era-tier-3:var(--era-jurassic-tier-3);--era-tier-4:var(--era-jurassic-tier-4);--era-tier-5:var(--era-jurassic-tier-5);}
+[data-era="cretaceous"]{--era-sky-top:var(--era-cretaceous-sky-top);--era-sky-bottom:var(--era-cretaceous-sky-bottom);--era-field:var(--era-cretaceous-field);--era-tier-1:var(--era-cretaceous-tier-1);--era-tier-2:var(--era-cretaceous-tier-2);--era-tier-3:var(--era-cretaceous-tier-3);--era-tier-4:var(--era-cretaceous-tier-4);--era-tier-5:var(--era-cretaceous-tier-5);}
+[data-era="age-of-mammals"]{--era-sky-top:var(--era-age-of-mammals-sky-top);--era-sky-bottom:var(--era-age-of-mammals-sky-bottom);--era-field:var(--era-age-of-mammals-field);--era-tier-1:var(--era-age-of-mammals-tier-1);--era-tier-2:var(--era-age-of-mammals-tier-2);--era-tier-3:var(--era-age-of-mammals-tier-3);--era-tier-4:var(--era-age-of-mammals-tier-4);--era-tier-5:var(--era-age-of-mammals-tier-5);}
+[data-era="ice-age"]{--era-sky-top:var(--era-ice-age-sky-top);--era-sky-bottom:var(--era-ice-age-sky-bottom);--era-field:var(--era-ice-age-field);--era-tier-1:var(--era-ice-age-tier-1);--era-tier-2:var(--era-ice-age-tier-2);--era-tier-3:var(--era-ice-age-tier-3);--era-tier-4:var(--era-ice-age-tier-4);--era-tier-5:var(--era-ice-age-tier-5);}
+[data-era="early-humans"]{--era-sky-top:var(--era-early-humans-sky-top);--era-sky-bottom:var(--era-early-humans-sky-bottom);--era-field:var(--era-early-humans-field);--era-tier-1:var(--era-early-humans-tier-1);--era-tier-2:var(--era-early-humans-tier-2);--era-tier-3:var(--era-early-humans-tier-3);--era-tier-4:var(--era-early-humans-tier-4);--era-tier-5:var(--era-early-humans-tier-5);}

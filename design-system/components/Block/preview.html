@@ -1,0 +1,7 @@
+<!-- @dsCard group="Game pieces" height=220 -->
+<div id="root" style="padding:16px"></div>
+<script>
+var D=window.DeepTime,h=React.createElement;
+var content=h(React.Fragment,null,h("div",{"data-era":"jurassic",style:{display:"flex",gap:8,padding:16,background:"var(--era-field)",borderRadius:16}},[1,2,3,4,5].map(function(t){return h(D.Block,{key:t,tier:t,damage:t>3?0.7:0})})));
+ReactDOM.createRoot(document.getElementById("root")).render(content);
+</script>
