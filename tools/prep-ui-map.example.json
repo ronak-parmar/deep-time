@@ -1,0 +1,4 @@
+{
+  "_comment": "Example for sheet K1 (HUD kit). Names in reading order: rows top to bottom, left to right. null skips an element. Check --preview and edit to match the real sheet.",
+  "elements": ["hud-sign", "hud-plaque", "target-sign", "moves-medallion", "gear-button", "back-button", "progress-frame", "progress-fill", "star-on", "star-off", null]
+}

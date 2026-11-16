@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dino Match: era boards (dev preview)</title>
+<link rel="stylesheet" href="/src/ui/game.css">
+<style>
+html,body{overflow:auto;height:auto;touch-action:auto}
+body{padding:16px}
+h1{margin:0 0 4px}
+#grid{display:grid;grid-template-columns:repeat(5,180px);gap:14px}
+.tile{width:180px}
+.tile .box{position:relative;width:180px;height:320px;overflow:hidden;border-radius:8px}
+.tile .inner{position:absolute;left:0;top:0;width:360px;height:640px;transform:scale(.5);transform-origin:0 0}
+.tile canvas{position:absolute;inset:0;width:360px;height:640px}
+.tile .ui{position:absolute;inset:0}
+.tile .cap{margin:6px 0 0;color:var(--text-dim);font-size:13px}
+</style></head>
+<body><h1 class="title">Era boards</h1><p class="body-small dim">Dev preview. Cambrian, Devonian and Carboniferous use the real gem sprites, the rest the code-drawn gems.</p>
+<div id="grid"></div>
+<script type="module" src="/src/preview-eras.js"></script></body></html>

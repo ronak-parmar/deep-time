@@ -1,0 +1,22 @@
+{
+  "name": "@deep-time/ad-brain",
+  "version": "0.1.0",
+  "description": "Engine-agnostic ad decision plugin for the Deep Time games (Dino Break, Dino Match).",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./providers/MockProvider": "./src/providers/MockProvider.js"
+  },
+  "files": ["src", "sim", "README.md"],
+  "scripts": {
+    "test": "vitest run",
+    "sim": "node sim/simulate.js"
+  },
+  "engines": { "node": ">=18" },
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}
