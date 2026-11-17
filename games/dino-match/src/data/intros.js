@@ -10,6 +10,7 @@ import { CONFIG } from '../core/config.js';
 import { OBSTACLES, parseLayout } from '../core/obstacles.js';
 import { KINDS, COMBOS } from '../core/specials.js';
 import { BOOSTERS, boosterIntroId } from './boosters.js';
+import { firstLevelOfTier } from '../core/difficulty.js';
 
 const U = CONFIG.specials.unlock, O = CONFIG.obstacles.unlock;
 const E = (id, group, title, text, first, extra) => ({ id, group, title, text, first, slot: id, ...extra });
@@ -17,7 +18,7 @@ const E = (id, group, title, text, first, extra) => ({ id, group, title, text, f
 export const INTROS = Object.fromEntries([
   // ---- objectives: what a level asks you to do
   E('obj-collect', 'objective', 'Break gems', 'Match gems of the target colour to break them. Other colours still use a move.', 1, { hook: { kind: 'target', key: 'collect' }, art: { kind: 'gem', key: 0 }, spot: 'target', tutorial: 1 }),
-  E('obj-dig', 'objective', 'Dig blocks', 'Match the colour shown on a block to hit it. Dig every block to uncover a fossil part.', 6, { hook: { kind: 'target', key: 'dig' }, art: { kind: 'block', key: 'tar' }, spot: 'plaque', tutorial: 6 }),
+  E('obj-dig', 'objective', 'Dig blocks', 'Match the colour shown on a block to hit it. Dig every block to uncover a fossil part.', 6, { hook: { kind: 'target', key: 'dig' }, art: { kind: 'block', key: 'tar', badge: 0, pick: true }, spot: 'plaque', tutorial: 6 }),   // same picture as the HUD dig goal
   E('obj-clearAll', 'objective', 'Clear them all', 'Clear every obstacle of the kind shown before the moves run out.', O.tar, { slot: 'tar', hook: { kind: 'target', key: 'clearAll' }, art: { kind: 'obstacle', key: 'tar' }, spot: 'target' }),
   E('obj-stones', 'objective', 'Break stones', 'Break the stone tiles. Sandstone and vine stone both count.', O.sandstone, { slot: 'sandstone', hook: { kind: 'target', key: 'stones' }, art: { kind: 'obstacle', key: 'sandstone' }, spot: 'target' }),
   E('obj-fossils', 'objective', 'Collect fossils', 'Break the fossil tiles to collect the fossil buried under each one.', O.fossil, { slot: 'fossil', hook: { kind: 'target', key: 'fossils' }, art: { kind: 'obstacle', key: 'fossil' }, spot: 'target' }),
@@ -48,6 +49,9 @@ export const INTROS = Object.fromEntries([
   // ---- boosters (generated from data/boosters.js: the card says what it does, 'tap the booster, then tap where to use it', lights the button)
   ...Object.values(BOOSTERS).map((b) => E(boosterIntroId(b.id), 'booster', b.name, b.text, b.first, { hook: { kind: 'booster', key: b.id }, art: { kind: 'booster', key: b.id }, spot: { booster: b.id }, booster: b.id })),
   // ---- things that happen during play (shown the first time, as a small card)
+  // ---- difficulty tiers (core/difficulty.js): shown the first time a hard / super-hard level comes up
+  E('tier-hard', 'event2', 'Hard level', 'Hard level: fewer moves, bigger rewards. Look for the red frame.', firstLevelOfTier('hard'), { group: 'tier', hook: { kind: 'tier', key: 'hard' }, art: { kind: 'tier', key: 'hard' }, spot: 'moves' }),
+  E('tier-super-hard', 'event2', 'Super hard level', 'Super hard: even fewer moves, double coins. Look for the violet frame.', firstLevelOfTier('super-hard'), { group: 'tier', hook: { kind: 'tier', key: 'super-hard' }, art: { kind: 'tier', key: 'super-hard' }, spot: 'moves' }),
   E('shuffle', 'event', 'Shuffle', 'No moves left? The board shuffles for you. Specials stay where they are.', null, { event: true, hook: { kind: 'event', key: 'shuffle' }, art: { kind: 'icon', key: 'burst' }, spot: 'board' }),
   E('hint', 'event', 'Hint', 'Stuck? After a short wait, two gems glow to show you a move.', null, { event: true, hook: { kind: 'event', key: 'hint' }, art: { kind: 'icon', key: 'info' }, spot: 'board' })
 ].map((e) => [e.id, e]));
@@ -82,6 +86,7 @@ export function elementsOfLevel(cfg) {
   if (cfg.blocks && cfg.blocks.length) { ids.add('plaque'); for (const b of cfg.blocks) if (b.t === 'sand' || b.t === 'stone') ids.add(b.t); }
   if (cfg.layout) { const p = parseLayout(cfg.layout); for (const c of p.cells) ids.add(c.k); if (p.artefacts.length) ids.add('artefact'); }
   for (const t of cfg.targets || []) ids.add('obj-' + t.type);
+  if (cfg.tier && cfg.tier !== 'normal') ids.add('tier-' + cfg.tier);
   if (cfg.level) for (const b of Object.values(BOOSTERS)) if (b.first <= cfg.level) ids.add(boosterIntroId(b.id));   // boosters are available from their teach level on
   return [...ids];
 }

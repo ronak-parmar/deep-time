@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { INTROS, COMBO_INTROS, comboId, comboIntroFor, elementsOfLevel, introsFor, markIntroSeen, seenIntros, MAX_PER_LEVEL, ALL_INTRO_IDS } from '../src/data/intros.js';
 import { generateLevel } from '../src/core/level.js';
 import { TOTAL_LEVELS } from '../src/core/eras.js';
+import { tierOf, firstLevelOfTier, TIERS, TIER_RULES } from '../src/core/difficulty.js';
 import { OBSTACLES, parseLayout } from '../src/core/obstacles.js';
 import { KINDS, COMBOS } from '../src/core/specials.js';
 import { TARGET_TYPES } from '../src/core/targets.js';
@@ -48,7 +49,7 @@ describe('intro registry: guard', () => {
 
 describe('gimmick pacing (docs/14)', () => {
   const slots = {};
-  for (const e of Object.values(INTROS)) if (!e.event && e.first > 10) slots[e.slot] = Math.min(slots[e.slot] ?? Infinity, e.first);
+  for (const e of Object.values(INTROS)) if (!e.event && e.group !== 'tier' && e.first > 10) slots[e.slot] = Math.min(slots[e.slot] ?? Infinity, e.first);
   it('after the hand-made onboarding (level 10) a new element is taught at most once per 5 levels', () => {
     const at = Object.values(slots).sort((a, b) => a - b);
     for (let i = 1; i < at.length; i++) expect(at[i] - at[i - 1], `new elements at ${at[i - 1]} and ${at[i]}`).toBeGreaterThanOrEqual(5);
@@ -95,4 +96,26 @@ describe('showing intros', () => {
     const q = migrateProfile(JSON.parse(JSON.stringify(markIntroSeen(newProfile(), 'bomb', 'nonsense')))); expect(q.tutorial.intros).toContain('bomb');
   });
   it('all ids are unique', () => { expect(new Set(ALL_INTRO_IDS).size).toBe(ALL_INTRO_IDS.length); });
+});
+
+describe('difficulty tiers (docs/14)', () => {
+  const all = Array.from({ length: TOTAL_LEVELS }, (_, i) => tierOf(i + 1));
+  it('no hard level in the onboarding, never two in a row, one every 8 to 12 levels', () => {
+    const hard = all.map((t, i) => (t !== 'normal' ? i + 1 : 0)).filter(Boolean);
+    expect(hard[0]).toBeGreaterThan(TIER_RULES.onboarding);
+    for (let i = 1; i < hard.length; i++) { const g = hard[i] - hard[i - 1]; expect(g).toBeGreaterThanOrEqual(8); expect(g).toBeLessThanOrEqual(12 + 2); }
+    for (const n of hard) { expect(n % 5).not.toBe(0); expect(n % 10).not.toBe(1); }
+  });
+  it('about one super-hard level per 40 levels, the rest hard', () => {
+    const sup = all.filter((t) => t === 'super-hard').length;
+    expect(sup).toBeGreaterThanOrEqual(Math.floor((TOTAL_LEVELS - 40) / 40) - 2);
+    expect(sup).toBeLessThanOrEqual(Math.ceil(TOTAL_LEVELS / 40));
+    expect(firstLevelOfTier('super-hard')).toBeGreaterThan(40);
+  });
+  it('hard tiers mean fewer moves and bigger rewards; the tier intro is taught on its first level', () => {
+    expect(TIERS.hard.moves).toBeLessThan(1); expect(TIERS['super-hard'].moves).toBeLessThan(TIERS.hard.moves);
+    expect(TIERS.hard.coins).toBeGreaterThan(1); expect(TIERS['super-hard'].coins).toBeGreaterThan(TIERS.hard.coins);
+    expect(INTROS['tier-hard'].first).toBe(firstLevelOfTier('hard'));
+    const n = firstLevelOfTier('hard'); expect(elementsOfLevel(levels[n - 1])).toContain('tier-hard');
+  });
 });

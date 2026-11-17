@@ -46,6 +46,10 @@ jobs:
           if [ ! -d android ]; then npx cap add android; fi
           npx cap sync android
 
+      - name: Make the launcher icons from assets/icon-*.png
+        working-directory: games/dino-match
+        run: npx --yes @capacitor/assets@3 generate --android
+
       - name: Build the debug APK
         working-directory: games/dino-match/android
         run: |

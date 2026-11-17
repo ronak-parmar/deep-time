@@ -1,53 +1,33 @@
 // Target icons and the HUD Target panel (docs/11). Presentation only: progress comes from core/targets.js.
 import { h } from './dom.js';
 import { glyph } from './glyphs.js';
-import { drawGemShape } from '../render/gems.js';
-import { slotUrl } from '../render/art.js';
+import { objectiveIcon } from './objectives.js';
 import { targetProgress, targetLabel } from '../core/targets.js';
 import { cue } from '../render/sound.js';
-import { drawObstacle, drawArtefact } from '../render/obstacles.js';
 
-// A small icon for a target: dig = the dirt block, collect = the gem it asks for. `colour` badges draw the gem silhouette.
-export function gemIcon(c, size = 20) {
-  const cv = h('canvas', { width: size * 2, height: size * 2, class: 'tgt-icon', 'aria-hidden': 'true' });
-  cv.style.width = size + 'px'; cv.style.height = size + 'px';
-  const g = cv.getContext('2d'); g.translate(size, size); drawGemShape(g, c, size * 0.42);
-  return cv;
-}
-// obstacle / artefact icons reuse the board drawing, so a target looks like what is on the board
-const ICON_KIND = { fossils: 'fossil', skeleton: 'bone', stones: 'sandstone' };
-export function obstacleIcon(kind, size = 20) {
-  const cv = h('canvas', { width: size * 2, height: size * 2, class: 'tgt-icon', 'aria-hidden': 'true' });
-  cv.style.width = size + 'px'; cv.style.height = size + 'px';
-  const g = cv.getContext('2d'); g.scale(2, 2);
-  if (kind === 'artefact') { g.translate(size / 2, size / 2); drawArtefact(g, size * 0.4, 0, true); }
-  else drawObstacle(g, { k: kind, hp: 1, max: 1 }, size / 2, size / 2, size + 4, 0, 0, true);
-  return cv;
-}
-export function targetIcon(t, size = 20) {
-  if (t.type === 'collect') return gemIcon(t.c, size);
-  if (t.type === 'drop') return obstacleIcon('artefact', size);
-  if (t.type === 'clearAll') return obstacleIcon(t.k, size);
-  if (ICON_KIND[t.type]) return obstacleIcon(ICON_KIND[t.type], size);
-  const url = slotUrl('tile-dirt');
-  if (url) return h('img', { src: url, alt: '', class: 'tgt-icon', width: size, height: size, draggable: 'false' });
-  const s = glyph('level', size); s.setAttribute('class', 'dt-glyph tgt-icon'); return s;
-}
+// Target icons: one shared drawing (ui/objectives.js), the same art the board uses.
+export const gemIcon = (c, size = 20) => objectiveIcon({ kind: 'gem', key: c }, size);
+export const obstacleIcon = (kind, size = 20) => objectiveIcon(kind === 'artefact' ? { kind: 'artefact', key: 'artefact' } : { kind: 'obstacle', key: kind }, size);
+export const targetIcon = (t, size = 20) => objectiveIcon(t, size);
 
-// HUD panel with 1 to 3 targets: icon + progress, pops when it changes, ticks when done. update(state | partial).
+// HUD panel with 1 to 3 targets: each = the objective's own board art on a dark inset well + how many are LEFT (counting down);
+// a tick badge and a small burst when it is done. update(state | partial).
 export function TargetPanel(state) {
   const rows = [], el = h('div', { class: 'target-panel', role: 'status', 'aria-label': 'Targets' });
-  const many = targetProgress(state).length > 1;
-  el.classList.toggle('target-panel--many', many);
-  for (const t of targetProgress(state)) {
-    const val = h('span', { class: 'heading dt-num tgt-val' }, `${t.got}/${t.n}`);
-    const tick = h('span', { class: 'tgt-tick', 'aria-hidden': 'true' }, glyph('check', 14));
-    const row = h('div', { class: 'tgt' + (t.done ? ' tgt--done' : ''), 'aria-label': targetLabel(t) }, targetIcon(t, many ? 18 : 24), val, tick);
+  const list = targetProgress(state), many = list.length;
+  el.classList.toggle('target-panel--many', many > 1); el.dataset.n = String(many);
+  for (const t of list) {
+    const left = Math.max(0, t.n - t.got);
+    const val = h('span', { class: 'heading dt-num tgt-val' }, String(left));
+    const tick = h('span', { class: 'tgt-tick', 'aria-hidden': 'true' }, glyph('check', 12));
+    const well = h('span', { class: 'tgt__well' }, objectiveIcon({ ...t, blocks: state.blocks }, many > 2 ? 23 : many > 1 ? 24 : 26), tick, h('i', { class: 'tgt__burst', 'aria-hidden': 'true' }));
+    const row = h('div', { class: 'tgt' + (t.done ? ' tgt--done' : ''), 'aria-label': targetLabel(t) }, well, val);
     rows.push({ t, val, row }); el.append(row);
   }
   const set = (i, got, n) => {
     const r = rows[i], was = r.t.got, done = got >= n;
-    r.t = { ...r.t, got, n }; r.val.textContent = `${got}/${n}`;
+    r.t = { ...r.t, got, n }; r.val.textContent = String(Math.max(0, n - got));
+    r.row.setAttribute('aria-label', targetLabel(r.t) + `, ${Math.max(0, n - got)} left`);
     if (got !== was) { r.row.classList.remove('tgt--pop'); void r.row.offsetWidth; r.row.classList.add('tgt--pop'); cue('targetPop'); }
     if (done && !r.row.classList.contains('tgt--done')) { r.row.classList.add('tgt--done'); cue('targetDone'); }
   };

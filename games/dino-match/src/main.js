@@ -7,8 +7,9 @@ import { createState, swap, hintMove, addMoves, useBooster } from './core/game.j
 import { boosterTargets, owned, spendBooster, buyBooster, giftBooster, applyPreBooster } from './core/boosters.js';
 import { BOOSTERS, unlockedBoosters } from './data/boosters.js';
 import { mountShop } from './screens/shop.js';
+import { mountCredits } from './screens/credits.js';
 import { generateLevel } from './core/level.js';
-import { eraOf } from './core/eras.js';
+import { eraOf, ERAS } from './core/eras.js';
 import { settleLevel, doubleCoins, spendCoins } from './core/profile.js';
 import { syncLives, canStartLevel, refillLives } from './core/lives.js';
 import { digPart, FOSSILS } from './core/fossils.js';
@@ -16,8 +17,11 @@ import { starsFor, nearMissOffer } from './core/rules.js';
 import { CONFIG } from './core/config.js';
 import { mountBoot } from './screens/boot.js';
 import { mountHome } from './screens/home.js';
+import { mountIsland } from './screens/island.js';
+import { loadIslandArt } from './render/islandart.js';
 import { mountPlay } from './screens/play.js';
 import { mountPrelevel } from './screens/prelevel.js';
+import { bestStars } from './core/journey.js';
 import { mountTutorial } from './screens/tutorial.js';
 import { needsTutorial, markTutorialSeen, skipTutorial } from './core/tutorial.js';
 import './ui/kit.js';
@@ -83,7 +87,8 @@ async function showHome() {
   game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   await renderer.setEra(eraOf(profile.level).id);
-  swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onPlay: () => startLevel(profile.level), onPlayLevel: (n) => startLevel(n), onHowTo: () => showHowTo(showHome), onDig: () => showDig(showHome), onMuseum: () => showMuseum(showHome), onShop: () => openShop({ onClose: showHome }) }));;
+  await loadIslandArt(ERAS.map((e) => e.id));
+  swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onPlay: () => startLevel(profile.level), onPlayLevel: (n) => startLevel(n), onHowTo: () => showHowTo(showHome), onDig: () => showDig(showHome), onMuseum: () => showMuseum(showHome), onShop: () => openShop({ onClose: showHome }), onCredits: () => mountCredits(ui, {}), onIsland: (id, origin) => showIsland(id, origin) }));
 }
 
 // Shop (docs/16): over whatever is on screen. Buying persists the profile; onClose runs when the player leaves it.
@@ -96,6 +101,15 @@ function showHowTo(back, all = false) {
   swapScreen(mountHowTo(ui, { profile, onBack: back, all }));
 }
 
+async function showIsland(eraId, origin) {
+  setTall(true);
+  game?.tut?.destroy(); game = null; renderer.clearLevel();
+  await refreshLives();
+  lastIsland = eraId;
+  swapScreen(mountIsland(ui, { profile, eraId, origin, onBack: () => { lastIsland = null; showHome(); }, onPlayLevel: (n) => startLevel(n) }));
+}
+let lastIsland = null;
+const backToMap = () => (lastIsland ? showIsland(lastIsland) : showHome());
 async function showDig(back) {
   setTall(true);
   game?.tut?.destroy(); game = null; renderer.clearLevel();
@@ -169,7 +183,7 @@ async function startLevel(n, opts = {}) {
       await persist(q); applyPreBooster(state, id); renderer.startLevel(state);
     }
     setTall(false);
-    const view = mountPlay(ui, { level, state, tip: null, onHome: () => { cancelBooster(); renderer.locked = true; showHome(); }, boosters: opts.test ? null : { counts: { ...profile.boosters }, onTap: (id) => boosterTap(id), onCancel: () => cancelBooster() } });
+    const view = mountPlay(ui, { level, state, tip: null, onHome: () => { cancelBooster(); renderer.locked = true; backToMap(); }, boosters: opts.test ? null : { counts: { ...profile.boosters }, onTap: (id) => boosterTap(id), onCancel: () => cancelBooster() } });
     swapScreen(view);
     game = { level, state, view, tut: null };
     if (!opts.test && needsTutorial(profile, n)) {    // first-time tutorial, levels 1-6: shown once, skippable, kept in the profile
@@ -187,7 +201,7 @@ async function startLevel(n, opts = {}) {
   if (opts.skipPre || opts.test) return begin();
   const preIds = unlockedBoosters(n, 'pre');
   const pre = { ids: preIds, counts: { ...profile.boosters }, onShop: (id) => openShop({ focus: id, level: n, onClose: () => { pv.setCounts(profile.boosters); } }) };
-  const pv = mountPrelevel(ui, { level, state, onPlay: begin, onBack: showHome, pre: preIds.length ? pre : null });
+  const pv = mountPrelevel(ui, { level, state, onPlay: begin, onBack: showHome, pre: preIds.length ? pre : null, best: bestStars(profile, n) });
   swapScreen(pv);
   const preIntros = introsFor(profile, level).filter(isPreIntro);   // a pre-level booster met for the first time: explained here, gifted, and already picked
   if (preIntros.length) mountIntro({ entries: preIntros, renderer, state, onDone: async () => { let p = markIntroSeen(profile, ...preIntros.map((e) => e.id)); for (const e of preIntros) p = giftBooster(p, e.booster); await persist(p); pv.setCounts(p.boosters); for (const e of preIntros) pv.select(e.booster); }, onSkip: () => persist(skipTutorial(profile)) });
@@ -315,7 +329,7 @@ async function settle(g, won) {
   let current = p;
   swapScreen(mountResult(ui, {
     won, level: g.level, state: g.state, stars, rewards, lives: p.lives, ads,
-    onNext: () => startLevel(n + 1), onRetry: () => startLevel(n, { skipPre: true }), onHome: showHome,
+    onNext: () => startLevel(n + 1), onRetry: () => startLevel(n, { skipPre: true }), onHome: backToMap,
     onDig: () => showDig(showHome),
     onWait: () => showOutOfLives(n),
     onDouble: async () => { ads.report(AD_EVENTS.rewardedCompleted, { kind: 'double_coins' }); current = doubleCoins(profile, rewards.coins); await persist(current); }
@@ -344,7 +358,7 @@ if (import.meta.env.DEV || location.search.includes('debug')) {
     get game() { return game; }, renderer, get profile() { return profile; }, hint: () => game && hintMove(game.state), CONFIG,
     setProfile: async (patch) => { await persist({ ...profile, ...patch }); },
     boosters: { give: async (n = 3) => { let p = profile; for (const k of Object.keys(BOOSTERS)) p = { ...p, boosters: { ...p.boosters, [k]: (p.boosters[k] || 0) + n } }; await persist(p); game?.view.boosters?.update(p.boosters); }, shop: (f) => openShop({ focus: f }), tap: (id) => boosterTap(id), use: (i) => runBooster(i), force: (id) => forceBooster(id) },
-    go: { home: showHome, howto: (all) => showHowTo(showHome, all), dig: () => showDig(showHome), museum: () => showMuseum(showHome), history: (id) => showHistory(FOSSILS.find((f) => f.id === id), showHome), lives: showOutOfLives, level: startLevel, play: (n) => startLevel(n, { skipPre: true }), test: (name, n = 40) => startLevel(n, { test: name }) },
+    go: { island: (id) => showIsland(id), home: showHome, howto: (all) => showHowTo(showHome, all), dig: () => showDig(showHome), museum: () => showMuseum(showHome), history: (id) => showHistory(FOSSILS.find((f) => f.id === id), showHome), lives: showOutOfLives, level: startLevel, play: (n) => startLevel(n, { skipPre: true }), test: (name, n = 40) => startLevel(n, { test: name }) },
     result: (won = true) => { const g = game; if (!g) return; g.state.status = won ? 'won' : 'lost'; if (won) g.state.score = g.state.score || 12480; return settle(g, won); },
     offer: () => { const g = game; if (g) return showNearMiss(g, { extraMoves: 5, coinCost: 50, blocksLeft: 2 }); },
     tests: ALL_TESTS

@@ -3,17 +3,19 @@ import { h } from '../ui/dom.js';
 import { Button, Chip, mmss } from '../ui/components.js';
 import { glyph } from '../ui/glyphs.js';
 import { ERAS, TOTAL_LEVELS } from '../core/eras.js';
-import { plaqueUrl } from '../render/frame.js';
+import { journeyStats } from '../core/journey.js';
 import { CONFIG } from '../core/config.js';
 import { syncLives, nextLifeIn } from '../core/lives.js';
 import { reducedMotion } from '../ui/motion.js';
 import { buildLayout, nodeStates, islandState, createMap, W } from '../render/islandmap.js';
+import { Logo, logoUrl } from '../ui/logo.js';
+import { artSizes } from '../render/islandart.js';
 
 // Home = the journey map. A vertical world of ten floating islands (Cambrian at the bottom), a winding trail of level
 // nodes, a slim top bar, a Play pill and an icon dock. The picture is a canvas painted by render/islandmap.js; the
 // nodes and plaques are real buttons/labels in a native scroller (touch drag with inertia comes from the browser).
-export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMuseum, onSetting, onHowTo, onCredits, onShop }) {
-  const layout = buildLayout(), states = nodeStates(layout, profile.level);
+export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMuseum, onSetting, onHowTo, onCredits, onShop, onIsland }) {
+  const layout = buildLayout(artSizes());
   const lvlC = ((profile.level - 1) % TOTAL_LEVELS) + 1;
   const state = { level: profile.level, completed: new Set(profile.completedFossils), progress: profile.fossilProgress || {} };
 
@@ -34,21 +36,26 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
   const world = h('div', { class: 'map__world' });
   const scroller = h('div', { class: 'map__scroll', tabindex: '-1' }, world);
 
-  // era plaques and nodes (positions are in world units, scaled to the phone width)
-  const plaques = layout.islands.map((isl) => {
-    const e = ERAS[isl.index], st = islandState(isl, profile.level), done = e.fossils.filter((f) => state.completed.has(f)).length;
-    return h('div', { class: `map__plaque map__plaque--${st}`, 'data-era': e.id, 'aria-label': `${e.name}, ${done} of ${e.fossils.length} fossils${st === 'locked' ? ', locked' : ''}`, style: { backgroundImage: `url(${plaqueUrl(e.id, 168, 46)})` } },
-      h('span', { class: 'heading map__pname' }, st === 'locked' ? glyph('lock', 14) : null, e.name),
-      h('span', { class: 'caption map__pcount dt-num' }, `${done}/${e.fossils.length} fossils`));
+  // the world map: one card per era island (name, levels, stars, fossils; locked = fog + lock + the level that opens it).
+  // Tap an open island to go into it (screens/island.js). No level nodes here.
+  const stats = journeyStats(profile);
+  const curI = Math.max(0, stats.findIndex((q) => q.state === 'current'));
+  const centreOf = (isl) => (isl.art ? { x: isl.art.x + isl.art.w / 2, y: isl.art.y + isl.art.h * 0.5 } : { x: isl.cx, y: isl.cy });
+  const cards = layout.islands.map((isl, i) => {
+    const e = ERAS[i], q = stats[i], locked = q.state === 'locked';
+    return h('button', { type: 'button', class: `wcard wcard--${q.state}`, 'data-era': e.id, disabled: locked,
+      'aria-label': locked ? `${e.name}, locked, reach level ${q.unlockAt}` : `${e.name}: ${q.won} of ${q.levels} levels, ${q.stars} of ${q.maxStars} stars, ${q.fossils} of ${q.totalFossils} fossils`,
+      onClick: (ev) => onIsland?.(e.id, { x: ev.clientX, y: ev.clientY }) },
+      h('span', { class: 'wcard__name heading' }, locked ? glyph('lock', 16) : null, e.name),
+      locked ? h('span', { class: 'wcard__lock caption' }, `Reach level ${q.unlockAt}`)
+        : h('span', { class: 'wcard__stats caption dt-num' },
+          h('span', {}, `${q.won}/${q.levels}`), h('i', { class: 'wcard__star' }), h('span', {}, `${q.stars}/${q.maxStars}`), h('span', { class: 'wcard__f' }, `${q.fossils}/${q.totalFossils} fossils`)));
   });
-  const nodeEls = layout.nodes.map((n, i) => {
-    const st = states[i], label = st === 'current' ? String(lvlC) : String(n.level);
-    const b = h('button', { type: 'button', class: `map__node map__node--${st}`, 'data-level': n.level, 'aria-label': st === 'locked' ? `Level ${n.level}, locked` : `Level ${st === 'current' ? lvlC : n.level}${st === 'done' ? ', completed' : ''}`, disabled: st === 'locked', onClick: () => (st === 'current' ? onPlay() : onPlayLevel?.(n.level)) },
-      h('span', { class: 'dt-num map__nnum' }, label));
-    return b;
-  });
-  const marker = h('div', { class: 'map__marker', 'aria-hidden': 'true' }, h('span', { class: 'map__pin' }, glyph('pick', 18)));
-  world.append(...plaques, ...nodeEls, marker);
+  const marker = h('div', { class: 'map__marker', 'aria-hidden': 'true' }, h('span', { class: 'map__pin' }, h('i', { class: 'map__sun' })), h('i', { class: 'map__spark map__spark--a' }), h('i', { class: 'map__spark map__spark--b' }), h('i', { class: 'map__spark map__spark--c' }));
+  // one container per island: it bobs with the island picture so the card stays on it
+  const isles = layout.islands.map((_, i) => h('div', { class: 'map__isle' }, cards[i]));
+  isles[curI].append(marker);
+  world.append(...isles);
 
   // settings sheet (sound, haptics, how to play)
   const toggle = (id, label, on, change) => {
@@ -61,7 +68,7 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
   const hap = toggle('set-haptics', 'Haptics', !!profile.settings.haptics, (on) => onSetting?.('haptics', on));
   const close = () => { sheet.hidden = true; };
   const sheet = h('div', { class: 'map__sheet kit-scrim scrim', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Settings', onClick: (e) => { if (e.target === sheet) close(); } },
-    Panel({ title: 'Settings', class: 'map__panel', onClose: close }, sound, hap,
+    Panel({ title: 'Settings', class: 'map__panel', onClose: close }, logoUrl ? h('div', { class: 'lockup' }, Logo({ size: 72 }), h('span', { class: 'lockup__t' }, h('b', {}, 'Dino Match'), h('small', {}, 'A fossil puzzle adventure'))) : null, sound, hap,
       onHowTo ? KButton({ full: true, variant: 'stone', icon: 'book', onClick: () => { close(); onHowTo(); }, id: 'howto' }, 'How to play') : null,
       onCredits ? KButton({ full: true, variant: 'stone', icon: 'info', onClick: () => { close(); onCredits(); }, id: 'credits' }, 'Credits') : null,
       KButton({ full: true, variant: 'gold', onClick: close, id: 'settings-close' }, 'Close')));
@@ -82,30 +89,29 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
 
   // sizing: world units -> css px
   const ctx = canvas.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
-  const map = createMap(layout, { state, dpr, reduced: reducedMotion });
+  const map = createMap(layout, { state, dpr, reduced: reducedMotion, world: true });
   let s = 1, vw = 360, vh = 640, raf = 0, alive = true, t0 = performance.now(), ready = false, dirty = true;
   const place = () => {
     vw = el.clientWidth || 360; vh = el.clientHeight || 640; s = vw / W;
     canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr); canvas.style.width = vw + 'px'; canvas.style.height = vh + 'px';
     world.style.height = layout.H * s + 'px';
-    layout.islands.forEach((isl, i) => { const p = plaques[i]; p.style.left = isl.cx * s + 'px'; p.style.top = (isl.box.y0 - 16) * s + 'px'; });
-    layout.nodes.forEach((n, i) => { nodeEls[i].style.left = n.x * s + 'px'; nodeEls[i].style.top = n.y * s + 'px'; });
-    const cur = layout.nodes[states.indexOf('current')] || layout.nodes.at(-1);
-    marker.style.left = cur.x * s + 'px'; marker.style.top = cur.y * s + 'px';
+    layout.islands.forEach((isl, i) => { const c = centreOf(isl); cards[i].style.left = c.x * s + 'px'; cards[i].style.top = c.y * s + 'px'; });
+    const cc = centreOf(layout.islands[curI]);
+    marker.style.left = cc.x * s + 'px'; marker.style.top = (cc.y - 34) * s + 'px';
     dirty = true;
   };
   place();
   const frame = (now2) => {
     if (!alive) return;
     const animate = !reducedMotion();
+    if (animate) isles.forEach((e, i) => { e.style.transform = `translateY(${(map.bobOf(i, (now2 - t0) / 1000) * s).toFixed(2)}px)`; });
     if (ready && (animate || dirty)) { ctx.clearRect(0, 0, canvas.width, canvas.height); map.draw(ctx, scroller.scrollTop / s, vw, vh / s, (now2 - t0) / 1000); dirty = false; }
     raf = requestAnimationFrame(frame);
   };
   scroller.addEventListener('scroll', () => { dirty = true; if (ready && reducedMotion()) { ctx.clearRect(0, 0, canvas.width, canvas.height); map.draw(ctx, scroller.scrollTop / s, vw, vh / s, 0); dirty = false; } }, { passive: true });
   addEventListener('resize', place);
   // start at the current island: the player's node sits about 60% down the screen
-  const cur = layout.nodes[states.indexOf('current')] || layout.nodes.at(-1);
-  scroller.scrollTop = Math.max(0, cur.y * s - vh * 0.6);
+  scroller.scrollTop = Math.max(0, centreOf(layout.islands[curI]).y * s - vh * 0.55);
   map.ensure().then(() => { ready = true; dirty = true; });
   raf = requestAnimationFrame(frame);
   return { el, destroy() { alive = false; cancelAnimationFrame(raf); clearInterval(timer); removeEventListener('resize', place); el.remove(); } };

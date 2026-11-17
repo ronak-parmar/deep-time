@@ -5,6 +5,7 @@ import { winRate } from './bot.js';
 import { unlockedKinds } from './specials.js';
 import { defaultTargets, validateTargets } from './targets.js';
 import { OBSTACLES, parseLayout, layoutRows, glyphOf } from './obstacles.js';
+import { tierOf, TIERS } from './difficulty.js';
 
 // Block lists are data: 'T0 S1 K2' = tar/sand/stone block of gem colour 0/1/2 (colours: 0 red, 1 green, 2 blue, 3 yellow, 4 purple, 5 amber).
 // tar = 1 hit point, sand = 2, stone = 3 (CONFIG.dig.blockTypes). A 3-match hits once, 4 twice, 5+ three times.
@@ -151,7 +152,10 @@ function mixTargets(level, cfg, target, kind) {
 export function generateLevel(level, { tune = false } = {}) {
   const b = base(level);
   const kind = levelKind(level);
-  const common = { level, seed: b.seed, era: b.era, kind, specials: unlockedKinds(level) };
+  const tier = tierOf(level);
+  const common = { level, seed: b.seed, era: b.era, kind, tier, specials: unlockedKinds(level) };
+  // hard tiers get fewer moves (never below the work the level needs, plus a little)
+  const tiered = (c) => { if (tier !== 'normal') c.moves = Math.max(Math.ceil(workOf(c.blocks, c.layout || null, collectsOf(c)) * 1.05), Math.round(c.moves * TIERS[tier].moves)); return c; };
   let cfg;
   if (kind === 'onboarding') {
     const A = ONBOARDING[level - 1], size = A.size, colors = A.colors, moves = A.moves, tip = A.tip;
@@ -172,7 +176,7 @@ export function generateLevel(level, { tune = false } = {}) {
     if (ob) { cfg.layout = ob.layout; if (ob.spread) cfg.spread = ob.spread; }
     if (!intro) mixTargets(level, cfg, target, kind);
   }
-  if (!tune || (kind === 'onboarding' && !cfg.layout)) return cfg;
+  if (!tune || (kind === 'onboarding' && !cfg.layout)) return tiered(cfg);
   // smallest budget whose bot win rate reaches the goal (win rate rises with moves), then keep the closer neighbour
   const L = CONFIG.levels, planned = cfg.layout && cfg.layout.some((r) => /[Ca]/.test(r));   // crates and artefacts need planning a bot lacks
   const goal = 1 - cfg.target - (planned ? L.plannedSlack : 0), hp = workOf(cfg.blocks, cfg.layout, collectsOf(cfg));
@@ -182,7 +186,7 @@ export function generateLevel(level, { tune = false } = {}) {
   let moves = lo;
   if (lo > floor && Math.abs(winRate({ ...cfg, moves: lo - 1 }) - goal) < Math.abs(winRate({ ...cfg, moves: lo }) - goal)) moves = lo - 1;
   moves = Math.max(floor, Math.ceil(moves * L.humanMargin));   // the bot plays better than a casual human: keep a margin
-  cfg.moves = moves; cfg.botWinRate = winRate(cfg);
+  cfg.moves = moves; tiered(cfg); cfg.botWinRate = winRate(cfg);
   return cfg;
 }
 

@@ -52,3 +52,18 @@ Changed from the first plan to meet rule 4: Bomb 15 to 16, rock 18 to 21, Dynami
 1. Rules in `core/` (obstacle, special, target type).
 2. One entry in `INTROS` (and combos in `COMBO_INTROS`). 3. Teach level in `level.js` INTRO (obstacles) or the unlock in `config.js`.
 4. Run the tests: guard (entry exists, `first` equals the first use) and pacing (5 level gap) tell you what is missing.
+
+## Difficulty tiers (normal, hard, super hard)
+Every level has a `tier` (`cfg.tier`, from `core/difficulty.js` `tierOf(level)`); it is data-driven and deterministic, nothing is stored.
+- No hard levels in the hand-made onboarding (levels 1 to 15). The first hard level is 16.
+- After that, one hard level every 8 to 12 levels (a seeded gap per level), so two hard levels are never next to each other.
+- Never on a breather or milestone level (level % 5 = 0) or an obstacle teach level (level % 10 = 1).
+- In every 40-level window from level 41 on, the first hard level at or after the window start + 5 is **super hard** (first one: 47).
+- Effect: moves x0.85 (hard) or x0.72 (super hard), never below the work the level needs x1.05; win coins x1.5 or x2.
+  The board, gems and pieces stay exactly the same. Only the frame, HUD plates and background get a tint (crimson / violet).
+- The first hard and the first super-hard level each show one intro card (`tier-hard`, `tier-super-hard` in `INTROS`, group `tier`).
+  These cards do not count toward the 5-level gimmick pacing (they are not board elements).
+- Where the player sees it: island screen = crimson coin with one flame badge (hard) or violet coin with two (super hard); pre-level =
+  a crimson / violet ribbon "Hard level" / "Super hard" with the coin bonus (x1.5 / x2); in level = the tint above (render/renderer.js
+  `TIER_TINT`); the first hard and first super-hard level show their intro card.
+- Tests: `tests/intros.test.js` "difficulty tiers".

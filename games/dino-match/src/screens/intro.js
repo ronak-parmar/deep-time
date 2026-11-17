@@ -6,6 +6,7 @@ import { Panel, KButton, Medal } from '../ui/kit.js';
 import { glyph } from '../ui/glyphs.js';
 import { paintIntroArt } from '../render/introart.js';
 import { reducedMotion } from '../ui/motion.js';
+import { D } from '../render/motion.js';
 import { BOOSTERS } from '../data/boosters.js';
 
 const LW = 360, LH = 640, ART = 72;
@@ -15,8 +16,8 @@ export function artBox(entry, size = ART) {
   if (a.kind === 'booster' && size >= 100) size = 112;
   if (a.kind === 'icon') { const b = h('div', { class: 'intro__icon' }); b.append(glyph(a.key, size * 0.6)); return { el: b, stop() {} }; }
   const cv = h('canvas', { class: 'intro__art', width: size * 2, height: size * 2, 'aria-hidden': 'true' }), c = cv.getContext('2d');
-  cv.style.width = cv.style.height = size + 'px'; let raf = 0, dead = false; const t0 = performance.now();
-  const frame = () => { if (dead) return; c.setTransform(2, 0, 0, 2, 0, 0); paintIntroArt(c, a, size, (performance.now() - t0) / 1000); if (!reducedMotion()) raf = requestAnimationFrame(frame); };
+  cv.style.width = cv.style.height = size + 'px'; let raf = 0, dead = false, late = false; const t0 = performance.now();
+  const frame = () => { if (dead) return; c.setTransform(2, 0, 0, 2, 0, 0); paintIntroArt(c, a, size, (performance.now() - t0) / 1000); if (!reducedMotion()) raf = requestAnimationFrame(frame); else if (!late) { late = true; setTimeout(frame, D.dramatic); } };   // reduced motion: one late repaint once pictures are in
   frame();
   return { el: cv, stop() { dead = true; cancelAnimationFrame(raf); } };
 }

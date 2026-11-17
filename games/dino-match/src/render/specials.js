@@ -1,3 +1,4 @@
+import { aiUrl } from '../ui/kitart.js';
 // Special pieces drawn as simple code overlays, plus their blast effects. Presentation only: the rules live in core/specials.js.
 // No durations here: effect life and timing come from motion.js recipes (passed in as fx.life).
 import { LOOP, EASE } from './motion.js';
@@ -57,9 +58,20 @@ export function drawSpecial(c, p, r, now, reduced) {
 }
 
 // Blast effects: fx = { kind, o, x, y, cells:[{x,y}], t0, life, big, cs }. Drawn while `now` is inside [t0, t0 + life].
+// the Pickaxe booster: the kit pickaxe swings down onto the cell (art/ui/kit/pickaxe.webp; a code pick if missing)
+let pickImg = null;
+function drawPickStrike(c, f, t) {
+  if (pickImg === null) { const u = aiUrl('pickaxe'); pickImg = u ? Object.assign(new Image(), { src: u }) : false; }
+  const S = f.cs * 1.6, strike = -1.39, raised = strike + 1.05, a = t < 0.5 ? strike + (raised - strike) * EASE.out(Math.min(1, t / 0.15)) : raised + (strike - raised) * EASE.in(Math.min(1, (t - 0.5) / 0.4));
+  c.save(); c.globalAlpha = t > 0.92 ? (1 - t) / 0.08 : 1; c.translate(f.x + S * 0.5, f.y + S * 0.5); c.rotate(a);
+  if (pickImg && pickImg.complete && pickImg.naturalWidth) { c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 6; c.shadowOffsetY = 3; c.drawImage(pickImg, -0.2 * S, -0.88 * S, S, S); }
+  else { c.rotate(0.97); c.strokeStyle = '#7A5A3A'; c.lineWidth = 4; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -S * 0.7); c.stroke(); c.strokeStyle = '#C8CFD8'; c.lineWidth = 5; c.beginPath(); c.moveTo(-S * 0.3, -S * 0.62); c.quadraticCurveTo(0, -S * 0.8, S * 0.3, -S * 0.62); c.stroke(); }
+  c.restore();
+}
 export function drawFx(c, list, now) {
   for (const f of list) {
     const t = (now - f.t0) / f.life; if (t < 0 || t > 1) continue;
+    if (f.kind === 'pickstrike') { drawPickStrike(c, f, t); continue; }
     const e = EASE.out(t), fade = 1 - t * t, cs = f.cs;
     c.save(); c.globalAlpha = Math.max(0, fade); c.lineCap = 'round';
     if (f.kind === 'firecracker' || f.kind === 'combo' && f.cells.length) {

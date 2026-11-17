@@ -5,7 +5,7 @@ import { glyph } from '../ui/glyphs.js';
 import { INTROS, COMBO_INTROS, seenIntros } from '../data/intros.js';
 import { artBox } from './intro.js';
 
-const GROUPS = [['objective', 'Goals'], ['block', 'Dig blocks'], ['special', 'Special pieces'], ['obstacle', 'Obstacles'], ['booster', 'Boosters'], ['event', 'Good to know']];
+const GROUPS = [['objective', 'Goals'], ['block', 'Dig blocks'], ['special', 'Special pieces'], ['obstacle', 'Obstacles'], ['booster', 'Boosters'], ['tier', 'Hard levels'], ['event', 'Good to know']];
 
 // all = true (debug page) shows everything unlocked.
 export function mountHowTo(root, { profile, onBack, all = false }) {

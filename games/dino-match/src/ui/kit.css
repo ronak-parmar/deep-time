@@ -163,3 +163,58 @@ html.ai-kit .intro--soft .intro__card { --w: 280px; }
 html.ai-kit .kit-panel.intro__card { position: absolute; }
 html.ai-kit .intro--center .kit-panel.intro__card { position: relative; }
 html.ai-kit .intro__card .intro__bart { width: 112px; height: 112px; }
+
+/* ---- dig site (docs/15): the slab image, full width, with a warm dock under it ---- */
+.dig { padding: 0 0 10px; gap: 0; background: radial-gradient(ellipse at 50% 28%, #6A4A24 0, #3A2410 48%, #190F06 100%); }
+.dig > * { position: relative; z-index: 1; }
+.dig__top { padding: 6px 10px 4px; }
+.dig__topright { display: flex; align-items: center; gap: 6px; }
+html.ai-kit .dig .icon-btn { --bh: 40px; width: 56px; }
+.dig__stage { flex: 1; min-height: 0; display: flex; align-items: flex-start; justify-content: center; }
+.dig__stage .dig__canvas { width: 328px; height: 170px; align-self: center; order: 0; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .5)); }
+.dig--slab .dig__stage { align-items: stretch; }
+.dig--slab .dig__stage .dig__canvas { position: static; width: 100%; height: 100%; filter: none; }
+.dig--slab { padding: 0 0 10px; background: radial-gradient(ellipse at 50% 28%, #6A4A24 0, #3A2410 48%, #190F06 100%); }
+.dig--slab .dig__top { background: none; padding: 6px 10px 4px; }
+.dig__dock2 { margin: 0 10px; padding: 10px 14px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; border-radius: 22px; text-align: center;
+  background: linear-gradient(180deg, rgba(74, 46, 20, .86), rgba(34, 20, 8, .94)); box-shadow: inset 0 0 0 2px #C98A1E, inset 0 0 0 4px #5A3510, 0 6px 12px rgba(0, 0, 0, .5); }
+.dig__dock2 .title { font-size: 22px; line-height: 26px; margin: 0; }
+.dig__dock2 .caption, .dig__dock2 .body-small { margin: 0; color: #F1DDB0; text-shadow: 0 1px 0 rgba(30, 14, 4, .8); }
+.dig__dock2 .dig__progress { width: 100%; }
+.dig__dock2 .kit-btn { width: 100%; }
+.dig__dock2 .dig__hint { font-size: 12px; line-height: 15px; }
+.dig--slab .dig__wait { margin: 0 10px 6px; }
+html.ai-kit { --bh: 56px; }
+
+/* ---- museum (docs/15): warm umber, slab pictures on plates, stone-slab era headers ---- */
+.museum { background: radial-gradient(ellipse at 50% 0%, #5A3C1C 0, #2C1A0A 60%, #170E05 100%); padding: 0 12px 0; gap: 4px; }
+.museum .museum__body { padding-bottom: 18px; gap: 14px; }
+.museum__erahead { --bh: 50px; box-sizing: border-box; min-height: var(--bh); margin: 0 0 8px; padding: 2px 0 6px; display: flex; align-items: center; justify-content: space-between; background-size: 100% 100%; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .45)); color: var(--ai-ink, #3A2008); }
+html.ai-kit .museum__erahead { border: solid transparent; border-width: 0 calc(var(--bh) * .6); border-image: var(--ai-btn-stone) 0 20.9% 0 20.9% fill / 0 calc(var(--bh) * .6) 0 calc(var(--bh) * .6) stretch; background: none; }
+html.ai-kit .museum__erahead .heading { color: var(--ai-ink); font-size: 18px; text-shadow: 1px 0 0 var(--ai-halo), -1px 0 0 var(--ai-halo), 0 1px 0 var(--ai-halo), 0 -1px 0 var(--ai-halo); }
+html.ai-kit .museum__erahead .caption { color: var(--ai-ink-soft); text-shadow: 0 1px 0 var(--ai-halo); }
+.museum__card { align-self: start; padding: 6px 6px 8px; border: 0; border-radius: 16px; background: linear-gradient(180deg, rgba(92, 58, 26, .9), rgba(40, 24, 10, .95)); box-shadow: inset 0 0 0 2px #B9801E, inset 0 0 0 3.5px #4A2C0C, 0 4px 8px rgba(0, 0, 0, .45); color: #FFF1D0; transition: transform var(--m-quick) var(--m-ease-pop); }
+.museum__card:active:not(:disabled) { transform: scale(.97); }
+.museum__card--digging { box-shadow: inset 0 0 0 2px #FFD36B, inset 0 0 0 3.5px #4A2C0C, 0 0 12px rgba(255, 200, 80, .45), 0 4px 8px rgba(0, 0, 0, .45); }
+.museum__card--locked { opacity: 1; }
+.museum__card .museum__thumb { width: 100%; height: auto; border-radius: 10px; background: radial-gradient(circle at 50% 40%, #4C3418, #1E1208); }
+.museum__card .museum__name { color: #FFE08A; text-shadow: 0 2px 0 #4A2A0A, 1px 0 0 #4A2A0A, -1px 0 0 #4A2A0A; padding: 0 4px; }
+.museum__card .museum__sub { color: #E8CFA0; padding: 0 4px; }
+.museum__big--slab { background: none; box-shadow: none; aspect-ratio: auto; }
+html.ai-kit .dig__dock2 .kit-btn { font-size: 16px; white-space: nowrap; --bh: 52px; }
+html.ai-kit .credits__panel { --w: 340px; justify-content: flex-start; gap: 8px; }
+.credits__body { display: flex; flex-direction: column; gap: 6px; text-align: left; max-height: 250px; overflow-y: auto; width: 100%; }
+.credits__body p { margin: 0; }
+.credits { z-index: 30; }
+
+/* ---- job 4: outside screens in the painted language ------------------------------------------------------------- */
+/* section ribbons in How to play: a stone slab strip (same as the museum era bars) instead of the old wood sign */
+html.ai-kit .howto__sec .kit-ribbon { --bh: 50px; box-sizing: border-box; width: 72%; min-width: 190px; min-height: var(--bh); margin: 4px auto 10px; padding: 0 0 4px; border: solid transparent; border-width: 0 calc(var(--bh) * .6);
+  border-image: var(--ai-btn-stone) 0 20.9% 0 20.9% fill / 0 calc(var(--bh) * .6) 0 calc(var(--bh) * .6) stretch; background: none; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .45)); display: flex; align-items: center; justify-content: center; }
+html.ai-kit .howto__sec .kit-ribbon__t { color: var(--ai-ink); font-size: 19px; text-shadow: 1px 0 0 var(--ai-halo), -1px 0 0 var(--ai-halo), 0 1px 0 var(--ai-halo), 0 -1px 0 var(--ai-halo); }
+/* tall stone cards: nine-slice, so the vine caps keep their shape and only the plain stone in the middle stretches */
+html.ai-kit .kit-slot { --bh: 80px; padding: 2px 0; border-width: calc(var(--bh) * .35) calc(var(--bh) * .6); border-image: var(--ai-btn-stone) 35% 20.9% 35% 20.9% fill / calc(var(--bh) * .35) calc(var(--bh) * .6) calc(var(--bh) * .35) calc(var(--bh) * .6) stretch; min-height: calc(var(--bh) + 8px); }
+/* museum: three across */
+.museum__grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.museum__card .museum__name { font-size: 14px; line-height: 1.15; }
+.museum__card .museum__sub { font-size: 11px; line-height: 1.2; }

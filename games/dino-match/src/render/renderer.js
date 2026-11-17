@@ -6,6 +6,8 @@ import { drawSpecial } from './specials.js';
 import { drawObstacle, drawArtefact, drawCracks } from './obstacles.js';
 import { drawFossilArt } from './fossilArt.js';
 import { fossilIdForLevel } from '../core/eras.js';
+import { tierOf } from '../core/difficulty.js';
+import { HUD_LAYOUT } from './artManifest.js';
 import { fossilById } from '../core/fossils.js';
 import { reducedMotion } from '../ui/motion.js';
 import { eraPalette } from '../ui/tokens.js';
@@ -23,6 +25,12 @@ import { CONFIG } from '../core/config.js';
 const W = 360, H = 640, TEXTS = 8;
 const FONTS = {};
 const font = (s) => FONTS[s] || (FONTS[s] = `800 ${s}px Nunito, system-ui, sans-serif`);
+
+// difficulty tier tint (docs/14): crimson for hard, violet for super hard
+const TIER_TINT = {
+  hard: { dim: 'rgba(30,4,4,.22)', glow: 'rgba(230,50,40,.85)', rim: 'rgba(240,96,80,.8)' },
+  'super-hard': { dim: 'rgba(18,4,34,.28)', glow: 'rgba(170,80,255,.9)', rim: 'rgba(196,140,255,.85)' }
+};
 
 export class Renderer {
   constructor(canvas) {
@@ -56,6 +64,7 @@ export class Renderer {
   }
   startLevel(state) {
     this.state = state;
+    this.tier = state.level ? tierOf(state.level) : 'normal';   // hard levels: tinted frame, HUD plates and a darker background (docs/14)
     const { w } = state;
     this.cs = Math.min(50, Math.floor(320 / w));
     this.hasDig = state.dirtTotal > 0;       // levels 1-5 have no plaque: the board and the Target panel only
@@ -225,7 +234,7 @@ export class Renderer {
   async animBooster(ev, hooks) {
     const R = RECIPES.boosterUse; cue('boosterUse');
     const at = (i) => [this.cx(i), this.cy(i)], sp = (i, col, n = 6) => { const [x, y] = at(i); this.sparks(x, y, col, n); };
-    if (ev.id === 'pick') { const [x, y] = at(ev.target); this.pool.emit('dust', x, y, '#B89A6A', 8, 1.8); this.pool.emit('shard', x, y, '#5A4630', 5, 3); sp(ev.target, '#FFE9A8', 8); this.doShake(R.shake); await this.wait(D.quick); }
+    if (ev.id === 'pick') { const [x, y] = at(ev.target); if (!reducedMotion()) { const life = dur(D.base) * 1.4; this.fx.push({ kind: 'pickstrike', x, y, cells: [], t0: this.vnow, life, cs: this.cs }); await this.wait(D.base * 1.4 * 0.88); } this.pool.emit('dust', x, y, '#B89A6A', 8, 1.8); this.pool.emit('shard', x, y, '#5A4630', 5, 3); sp(ev.target, '#FFE9A8', 8); this.doShake(R.shake); await this.wait(D.quick); }
     else if (ev.id === 'rockslide') {
       const w = this.state.w, y = Math.floor(ev.target / w);
       for (let x = 0; x < w; x++) { const i = y * w + x, [px, py] = at(i); this.pool.emit('dust', px, py, '#B89A6A', 6, 2); this.pool.emit('shard', px, py, '#7A6140', 3, 3); if (x % 2 === 0) this.doShake('tiny'); await this.wait(R.stagger * 0.6); }
@@ -386,6 +395,13 @@ export class Renderer {
     if (this.art) { drawBackdrop(c, this.art, this.theme, now, reducedMotion()); if (!reducedMotion() && this.theme.paint?.ambient) drawAmbient(c, { ...this.theme, ambient: this.theme.paint.ambient }, { x: 0, y: 0, w: W, h: H }, now); }
     else if (this.scenery) { c.drawImage(this.scenery.image, 0, 0, W, H); drawSceneryLive(c, this.scenery, now, reducedMotion()); }
     if (!this.state) return;
+    const tint = TIER_TINT[this.tier];
+    if (tint) { c.fillStyle = tint.dim; c.fillRect(0, 0, W, H); }   // background slightly darker
+    if (tint) {   // HUD plates glow in the tier colour: soft shapes behind the plates (the plates themselves stay as painted)
+      c.save(); c.shadowColor = tint.glow; c.shadowBlur = 22; c.fillStyle = tint.rim;
+      for (const k of ['level', 'target']) { const q = HUD_LAYOUT[k]; this.rr(c, q.x + 2, q.y + 2, q.w - 4, q.h - 4, 12); c.fill(); c.fill(); }
+      const m = HUD_LAYOUT.moves; c.beginPath(); c.arc(m.x + m.w / 2, m.y + m.h / 2, m.w / 2 - 1, 0, 6.283); c.fill(); c.fill(); c.restore();
+    }
     if (hudPainted()) drawHud(c); else drawHudPlate(c, this.theme);
     document.body.classList.toggle('has-hud-art', hudPainted()); document.body.classList.toggle('has-booster-art', boostersPainted());
     c.save();
@@ -456,7 +472,12 @@ export class Renderer {
     const { w, h } = this.state, cs = this.cs, x0 = this.boardX, y0 = this.boardY;
     const fx = x0 - FRAME_T - 2, fy = y0 - FRAME_T - 2, fw = w * cs + 2 * FRAME_T + 4, fh = h * cs + 2 * FRAME_T + 4;
     const tiles = slotsReady('tile-cream');
-    if (tiles) { c.fillStyle = 'rgba(38,26,16,.9)'; this.rr(c, x0 - 6, y0 - 6, w * cs + 12, h * cs + 12, 10); c.fill(); c.strokeStyle = 'rgba(214,190,140,.55)'; c.lineWidth = 2; c.stroke(); }
+    const tint = TIER_TINT[this.tier];
+    if (tint) {   // a soft glow in the tier colour around the board frame; the board itself is unchanged
+      const k = reducedMotion() ? 1 : 0.85 + 0.15 * Math.sin(now / LOOP.hint);
+      c.save(); c.shadowColor = tint.glow; c.shadowBlur = 22 * k; c.strokeStyle = tint.rim; c.lineWidth = 3; this.rr(c, x0 - 8, y0 - 8, w * cs + 16, h * cs + 16, 12); c.stroke(); c.restore();
+    }
+    if (tiles) { c.fillStyle = 'rgba(38,26,16,.9)'; this.rr(c, x0 - 6, y0 - 6, w * cs + 12, h * cs + 12, 10); c.fill(); c.strokeStyle = tint ? tint.rim : 'rgba(214,190,140,.55)'; c.lineWidth = 2; c.stroke(); }
     else { c.fillStyle = rgba(this.theme.interior, 0.82); this.rr(c, x0 - 2, y0 - 2, w * cs + 4, h * cs + 4, 6); c.fill(); }
     for (let i = 0; i < w * h; i++) {
       if (tiles) { drawSlot(c, 'tile-cream', x0 + (i % w) * cs, y0 + Math.floor(i / w) * cs, cs, cs, (i * 7 + Math.floor(i / w)) % 4); continue; }

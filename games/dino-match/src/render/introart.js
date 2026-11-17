@@ -3,8 +3,8 @@ import { drawObstacle, drawArtefact } from './obstacles.js';
 import { drawSpecial } from './specials.js';
 import { drawGemShape } from './gems.js';
 import { reducedMotion } from '../ui/motion.js';
+import { paintObjective } from '../ui/objectives.js';
 
-const BLOCK = { tar: ['#5A4230', '#2F2118'], sand: ['#C9A064', '#8A6338'], stone: ['#9A9BA0', '#5C5D63'] };
 const HITS = { tar: 1, sand: 2, stone: 3 };
 
 // ---- boosters: a little 4x4 board that plays the effect, looping (docs/16). size = the square it is painted in. ---------------------
@@ -67,20 +67,30 @@ export function paintIntroArt(c, art, size, t) {
   switch (art.kind) {
     case 'obstacle': { c.translate(-m, -m); drawObstacle(c, { k: art.key, hp: art.key === 'lava' ? 3 : 2, max: art.key === 'lava' ? 3 : 2, heat: (t * 1.2) % 3 }, m, m, size * 0.96, 0, t * 1000, red); break; }
     case 'artefact': drawArtefact(c, r * 1.2, t * 1000, red); break;
-    case 'gem': drawGemShape(c, art.key, r * 1.2); break;
+    case 'gem': { const b = size * 0.8; c.translate(-b / 2, -b / 2); paintObjective(c, { kind: 'gem', key: art.key }, b, undefined, false); break; }   // the painted gem the board uses
     case 'special': {
       const k = art.key;
       if (k !== 'rainbow') drawGemShape(c, 0, r * 1.2);
       drawSpecial(c, { k, o: 'h', c: k === 'rainbow' ? -1 : 0 }, r * 1.2, t * 1000, red);
       break;
     }
-    case 'block': {   // a plaque block with its hit points as pips
-      const [a, b] = BLOCK[art.key], g = c.createLinearGradient(0, -r, 0, r); g.addColorStop(0, a); g.addColorStop(1, b);
-      c.fillStyle = g; c.beginPath(); c.roundRect(-r, -r, r * 2, r * 2, r * 0.25); c.fill(); c.lineWidth = 2; c.strokeStyle = 'rgba(0,0,0,.55)'; c.stroke();
-      c.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < HITS[art.key]; i++) { c.beginPath(); c.arc((i - (HITS[art.key] - 1) / 2) * r * 0.5, 0, r * 0.14, 0, 6.283); c.fill(); }
+    case 'block': {   // the painted plaque tile the board uses, with its hit points as pips
+      const b = size * 0.74; c.save(); c.translate(-b / 2, -b / 2); paintObjective(c, { kind: 'block', key: art.key, badge: art.badge, pick: art.pick }, b, undefined, false); c.restore();
+      if (art.pick) break;   // the dig goal: tile, gem badge and pickaxe, as in the HUD
+      const n = HITS[art.key] || 1; c.fillStyle = '#FFE9A8'; c.strokeStyle = 'rgba(40,20,0,.8)'; c.lineWidth = 1.5;
+      for (let i = 0; i < n; i++) { c.beginPath(); c.arc((i - (n - 1) / 2) * r * 0.42, b * 0.36, r * 0.12, 0, 6.283); c.fill(); c.stroke(); }
       break;
     }
     case 'booster': boosterBoard(c, art.key, size, t); break;
+    case 'tier': {   // a level coin in the tier colour with a flame badge (two for super hard), gently pulsing
+      const sup = art.key === 'super-hard', k = 1 + (red ? 0 : 0.04 * Math.sin(t * 4)), R = r * 1.25 * k;
+      const g = c.createRadialGradient(-R * 0.3, -R * 0.35, 1, 0, 0, R); g.addColorStop(0, sup ? '#E6C8FF' : '#FFB4A0'); g.addColorStop(0.55, sup ? '#9A4BE0' : '#D8392B'); g.addColorStop(1, sup ? '#4E1A86' : '#7A1410');
+      c.fillStyle = 'rgba(0,0,0,.35)'; c.beginPath(); c.arc(0, R * 0.12, R * 1.05, 0, 6.283); c.fill();
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, R, 0, 6.283); c.fill(); c.lineWidth = R * 0.14; c.strokeStyle = sup ? '#2E0E52' : '#4A0C08'; c.stroke();
+      const flame = (x, y, s) => { c.save(); c.translate(x, y); c.scale(s, s); c.beginPath(); c.moveTo(0, -1); c.bezierCurveTo(0.7, -0.4, 0.6, 0.6, 0, 0.8); c.bezierCurveTo(-0.6, 0.6, -0.7, -0.2, -0.15, -0.45); c.bezierCurveTo(-0.1, -0.1, 0.2, -0.2, 0, -1); c.fillStyle = '#FFD24A'; c.fill(); c.lineWidth = 0.12; c.strokeStyle = '#7A2A08'; c.stroke(); c.restore(); };
+      if (sup) { flame(-R * 0.32, 0, R * 0.42); flame(R * 0.32, 0, R * 0.42); } else flame(0, 0, R * 0.55);
+      break;
+    }
     default: break;
   }
   c.restore();

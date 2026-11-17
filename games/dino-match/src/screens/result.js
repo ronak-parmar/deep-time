@@ -1,14 +1,23 @@
 import { h } from '../ui/dom.js';
+import { Ribbon } from '../ui/kit.js';
 import { Button, Stars, RewardButton, watchAd } from '../ui/components.js';
-import { eraOf } from '../core/eras.js';
+import { eraOf, fossilIdForLevel } from '../core/eras.js';
+import { fossilById } from '../core/fossils.js';
 import { CONFIG } from '../core/config.js';
 import { roll, RECIPES } from '../render/motion.js';
 import { cue } from '../render/sound.js';
 import { targetProgress, targetLabel } from '../core/targets.js';
+import { objectiveIcon } from '../ui/objectives.js';
+import { glyph } from '../ui/glyphs.js';
 
 // Result: one template, win or lose, one primary action each.
 // win:  title, stars, score, coins + pickaxe lines, rewarded double-coins (mock), Next level, Dig site, Home
 // lose: title, dug count, life lost, Try again (or Wait for lives when none are left), Dig site, Home
+// one goal: the board's own art in a small well, a tick when done, and how far it got
+const goalRow = (t) => h('li', { class: 'result__target' + (t.done ? ' result__target--done' : ''), 'data-target': t.type, 'aria-label': `${targetLabel(t)}: ${Math.min(t.got, t.n)} of ${t.n}` },
+  h('span', { class: 'result__well' }, objectiveIcon(t, 26), t.done ? h('span', { class: 'result__tick' }, glyph('check', 11)) : null),
+  h('span', { class: 'body-small dt-num' }, `${Math.min(t.got, t.n)}/${t.n}`));
+
 export function mountResult(root, p) {
   const { won, level, state, stars, rewards, lives, ads, onNext, onRetry, onHome, onDig, onDouble, onWait } = p;
   const era = eraOf(level.level);
@@ -27,18 +36,19 @@ export function mountResult(root, p) {
   const outOfLives = !won && lives <= 0;
   const card = h('section', { class: 'dt-result', 'aria-label': won ? 'Level won' : 'Level lost' },
     h('div', { class: 'dt-result__head' },
-      h('h2', { class: 'display', id: 'result-title' }, won ? (state.hasDig ? 'Fossil found!' : 'Level complete!') : 'Out of moves'),
+      Ribbon(won ? (state.hasDig ? 'Fossil found!' : 'Level complete!') : 'Out of moves', 'result-title'),
       won ? Stars(stars) : null,
       h('p', { class: 'title dt-num dt-result__score' }, state.score.toLocaleString('en-US')),
       won
         ? h('div', { class: 'result__rows' },
-            h('p', { class: 'body-small dim' }, state.hasDig ? `${era.fossil} uncovered, level ${level.level}` : `Level ${level.level} complete`),
+            h('p', { class: 'body-small dim' }, state.hasDig ? `${(fossilById(fossilIdForLevel(level.level)) || { name: era.fossil }).name} part uncovered, level ${level.level}` : `Level ${level.level} complete`),
+            h('ul', { class: 'result__goals result__goals--won', 'aria-label': 'Goals done' }, ...targetProgress(state).map((t) => goalRow({ ...t, got: t.n, done: true }))),
             coinsLine,
             rewards.pickaxes > 0
               ? h('p', { class: 'body-small result__pick dt-num', id: 'pick-line' }, `+${rewards.pickaxes} pickaxe`)
               : h('p', { class: 'body-small dim', id: 'pick-line' }, 'Replay: no pickaxe this time'))
         : h('div', { class: 'result__rows' },
-            ...targetProgress(state).map((t) => h('p', { class: 'body-small dim dt-num result__target' + (t.done ? ' result__target--done' : ''), 'data-target': t.type }, `${targetLabel(t)}: ${t.got} of ${t.n}`)),
+            h('ul', { class: 'result__goals', 'aria-label': 'Goals' }, ...targetProgress(state).map(goalRow)),
             h('p', { class: 'body-small result__life dt-num', id: 'life-line' }, `Lost 1 life. ${lives} of ${CONFIG.lives.max} left`))),
     reward ? h('div', { class: 'dt-result__offer' }, reward) : null,
     h('div', { class: 'dt-result__actions' },

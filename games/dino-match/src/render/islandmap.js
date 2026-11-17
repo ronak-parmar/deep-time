@@ -9,6 +9,8 @@ import { themeFor } from './eraTheme.js';
 import { rng01, mix, shade, rgba, clamp } from './util.js';
 import { drawFossilArt } from './fossilArt.js';
 import { peek, loadEra } from './art.js';
+import { nodesFor, GROUND } from '../data/islandNodes.js';
+import { artOf } from './islandart.js';
 
 export const W = 360;
 export const NODES_PER_FOSSIL = 2;                    // one node per 25 levels
@@ -23,49 +25,71 @@ const catmull = (p0, p1, p2, p3, t) => {
 };
 
 // ---- layout (pure) -----------------------------------------------------------------------------
-export function buildLayout() {
-  const heights = ERAS.map((e) => islandHeight(e.fossils.length));
-  const H = TOP_PAD + BOTTOM_PAD + heights.reduce((a, b) => a + b, 0) + GAP * (ERAS.length - 1);
+export const ISLAND_W = 346, STEP_K = 0.78, ART_TOP_PAD = 300;
+// art = Map(eraId -> { w, h }) of the island pictures that exist (render/islandart.js). An era with a picture is laid out from
+// the picture (its nodes come from data/islandNodes.js); the others keep the code-drawn island.
+export function buildLayout(art = new Map()) {
+  const info = ERAS.map((e) => {
+    const a = art.get(e.id), hI = islandHeight(e.fossils.length);
+    if (a) { const ah = ISLAND_W * a.h / a.w; return { art: a, h: ah, step: ah * STEP_K }; }
+    return { art: null, h: hI, step: hI + GAP };
+  });
+  const topPad = art.size ? ART_TOP_PAD : TOP_PAD;
+  const H = topPad + BOTTOM_PAD + info.slice(0, -1).reduce((s, q) => s + q.step, 0) + info.at(-1).h;
   const islands = [], nodes = [];
   let bottom = H - BOTTOM_PAD;
   ERAS.forEach((era, i) => {
-    const hI = heights[i], top = bottom - hI, rx = 146, ry = hI / 2, cx = 180 + (i % 2 ? 10 : -10), cy = top + ry;
-    const rnd = rng01(1000 + i * 77);
-    const isl = { index: i, era: era.id, cx, cy, rx, ry, top, bottom, h: hI, lobes: [], nodes: [], fossils: [] };
-    // nodes wind up the island
-    const N = era.fossils.length * NODES_PER_FOSSIL;
-    for (let k = 0; k < N; k++) {
-      const t = N === 1 ? 0.5 : k / (N - 1), y = bottom - 0.14 * hI - t * 0.72 * hI;
-      const x = cx + Math.sin(t * N * 0.62 + i * 1.7) * 52;
+    const inf = info[i], hI = inf.h, top = bottom - hI, N = era.fossils.length * NODES_PER_FOSSIL;
+    const addNode = (k, x, y) => {
       const fi = Math.floor(k / NODES_PER_FOSSIL), level = era.start + fi * CONFIG.fossils.levelsPerFossil + (k % NODES_PER_FOSSIL) * NODE_STEP;
       const node = { id: nodes.length, island: i, k, x, y, level, fossil: era.fossils[fi] };
-      nodes.push(node); isl.nodes.push(node);
+      nodes.push(node); return node;
+    };
+    if (inf.art) {
+      const cx = 180 + (i % 2 ? 8 : -8), ax = cx - ISLAND_W / 2;
+      const isl = { index: i, era: era.id, cx, cy: top + GROUND.cy * hI, rx: GROUND.rx * ISLAND_W, ry: GROUND.ry * hI, top, bottom, h: hI, lobes: [], nodes: [], fossils: [],
+        art: { x: ax, y: top, w: ISLAND_W, h: hI }, plaque: { x: cx, y: top + 0.05 * hI } };
+      nodesFor(era.id, N, hI / ISLAND_W).forEach(([u, v], k) => isl.nodes.push(addNode(k, ax + u * ISLAND_W, top + v * hI)));
+      isl.lobes.push({ x: ax + GROUND.cx * ISLAND_W, y: top + GROUND.cy * hI, rx: GROUND.rx * ISLAND_W * 1.08, ry: GROUND.ry * hI * 1.1 });
+      isl.box = { x0: isl.lobes[0].x - isl.lobes[0].rx, x1: isl.lobes[0].x + isl.lobes[0].rx, y0: isl.lobes[0].y - isl.lobes[0].ry, y1: isl.lobes[0].y + isl.lobes[0].ry };
+      islands.push(isl);
+    } else {
+      const rx = 146, ry = hI / 2, cx = 180 + (i % 2 ? 10 : -10), cy = top + ry, rnd = rng01(1000 + i * 77);
+      const isl = { index: i, era: era.id, cx, cy, rx, ry, top, bottom, h: hI, lobes: [], nodes: [], fossils: [], art: null };
+      for (let k = 0; k < N; k++) {                          // nodes wind up the island
+        const t = N === 1 ? 0.5 : k / (N - 1), y = bottom - 0.14 * hI - t * 0.72 * hI;
+        isl.nodes.push(addNode(k, cx + Math.sin(t * N * 0.62 + i * 1.7) * 52, y));
+      }
+      // the island is a chain of lobes along the trail (one per fossil) with a cap at each end, so it reads as a winding island
+      const first = isl.nodes[0], last = isl.nodes.at(-1);
+      isl.lobes.push({ x: first.x, y: first.y + 24, rx: 84, ry: 48 });
+      era.fossils.forEach((fid, fi) => {
+        const a = isl.nodes[fi * NODES_PER_FOSSIL], b = isl.nodes[fi * NODES_PER_FOSSIL + NODES_PER_FOSSIL - 1];
+        const my = (a.y + b.y) / 2, mx = (a.x + b.x) / 2, side = mx > cx ? -1 : 1;
+        isl.lobes.push({ x: mx + side * 10, y: my, rx: 96 + rnd() * 12, ry: 56 + rnd() * 8 });
+        isl.fossils.push({ id: fid, x: clamp(mx + side * 46, 52, 308), y: my + 2, w: 76, h: 42 });
+      });
+      isl.lobes.push({ x: last.x, y: last.y - 24, rx: 84, ry: 48 });
+      for (let k = 0, nl = isl.lobes.length - 1; k < nl; k++) { const p = isl.lobes[k], q = isl.lobes[k + 1]; isl.lobes.push({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2, rx: 76, ry: 44 }); }
+      isl.box = { x0: Math.min(...isl.lobes.map((l) => l.x - l.rx)), x1: Math.max(...isl.lobes.map((l) => l.x + l.rx)), y0: Math.min(...isl.lobes.map((l) => l.y - l.ry)), y1: Math.max(...isl.lobes.map((l) => l.y + l.ry)) };
+      isl.plaque = { x: cx, y: isl.box.y0 - 16 };
+      islands.push(isl);
     }
-    // the island is a chain of lobes along the trail (one per fossil) with a cap at each end, so it reads as a winding island
-    const first = isl.nodes[0], last = isl.nodes.at(-1);
-    isl.lobes.push({ x: first.x, y: first.y + 24, rx: 84, ry: 48 });
-    era.fossils.forEach((fid, fi) => {
-      const a = isl.nodes[fi * NODES_PER_FOSSIL], b = isl.nodes[fi * NODES_PER_FOSSIL + NODES_PER_FOSSIL - 1];
-      const my = (a.y + b.y) / 2, mx = (a.x + b.x) / 2, side = mx > cx ? -1 : 1;
-      isl.lobes.push({ x: mx + side * 10, y: my, rx: 96 + rnd() * 12, ry: 56 + rnd() * 8 });
-      isl.fossils.push({ id: fid, x: clamp(mx + side * 46, 52, 308), y: my + 2, w: 76, h: 42 });
-    });
-    isl.lobes.push({ x: last.x, y: last.y - 24, rx: 84, ry: 48 });
-    for (let k = 0, nl = isl.lobes.length - 1; k < nl; k++) { const p = isl.lobes[k], q = isl.lobes[k + 1]; isl.lobes.push({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2, rx: 76, ry: 44 }); }
-    isl.box = { x0: Math.min(...isl.lobes.map((l) => l.x - l.rx)), x1: Math.max(...isl.lobes.map((l) => l.x + l.rx)), y0: Math.min(...isl.lobes.map((l) => l.y - l.ry)), y1: Math.max(...isl.lobes.map((l) => l.y + l.ry)) };
-    islands.push(isl);
-    bottom = top - GAP;
+    const il = islands.at(-1); il.minGap = 1e9;
+    for (let a = 0; a < il.nodes.length; a++) for (let b = a + 1; b < il.nodes.length; b++) il.minGap = Math.min(il.minGap, Math.hypot(il.nodes[a].x - il.nodes[b].x, il.nodes[a].y - il.nodes[b].y));
+    bottom -= inf.step;
   });
   // the trail: a smooth spline through every node, in order; segments between islands are bridges
   const pts = [[nodes[0].x, nodes[0].y + 40], ...nodes.map((n) => [n.x, n.y]), [nodes.at(-1).x, nodes.at(-1).y - 40]];
   const trail = [];
   for (let s = 1; s < pts.length - 2; s++) {
     const bridge = nodes[s - 1].island !== nodes[s].island;
-    for (let u = 0; u < 10; u++) trail.push({ p: catmull(pts[s - 1], pts[s], pts[s + 1], pts[s + 2], u / 10), bridge });
+    for (let u = 0; u < 10; u++) trail.push({ p: catmull(pts[s - 1], pts[s], pts[s + 1], pts[s + 2], u / 10), bridge, seg: s - 1, a: nodes[s - 1].island, b: nodes[s].island, u: u / 10 });
   }
-  trail.push({ p: [nodes.at(-1).x, nodes.at(-1).y], bridge: false });
-  return { H, islands, nodes, trail };
+  trail.push({ p: [nodes.at(-1).x, nodes.at(-1).y], bridge: false, seg: nodes.length - 1, a: nodes.at(-1).island, b: nodes.at(-1).island, u: 0 });
+  return { H, topPad, islands, nodes, trail };
 }
+
 
 // where the player is: node index (the node whose 25-level band holds the level)
 export function nodeStates(layout, level) {
@@ -241,80 +265,124 @@ export function renderIsland(layout, isl, state, dpr, textureImg) {
 }
 
 // ---- the painter -------------------------------------------------------------------------------
-export function createMap(layout, { state, dpr = 1, reduced = () => false }) {
-  const bitmaps = new Map(), clouds = [], rnd = rng01(42);
-  for (let i = 0; i < 18; i++) clouds.push({ x: rnd() * 420 - 30, y: rnd() * layout.H, s: 0.7 + rnd() * 1.1, v: 3 + rnd() * 5, a: 0.5 + rnd() * 0.3 });
-  const foam = layout.islands.map((isl) => { const p = new Path2D(); isl.lobes.forEach((l) => { p.moveTo(l.x + l.rx * 1.1, l.y); p.ellipse(l.x, l.y, l.rx * 1.1, l.ry * 1.1, 0, 0, Math.PI * 2); }); return p; });
-  const trailPath = new Path2D(), bridges = [];
-  layout.trail.forEach((t, i) => { if (!i) trailPath.moveTo(t.p[0], t.p[1]); else trailPath.lineTo(t.p[0], t.p[1]); });
-  let seg = null;
-  layout.trail.forEach((t, i) => { if (t.bridge) { (seg ||= []).push(t.p); } else if (seg) { bridges.push(seg); seg = null; } void i; });
-  if (seg) bridges.push(seg);
-  let textures = {};
-  const ensure = async () => {
-    for (const isl of layout.islands) { if (!textures[isl.era]) { const e = await loadEra(isl.era); textures[isl.era] = e?.bg || null; } }
-    bitmaps.clear();
+// Sky: pastel, lavender at the top of the world through blue to a warm pink at the bottom.
+const SKY = [[0, '#B9A8E8'], [0.3, '#93B6F0'], [0.65, '#A4CDF3'], [1, '#EBCBE6']];
+const skyAt = (f) => { f = clamp(f, 0, 1); for (let i = 1; i < SKY.length; i++) if (f <= SKY[i][0]) { const a = SKY[i - 1], b = SKY[i]; return mix(a[1], b[1], (f - a[0]) / (b[0] - a[0])); } return SKY.at(-1)[1]; };
+const PUFFS = [[0, 0, 26], [-26, 7, 18], [24, 8, 20], [-8, -10, 18], [12, -8, 15], [-44, 12, 12], [42, 13, 12]];
+const cloud = (c, x, y, s, a) => {
+  c.fillStyle = `rgba(190,176,232,${a * 0.5})`; PUFFS.forEach(([dx, dy, r]) => { c.beginPath(); c.ellipse(x + dx * s, y + (dy + 7) * s, r * s, r * s * 0.6, 0, 0, Math.PI * 2); c.fill(); });
+  c.fillStyle = `rgba(255,255,255,${a})`; PUFFS.forEach(([dx, dy, r]) => { c.beginPath(); c.ellipse(x + dx * s, y + dy * s, r * s, r * s * 0.62, 0, 0, Math.PI * 2); c.fill(); });
+};
+const mkCanvas = (w, h) => { const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.ceil(w)); cv.height = Math.max(1, Math.ceil(h)); return cv; };
+
+export function createMap(layout, { state, dpr = 1, reduced = () => false, world = false }) {
+  const bitmaps = new Map(), greyArt = new Map(), rnd = rng01(42), states = nodeStates(layout, state.level);
+  const curIdx = states.indexOf('current');
+  // the picture rectangle of an island: its art, or the box of the code-drawn island
+  const rectOf = (isl) => isl.art || { x: isl.box.x0 - 24, y: isl.box.y0 - 30, w: isl.box.x1 - isl.box.x0 + 48, h: isl.box.y1 - isl.box.y0 + CLIFF + 60 };
+  // drifting clouds, behind and in front of each island (code drawn, they move sideways and wrap)
+  const cloudsOf = layout.islands.map((isl, i) => {
+    const r = rng01(900 + i * 13);
+    const mk = (n, front) => Array.from({ length: n }, () => ({ u: r(), v: front ? 0.96 + r() * 0.16 : 0.55 + r() * 0.4, s: front ? 0.8 + r() * 0.6 : 0.7 + r() * 0.7, sp: 1.5 + r() * 2.5, a: front ? 0.9 : 0.7 }));
+    return { back: mk(3, false), front: mk(3, true) };
+  });
+  // trail: glowing dots at an even spacing along the spline (island index pair + blend so they follow the island bob)
+  // world map: the trail joins the island centres (no level nodes); the current island's index plays the role of the current node
+  let trail = layout.trail, curIdx2 = curIdx;
+  if (world) {
+    const cen = layout.islands.map((q) => (q.art ? [q.art.x + q.art.w / 2, q.art.y + q.art.h * 0.5] : [q.cx, q.cy]));
+    trail = [];
+    for (let i = 1; i < cen.length; i++) for (let u = 0; u < 12; u++) { const f = u / 12, a = cen[i - 1], b = cen[i], bend = Math.sin(f * Math.PI) * (i % 2 ? 60 : -60); trail.push({ p: [a[0] + (b[0] - a[0]) * f + bend, a[1] + (b[1] - a[1]) * f], a: i - 1, b: i, u: f, seg: i - 1 }); }
+    trail.push({ p: cen.at(-1), a: cen.length - 1, b: cen.length - 1, u: 0, seg: cen.length - 1 });
+    curIdx2 = layout.islands.findIndex((q) => islandState(q, state.level) === 'current');
+  }
+  const dots = []; { let carry = 0; for (let i = 1; i < trail.length; i++) { const p = trail[i - 1], q = trail[i], d = Math.hypot(q.p[0] - p.p[0], q.p[1] - p.p[1]); let pos = 12 - carry;
+    while (pos <= d) { const f = pos / d; dots.push({ x: p.p[0] + (q.p[0] - p.p[0]) * f, y: p.p[1] + (q.p[1] - p.p[1]) * f, a: p.a, b: p.b, u: p.u + (q.u - p.u) * f * (p.b === q.b ? 1 : 0), seg: p.seg, at: dots.length }); pos += 12; } carry = d - (pos - 12); } }
+  const sprite = (() => {   // one glow dot, drawn many times
+    const R = 9, cv = mkCanvas(R * 2 * dpr, R * 2 * dpr), c = cv.getContext('2d'); c.scale(dpr, dpr);
+    c.fillStyle = rad(c, R, R, 0, R, [[0, 'rgba(255,236,150,.85)'], [0.35, 'rgba(255,214,110,.4)'], [1, 'rgba(255,200,90,0)']]); c.fillRect(0, 0, R * 2, R * 2);
+    c.beginPath(); c.arc(R, R, 2.7, 0, Math.PI * 2); c.fillStyle = '#FFF6D2'; c.fill(); return { cv, R };
+  })();
+  let distant = [];
+  const bobOf = (i, t) => (reduced() ? 0 : Math.sin(t * 0.9 + i * 1.3) * 2.2);
+
+  const buildDistant = () => {
+    distant = [];
+    const have = [...layout.islands].filter((q) => q.art && artOf(q.era));
+    const spots = [[8, 40, 190], [150, 92, 170], [236, 28, 150]];
+    spots.forEach(([x, y, w], k) => {
+      const src = have.length ? artOf(have[(k * 3 + 1) % have.length].era) : null;
+      const h = src ? w * src.h / src.w : w * 0.55, cv = mkCanvas(w * dpr, h * dpr), c = cv.getContext('2d'); c.scale(dpr, dpr);
+      if (src) { c.filter = 'blur(1.2px) saturate(.55) brightness(1.18)'; c.drawImage(src.img, 0, 0, w, h); c.filter = 'none'; }
+      else {   // no pictures at all: a hazy floating rock
+        c.fillStyle = 'rgba(150,165,190,.9)'; c.beginPath(); c.moveTo(w * 0.08, h * 0.45); c.quadraticCurveTo(w * 0.5, h * 0.22, w * 0.92, h * 0.45); c.quadraticCurveTo(w * 0.7, h * 0.95, w * 0.52, h); c.quadraticCurveTo(w * 0.3, h * 0.9, w * 0.08, h * 0.45); c.fill();
+        c.fillStyle = 'rgba(176,196,170,.95)'; c.beginPath(); c.ellipse(w * 0.5, h * 0.44, w * 0.42, h * 0.16, 0, 0, Math.PI * 2); c.fill();
+      }
+      distant.push({ x, y, w, h, cv, k });
+    });
   };
+  const ensure = async () => { bitmaps.clear(); greyArt.clear(); buildDistant(); };
   const bitmapOf = (isl) => {
     if (!bitmaps.has(isl.index)) {
-      const b = renderIsland(layout, isl, state, dpr, textures[isl.era]);
+      const b = renderIsland(layout, isl, state, dpr, null);
       if (islandState(isl, state.level) === 'locked') {       // locked islands: greyed, calmer
-        const g = document.createElement('canvas'); g.width = b.canvas.width; g.height = b.canvas.height; const gc = g.getContext('2d');
+        const g = mkCanvas(b.canvas.width, b.canvas.height), gc = g.getContext('2d');
         gc.filter = 'grayscale(0.8) brightness(0.82) contrast(0.95)'; gc.drawImage(b.canvas, 0, 0); gc.filter = 'none'; b.canvas = g;
       }
       bitmaps.set(isl.index, b);
     }
     return bitmaps.get(isl.index);
   };
-  const waterAt = (wy) => { const f = clamp(1 - wy / layout.H, 0, 1) * (layout.islands.length - 1), i = Math.floor(f), j = Math.min(layout.islands.length - 1, i + 1); return mix(LOOK[layout.islands[i].era].sea, LOOK[layout.islands[j].era].sea, f - i); };
-  const cloud = (c, x, y, s, a) => { c.fillStyle = `rgba(255,255,255,${a})`; [[0, 0, 26], [-26, 7, 18], [24, 8, 20], [-8, -10, 18], [12, -8, 15]].forEach(([dx, dy, r]) => { c.beginPath(); c.ellipse(x + dx * s, y + dy * s, r * s, r * s * 0.62, 0, 0, Math.PI * 2); c.fill(); }); };
+  const artImage = (isl) => {
+    const a = artOf(isl.era); if (!a) return null;
+    if (islandState(isl, state.level) !== 'locked') return a.img;
+    if (!greyArt.has(isl.index)) {
+      const k = Math.min(1, 700 / a.w), g = mkCanvas(a.w * k, a.h * k), gc = g.getContext('2d');
+      gc.filter = 'grayscale(0.85) brightness(0.78) contrast(0.92)'; gc.drawImage(a.img, 0, 0, g.width, g.height); gc.filter = 'none'; greyArt.set(isl.index, g);
+    }
+    return greyArt.get(isl.index);
+  };
+  const drawClouds = (c, isl, list, t, motion) => {
+    const r = rectOf(isl), span = r.w + 200;
+    list.forEach((cl, k) => { const x = r.x - 100 + ((cl.u * span + (motion ? t * cl.sp : 0)) % span), y = r.y + cl.v * r.h + (motion ? Math.sin(t * 0.4 + k + isl.index) * 2 : 0); cloud(c, x, y, cl.s, cl.a); });
+  };
 
   function draw(c, scrollUnits, viewW, viewH, t) {
-    const motion = !reduced(), y0 = scrollUnits, y1 = scrollUnits + viewH;
+    const motion = !reduced(), y0 = scrollUnits, y1 = scrollUnits + viewH, H = layout.H;
     c.save(); c.setTransform(dpr * (viewW / W), 0, 0, dpr * (viewW / W), 0, 0);
-    // sea
-    const top = waterAt(y0), bot = waterAt(y1);
-    c.fillStyle = lin(c, 0, 0, 0, viewH, [[0, shade(top, 0.08)], [1, shade(bot, -0.12)]]); c.fillRect(0, 0, W + 2, viewH + 2);
+    // sky
+    c.fillStyle = lin(c, 0, 0, 0, viewH, [[0, skyAt(y0 / H)], [1, skyAt(y1 / H)]]); c.fillRect(0, 0, W + 2, viewH + 2);
     c.translate(0, -y0);
-    // light ripples and sparkles that scroll with the world
-    c.lineWidth = 1.2;
-    for (let wy = Math.floor(y0 / 38) * 38; wy < y1 + 38; wy += 38) {
-      const r = rng01(Math.floor(wy) * 7 + 3);
-      for (let k = 0; k < 4; k++) { const x = ((r() * 420 + (motion ? t * (4 + k) : 0)) % 400) - 20, w = 14 + r() * 22; c.strokeStyle = `rgba(255,255,255,${0.07 + 0.05 * (k % 2)})`; c.beginPath(); c.moveTo(x, wy + r() * 30); c.quadraticCurveTo(x + w / 2, wy + r() * 30 - 3, x + w, wy + r() * 30); c.stroke(); }
+    // distant misty islands at the top of the world
+    distant.forEach((d) => { const dy = d.y + (motion ? Math.sin(t * 0.35 + d.k * 2) * 3 : 0); if (dy + d.h < y0 || dy > y1) return; c.globalAlpha = 0.42; c.drawImage(d.cv, d.x, dy, d.w, d.h); c.globalAlpha = 1; });
+    if (y0 < layout.topPad) { const g = lin(c, 0, 0, 0, layout.topPad + 40, [[0, 'rgba(232,226,252,.55)'], [1, 'rgba(232,226,252,0)']]); c.fillStyle = g; c.fillRect(0, 0, W, layout.topPad + 40); }
+    // islands, far (top) to near (bottom): clouds behind, the island, clouds in front
+    for (let i = layout.islands.length - 1; i >= 0; i--) {
+      const isl = layout.islands[i], r = rectOf(isl);
+      if (r.y + r.h + 120 < y0 || r.y - 120 > y1) continue;
+      const bob = bobOf(i, t);
+      drawClouds(c, isl, cloudsOf[i].back, t, motion);
+      const img = isl.art ? artImage(isl) : null;
+      if (img) { c.save(); c.translate(0, bob); c.drawImage(img, isl.art.x, isl.art.y, isl.art.w, isl.art.h); c.restore(); }
+      else { const b = bitmapOf(isl); c.save(); c.translate(0, bob); c.drawImage(b.canvas, b.ox, b.oy, b.canvas.width / dpr, b.canvas.height / dpr); c.restore(); }
+      if (islandState(isl, state.level) === 'locked') {   // fog over a locked island
+        const bx = isl.box, mx = (bx.x0 + bx.x1) / 2, my = (bx.y0 + bx.y1) / 2, hw = (bx.x1 - bx.x0) / 2, hh = (bx.y1 - bx.y0) / 2;
+        c.save(); c.translate(mx, my + bob); c.scale(hw * 1.35, hh * 1.3); c.fillStyle = rad(c, 0, 0, 0.05, 1, [[0, 'rgba(222,228,246,.4)'], [0.6, 'rgba(210,218,242,.26)'], [1, 'rgba(210,218,242,0)']]);
+        c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill(); c.restore();
+        for (let k = 0; k < 4; k++) { const px = mx + Math.sin(k * 2.3 + (motion ? t * 0.08 : 0) + isl.index) * hw * 0.8, py = bx.y0 + ((k + 0.5) / 4) * hh * 2 + bob; cloud(c, px, py, 0.9, 0.3); }
+      }
+      drawClouds(c, isl, cloudsOf[i].front, t, motion);
     }
-    // islands
-    layout.islands.forEach((isl, i) => {
-      if (isl.box.y1 + 90 < y0 || isl.box.y0 - 90 > y1) return;
-      const bob = motion ? Math.sin(t * 0.9 + i * 1.3) * 2.4 : 0, lockedI = islandState(isl, state.level) === 'locked';
-      // soft shadow on the water
-      c.save(); c.translate(0, bob * 0.3); ellipse(c, (isl.box.x0 + isl.box.x1) / 2 + 8, isl.box.y1 + CLIFF + 4, (isl.box.x1 - isl.box.x0) * 0.42, 14, 'rgba(0,25,40,.32)'); c.restore();
-      // foam ring around the island, drifting
-      c.save(); c.translate(0, bob * 0.6 + CLIFF * 0.6); c.lineWidth = 5; c.strokeStyle = 'rgba(255,255,255,.18)'; c.stroke(foam[i]);
-      c.lineWidth = 2.4; c.strokeStyle = 'rgba(255,255,255,.55)'; c.setLineDash([16, 11]); c.lineDashOffset = motion ? -t * 9 : 0; c.stroke(foam[i]); c.setLineDash([]); c.restore();
-      const b = bitmapOf(isl); c.save(); c.translate(0, bob); c.drawImage(b.canvas, b.ox, b.oy, b.canvas.width / dpr, b.canvas.height / dpr); c.restore();
-      void lockedI;
-    });
-    // the trail (over the islands, under the nodes which are DOM)
-    c.lineCap = 'round'; c.lineJoin = 'round';
-    c.lineWidth = 12; c.strokeStyle = 'rgba(40,24,10,.42)'; c.stroke(trailPath);
-    c.lineWidth = 8.5; c.strokeStyle = '#E8D5A3'; c.stroke(trailPath);
-    c.lineWidth = 4; c.strokeStyle = '#C79B5E'; c.setLineDash([2, 9]); c.stroke(trailPath); c.setLineDash([]);
-    bridges.forEach((seg2) => { path(c, seg2, false); c.lineWidth = 9; c.strokeStyle = 'rgba(30,18,6,.55)'; c.stroke(); c.lineWidth = 6; c.strokeStyle = '#9C7347'; c.stroke(); c.lineWidth = 6; c.strokeStyle = '#D2AE76'; c.setLineDash([3, 5]); c.stroke(); c.setLineDash([]); });
-    // fog and drifting clouds over locked islands
-    layout.islands.forEach((isl) => {
-      if (isl.box.y1 + 90 < y0 || isl.box.y0 - 90 > y1 || islandState(isl, state.level) !== 'locked') return;
-      const bx = isl.box, mx = (bx.x0 + bx.x1) / 2, my = (bx.y0 + bx.y1) / 2, hw = (bx.x1 - bx.x0) / 2, hh = (bx.y1 - bx.y0) / 2;
-      c.save(); c.translate(mx, my); c.scale(hw * 1.35, hh * 1.15); c.fillStyle = rad(c, 0, 0, 0.05, 1, [[0, 'rgba(214,226,240,.68)'], [0.6, 'rgba(204,218,236,.46)'], [1, 'rgba(204,218,236,0)']]);
-      c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill(); c.restore();
-      for (let k = 0; k < 7; k++) { const px = mx + Math.sin(k * 2.3 + (motion ? t * 0.08 : 0) + isl.index) * hw * 0.8, py = bx.y0 + ((k + 0.5) / 7) * hh * 2; cloud(c, px, py, 1.25, 0.62); }
-    });
-    // high clouds, parallax: they move a little faster than the world
-    clouds.forEach((cl) => {
-      const x = ((cl.x + (motion ? t * cl.v : 0)) % 440) - 40, wy = cl.y - scrollUnits * 0.08 * 0;   // world-anchored so they stay with their island
-      if (wy < y0 - 80 || wy > y1 + 80) return;
-      cloud(c, x, wy + (motion ? Math.sin(t * 0.3 + cl.x) * 2 : 0), cl.s, cl.a * 0.55);
-    });
+    // the trail: glowing dots, brighter along the road already travelled and the next step, dim beyond
+    for (const d of dots) {
+      if (d.y < y0 - 20 || d.y > y1 + 20) continue;
+      const locked = curIdx2 >= 0 && d.seg >= curIdx2 + (world ? 0 : 1), wave = motion ? 0.8 + 0.2 * Math.sin(t * 2.4 - d.at * 0.35) : 1;
+      c.globalAlpha = (locked ? 0.4 : 1) * wave;
+      c.drawImage(sprite.cv, d.x - sprite.R, d.y + bobOf(d.a, t) * (1 - d.u) + bobOf(d.b, t) * d.u - sprite.R, sprite.R * 2, sprite.R * 2);
+    }
+    c.globalAlpha = 1;
     c.restore();
   }
-  return { draw, ensure, invalidate: () => bitmaps.clear(), bitmaps };
+  return { draw, ensure, bobOf, invalidate: () => { bitmaps.clear(); greyArt.clear(); }, bitmaps };
 }
+export { PROPS, LOOK };

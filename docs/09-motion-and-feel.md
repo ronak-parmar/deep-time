@@ -48,7 +48,9 @@ Particles: `sparkle` 6 to 10 per gem, life 450 ms, gem colour. `dust` 8 to 12 pe
 | Fossil found banner | drops in `slow` `pop`, holds, leaves `base` `in` | fanfare | none |
 | Win screen | panel slides up `slow` `out`, then stars and pickaxes pop (`120` stagger), coins tick up (count `slow`) | star ladder | light per star |
 | Lose screen | panel fades `base`, no shake, soft | low-tone | none |
-| Pickaxe spend (Dig site) | pickaxe swing `base`, part reveal with shine `slow`, small shake | crumble then chime | medium |
+| Pickaxe spend (Dig site) | the kit pickaxe (art/ui/kit/pickaxe.webp) swings 3 strikes onto the next part (each `base` x1.2: wind-up `out`, strike `in`, `instant` gap): rock chips, dust, crack lines and a half `small` shake per strike, the last one heaviest with a full `small` shake; then the dirt is brushed away along the part's stroke `slow` and the bone shines (sparkles). Reduced motion: no swing, the part just appears | crumble then chime | medium |
+| Moves running low (HUD) | MOVES number turns amber and pulses (`celebrate` loop) at 5 or less, red and faster (`dramatic` loop) at 3 or less, with a soft glow ring. Reduced motion: colour only | none | none |
+| Hard / super hard level | static: crimson (hard) or violet (super hard) glow around the board frame and behind the HUD plates, background 22-28% darker; the frame glow breathes on the hint loop. Gems and board unchanged. Reduced motion: no breathing | none | none |
 | Fossil complete | confetti, shake `big`, fossil lift `dramatic`, history card after | fanfare-big | heavy |
 | Button press | scale 0.96 `instant`, release `quick` `pop` | tick | light |
 | Screen change | outgoing fades `quick`, incoming slides 16 px and fades `base` `out` | none | none |
@@ -63,7 +65,7 @@ Particles: `sparkle` 6 to 10 per gem, life 450 ms, gem colour. `dust` 8 to 12 pe
 | Tar spreads | a new tar pit grows in `slow` `out` from its neighbour, the gem under it shrinks away, `tiny` shake | lowTone | none |
 | Lava erupts | lava flares and shakes `medium`, tar pits grow in over `slow` `out` with dust, gems under them shrink away | boom | medium |
 | Booster picked (bar button) | medallion lifts and glows `quick` `pop`, tiles that can be targeted breathe a gold ring, a prompt with Cancel slides in | chime | light |
-| Booster used | effect on the board `slow` `out` (dust and shards for Pickaxe and Rockslide, green sparkles for Brush, gold for Amber Lure, shake for Tremor), `small` shake, then the normal clear / hit / fall events | crumble then chime | medium |
+| Booster used | effect on the board `slow` `out` (Pickaxe: the kit pickaxe swings down onto the tile over `base` x1.4, then dust and shards; dust and shards for Rockslide, green sparkles for Brush, gold for Amber Lure, shake for Tremor), `small` shake, then the normal clear / hit / fall events | crumble then chime | medium |
 | Target changes (HUD) | the target row pulses `base` `pop` | tick | none |
 | Target done (HUD) | row pulses `slow` `pop`, tick glyph appears | star | light |
 

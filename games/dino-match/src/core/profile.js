@@ -1,3 +1,4 @@
+import { tierInfo } from './difficulty.js';
 import { CONFIG } from './config.js';
 import { syncLives, loseLife } from './lives.js';
 import { freshTutorial, normaliseTutorial } from './tutorial.js';
@@ -31,7 +32,11 @@ export function migrateProfile(raw) {
   if (!raw || typeof raw !== 'object') return newProfile();
   const base = newProfile();
   const p = { ...base, ...raw, v: PROFILE_VERSION };
-  p.stars = raw.stars && typeof raw.stars === 'object' ? { ...raw.stars } : {};
+  // best stars per level: whole numbers 0..3 keyed by level; a save without a stars table gets 1 star for every level it had passed
+  const hadStars = raw.stars && typeof raw.stars === 'object';
+  p.stars = {};
+  if (hadStars) for (const [k, v] of Object.entries(raw.stars)) { const n = Math.floor(+k); if (n >= 1) p.stars[n] = Math.max(0, Math.min(3, Math.round(+v) || 0)); }
+  else for (let n = 1; n < Math.floor(num(raw.level, 1)); n++) p.stars[n] = 1;
   if (!(raw.v >= 2)) {
     // v1 had no pickaxes: one for every level already won, so nobody loses progress
     p.pickaxes = Object.keys(p.stars).length;
@@ -56,11 +61,11 @@ export function migrateProfile(raw) {
 
 // What a win pays, before applying it. Pickaxe only on the first win of a level.
 export function winRewards(profile, levelNo, stars) {
-  const firstWin = !(levelNo in profile.stars);
+  const firstWin = !(levelNo in profile.stars), T = tierInfo(levelNo);
   return {
-    firstWin,
-    pickaxes: firstWin ? CONFIG.economy.pickaxesPerFirstWin : 0,
-    coins: CONFIG.coins.win + CONFIG.coins.perStar * stars
+    firstWin, tier: T.id,
+    pickaxes: firstWin ? CONFIG.economy.pickaxesPerFirstWin + T.pickaxes : 0,
+    coins: Math.round((CONFIG.coins.win + CONFIG.coins.perStar * stars) * T.coins)
   };
 }
 

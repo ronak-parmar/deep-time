@@ -63,8 +63,8 @@ export function parseProp(rel) {
 // Play HUD slots in stage px (HUD row is 56 px high). The DOM HUD uses the same widths so text sits on the plates.
 export const HUD_LAYOUT = {
   back:   { x: 4,   y: 4, w: 48, h: 48 },
-  level:  { x: 58,  y: 0, w: 140, h: 56 },
-  target: { x: 204, y: 0, w: 90, h: 56 },
+  level:  { x: 58,  y: 0, w: 96, h: 56 },
+  target: { x: 160, y: 0, w: 134, h: 56 },   // wide enough for 3 goals (icon well + count each)
   moves:  { x: 300, y: 0, w: 56, h: 56 }
 };
 export const BOOSTER_LAYOUT = { cy: 604, size: 56, cx: [76, 180, 284] };   // matches the three 96 px DOM booster buttons
