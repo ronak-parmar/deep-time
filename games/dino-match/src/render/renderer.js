@@ -4,7 +4,9 @@ import { loadEraSprites, spriteFor } from './atlas.js';
 import { drawGemShape, GEM_COLORS } from './gems.js';
 import { drawSpecial } from './specials.js';
 import { drawObstacle, drawArtefact, drawCracks } from './obstacles.js';
-import { drawFossil } from './fossils.js';
+import { drawFossilArt } from './fossilArt.js';
+import { fossilIdForLevel } from '../core/eras.js';
+import { fossilById } from '../core/fossils.js';
 import { reducedMotion } from '../ui/motion.js';
 import { eraPalette } from '../ui/tokens.js';
 import { themeFor } from './eraTheme.js';
@@ -398,13 +400,13 @@ export class Renderer {
 
   drawPanel(c) {
     if (!this.hasDig) return;
-    const era = ERAS.find((e) => e.id === this.eraId), P = this.panel;
-    this.label(c, 'Dig up: ' + era.fossil, W / 2, 76, 14, '#E8D3A0');
+    const fos = fossilById(fossilIdForLevel(this.state.level)), P = this.panel;   // the fossil this stretch of 50 levels is about
+    this.label(c, 'Dig up: ' + fos.name, W / 2, 76, 14, '#E8D3A0');
     if (!drawSlot(c, 'hud-plaque', P.x, P.y, P.w, P.h)) drawPlaque(c, this.theme, P.x, P.y, P.w, P.h);
     c.save(); c.beginPath(); for (const p of this.blockPos) c.rect(p.x, p.y, this.bs, this.bs); c.clip();
     c.fillStyle = '#D9C79F'; c.fillRect(P.x, P.y, P.w, P.h);
     if (this.glow) { c.shadowColor = '#FFE9A8'; c.shadowBlur = 30 * this.glow; }
-    drawFossil(c, this.eraId, P.x + 6, P.y + 4, P.w - 12, P.h - 8);
+    drawFossilArt(c, fos.shape, P.x + 6, P.y + 4, P.w - 12, P.h - 8, { look: 'bone' });
     c.restore();
     for (let i = 0; i < this.blocks.length; i++) { const b = this.blocks[i]; if (b.alive && b.s > 0) this.drawDirt(c, this.blockPos[i], b, i); }
   }

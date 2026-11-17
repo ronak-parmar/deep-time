@@ -8,7 +8,7 @@ import { generateLevel } from './core/level.js';
 import { eraOf } from './core/eras.js';
 import { settleLevel, doubleCoins, spendCoins } from './core/profile.js';
 import { syncLives, canStartLevel, refillLives } from './core/lives.js';
-import { digPart } from './core/fossils.js';
+import { digPart, FOSSILS } from './core/fossils.js';
 import { starsFor, nearMissOffer } from './core/rules.js';
 import { CONFIG } from './core/config.js';
 import { mountBoot } from './screens/boot.js';
@@ -24,6 +24,7 @@ import { mountDig } from './screens/dig.js';
 import { mountOutOfLives } from './screens/lives.js';
 import { mountOffer } from './screens/offer.js';
 import { mountHistory } from './screens/history.js';
+import { mountMuseum } from './screens/museum.js';
 import { createLocalSaveStore } from './ports/save.js';
 import { createMockAdPort, AD_EVENTS } from './ports/ads.js';
 
@@ -68,7 +69,7 @@ async function showHome() {
   game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   await renderer.setEra(eraOf(profile.level).id);
-  swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onPlay: () => startLevel(profile.level), onDig: () => showDig(showHome) }));
+  swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onPlay: () => startLevel(profile.level), onDig: () => showDig(showHome), onMuseum: () => showMuseum(showHome) }));
 }
 
 async function showDig(back) {
@@ -76,12 +77,30 @@ async function showDig(back) {
   await refreshLives();
   await renderer.setEra(eraOf(profile.level).id);
   swapScreen(mountDig(ui, {
-    profile, onBack: back,
+    profile, now, level: profile.level, onBack: back,
+    onPlay: () => startLevel(profile.level),
+    onMuseum: () => showMuseum(() => showDig(back)),
     dig: () => { const r = digPart(profile); if (r.ok) persist(r.profile); return r; },
     onComplete: (fossil) => {
       ads.report(AD_EVENTS.fossilComplete, { fossil: fossil.id });
-      swapScreen(mountHistory(ui, { fossil, onDone: () => showDig(back) }));
+      showHistory(fossil, () => showDig(back));
     }
+  }));
+}
+
+// History cutscene (never an ad): after a fossil is completed, or replayed from the museum.
+function showHistory(fossil, back) {
+  swapScreen(mountHistory(ui, { fossil, onDone: back }));
+}
+
+async function showMuseum(back) {
+  game?.tut?.destroy(); game = null; renderer.clearLevel();
+  await refreshLives();
+  await renderer.setEra(eraOf(profile.level).id);
+  swapScreen(mountMuseum(ui, {
+    profile, onBack: back,
+    onDig: () => showDig(() => showMuseum(back)),
+    onWatch: (fossil) => showHistory(fossil, () => showMuseum(back))
   }));
 }
 
@@ -216,7 +235,7 @@ if (import.meta.env.DEV || location.search.includes('debug')) {
   window.__dino = {
     get game() { return game; }, renderer, get profile() { return profile; }, hint: () => game && hintMove(game.state), CONFIG,
     setProfile: async (patch) => { await persist({ ...profile, ...patch }); },
-    go: { home: showHome, dig: () => showDig(showHome), lives: showOutOfLives, level: startLevel, play: (n) => startLevel(n, { skipPre: true }), test: (name, n = 40) => startLevel(n, { test: name }) },
+    go: { home: showHome, dig: () => showDig(showHome), museum: () => showMuseum(showHome), history: (id) => showHistory(FOSSILS.find((f) => f.id === id), showHome), lives: showOutOfLives, level: startLevel, play: (n) => startLevel(n, { skipPre: true }), test: (name, n = 40) => startLevel(n, { test: name }) },
     tests: ALL_TESTS
   };
 }

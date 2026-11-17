@@ -11,7 +11,7 @@ injectDesignSystem();
 await loadFonts();
 const grid = document.getElementById('grid');
 for (let i = 0; i < ERAS.length; i++) {
-  const era = ERAS[i], n = i * 100 + 21;
+  const era = ERAS[i], n = era.start + 20;
   const tile = document.createElement('div'); tile.className = 'tile';
   tile.innerHTML = `<div class="box"><div class="inner"><canvas width="360" height="640"></canvas><div class="ui"></div></div></div><p class="cap">${era.name}: ${THEMES[era.id].label}</p>`;
   grid.append(tile);

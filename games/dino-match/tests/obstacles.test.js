@@ -1,3 +1,4 @@
+import { TOTAL_LEVELS } from '../src/core/eras.js';
 import { describe, it, expect } from 'vitest';
 import { OBSTACLES, OBSTACLE_KINDS, parseLayout, layoutRows, buildObstacles, hitObstacles, hazards, newObstacle, freshCounters, countKind } from '../src/core/obstacles.js';
 import { createState, swap, reshuffle, hasMove } from '../src/core/game.js';
@@ -258,8 +259,8 @@ describe('level data and generator', () => {
     const want = { T: 11, '#': 18, S: 25, F: 35, B: 55, a: 70, V: 101, C: 201, L: 301 };
     for (const [g, n] of Object.entries(want)) expect(first[g], g).toBe(n);
   });
-  it('generated levels from 1 to 1000 are valid and layouts keep columns playable', () => {
-    for (let n = 1; n <= 1000; n++) { const c = generateLevel(n); expect(validateLevel(c), 'level ' + n).toEqual([]); if (c.layout) { expect(c.layout.length).toBe(c.h); expect(c.targets.length).toBeLessThanOrEqual(3); } }
+  it('generated levels from 1 to the end of the first cycle and one more are valid and layouts keep columns playable', () => {
+    for (let n = 1; n <= TOTAL_LEVELS + 150; n++) { const c = generateLevel(n); expect(validateLevel(c), 'level ' + n).toEqual([]); if (c.layout) { expect(c.layout.length).toBe(c.h); expect(c.targets.length).toBeLessThanOrEqual(3); } }
   });
   it('a level with a layout is deterministic and its work estimate counts obstacles', () => {
     expect(generateLevel(253)).toEqual(generateLevel(253));

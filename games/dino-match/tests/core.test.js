@@ -4,7 +4,7 @@ import { findMatches, validSwaps, adjacent } from '../src/core/board.js';
 import { createState, swap, hasMove, reshuffle, serialize, deserialize } from '../src/core/game.js';
 import { judge, starsFor } from '../src/core/rules.js';
 import { CONFIG } from '../src/core/config.js';
-import { eraOf, eraIndexOf, isHistoryLevel, levelInEra, cycleOf } from '../src/core/eras.js';
+import { eraOf, eraIndexOf, isHistoryLevel, levelInEra, cycleOf, ERAS, TOTAL_LEVELS } from '../src/core/eras.js';
 import { generateLevel, difficultyTarget, validateLevel, levelKind } from '../src/core/level.js';
 import { botPlay } from '../src/core/bot.js';
 import { newProfile, settleLevel, mergeProfiles } from '../src/core/profile.js';
@@ -150,15 +150,18 @@ describe('rules', () => {
 });
 
 describe('eras and levels', () => {
-  it('maps levels to eras, 100 each, cycling after 1000', () => {
+  it('maps levels to eras from the roster (50 levels per fossil), cycling after the last level', () => {
+    const E = ERAS;
     expect(eraOf(1).id).toBe('cambrian');
-    expect(eraOf(100).id).toBe('cambrian');
-    expect(eraOf(101).id).toBe('devonian');
-    expect(eraOf(1000).id).toBe('early-humans');
-    expect(eraOf(1001).id).toBe('cambrian');
-    expect(cycleOf(1001)).toBe(1);
-    expect(levelInEra(250)).toBe(50);
-    expect(eraIndexOf(701)).toBe(7);
+    expect(eraOf(E[0].end).id).toBe('cambrian');
+    expect(eraOf(E[0].end + 1).id).toBe('devonian');
+    expect(eraOf(TOTAL_LEVELS).id).toBe('early-humans');
+    expect(eraOf(TOTAL_LEVELS + 1).id).toBe('cambrian');
+    expect(cycleOf(TOTAL_LEVELS + 1)).toBe(1);
+    expect(levelInEra(E[1].start + 49)).toBe(50);
+    expect(eraIndexOf(E[7].start)).toBe(7);
+    E.forEach((e, i) => { expect(e.levels).toBe(e.fossils.length * 50); if (i) expect(e.start).toBe(E[i - 1].end + 1); });
+    expect(TOTAL_LEVELS).toBe(E.reduce((a, e) => a + e.levels, 0));
   });
   it('flags history levels every 50', () => {
     expect([49, 50, 100, 150].map(isHistoryLevel)).toEqual([false, true, true, true]);
@@ -185,7 +188,7 @@ describe('eras and levels', () => {
     expect(generateLevel(1).moves - generateLevel(1).dirtTotal).toBeGreaterThanOrEqual(6);
   });
   it('every generated level validates and is winnable', () => {
-    for (const n of [1, 15, 16, 25, 30, 99, 100, 101, 250, 500, 999, 1000, 1001, 2500]) {
+    for (const n of [1, 15, 16, 25, 30, 99, 100, 101, 250, 500, 999, 1000, 1001, 2500, TOTAL_LEVELS - 1, TOTAL_LEVELS, TOTAL_LEVELS + 1]) {
       const l = generateLevel(n);
       expect(validateLevel(l)).toEqual([]);
       expect(l.blocks).toHaveLength(l.dirtTotal);

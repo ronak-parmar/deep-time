@@ -114,11 +114,10 @@ describe('lives with an injected clock', () => {
 
 describe('fossils', () => {
   const rich = (n) => ({ ...newProfile(), pickaxes: n });
-  it('has 20 fossils, 2 per era, Cambrian names from the emblem list', () => {
-    expect(FOSSILS).toHaveLength(20);
-    expect(FOSSILS.slice(0, 2).map((f) => f.name)).toEqual(['Anomalocaris', 'Trilobite']);
-    expect(FOSSILS[2].eraIndex).toBe(1);
-    expect(FOSSILS[19].eraIndex).toBe(9);
+  it('takes its fossils from the roster, in era order (roster rules: tests/roster.test.js)', () => {
+    expect(FOSSILS.length).toBeGreaterThanOrEqual(10);
+    expect(FOSSILS[0].eraIndex).toBe(0);
+    expect(FOSSILS.at(-1).eraIndex).toBe(9);
   });
   it('a part costs the configured pickaxes', () => {
     const r = digPart(rich(7));
@@ -202,7 +201,7 @@ describe('profile migration', () => {
     expect(p.stars).toEqual(v1.stars);
   });
   it('keeps a v2 save as is and is idempotent', () => {
-    const p = { ...newProfile(), pickaxes: 9, lives: 2, lastLifeTimestamp: T0, fossilProgress: { 'cambrian-1': 4 }, completedFossils: ['x'] };
+    const p = { ...newProfile(), pickaxes: 9, lives: 2, lastLifeTimestamp: T0, fossilProgress: { [FOSSILS[0].id]: 4 }, completedFossils: [FOSSILS[1].id] };
     expect(migrateProfile(p)).toEqual(p);
     expect(migrateProfile(migrateProfile(p))).toEqual(p);
   });

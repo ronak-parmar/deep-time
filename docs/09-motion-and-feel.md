@@ -99,3 +99,6 @@ Era themes (docs/06, `eraTheme.js`) set palette, frame, texture and ambient visu
 5. Same on every era and every screen?
 6. Sound and haptic assigned?
 7. Within the reward ladder cap?
+
+## History cutscenes (M2)
+Cutscenes are a pure function of time (`data/cutscene.js`, seconds, 20-30 s, T. rex finale up to 30 s): title, 10 parts unearthed, hold, 2-3 fact captions, outro. Drawn by `render/cutscene.js`; music bed by `renderBed` in `render/sound.js` (works live and offline). Skippable and replayable from the museum. No new RECIPES were added to motion.js.

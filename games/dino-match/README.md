@@ -159,3 +159,23 @@ Eight obstacles sit in board cells (tar pit, cracked sandstone, fossil tile, ske
 ## Early levels and tutorial
 
 Levels 1 to 5 are collect-only (no plaque; "Break 10 red" and similar); the dig plaque starts on level 6. Levels 1 to 6 show a one-time skippable tutorial (spotlight, hand pointer, tap to continue) kept in `profile.tutorial`. To see it again clear the save (browser storage for the page) or use a private window. Screens: `docs/screens/collect/`. Details: `docs/11-objectives-obstacles-specials.md` (early levels and tutorial).
+
+## Android debug APK (GitHub Actions)
+
+The app is wrapped with Capacitor (`com.deeptime.dinomatch`, name "Dino Match", web files from `dist`).
+
+Build the APK on GitHub (no Android Studio needed):
+1. Push to `main`, or open the repo on GitHub > Actions > "apk" > Run workflow.
+2. The job runs the tests (it fails if a test fails), builds the web app, runs `cap add android` (only if `android/` is missing), `cap sync`, and `./gradlew assembleDebug`.
+3. When it is green, open the run > Artifacts > download `dino-match-debug-apk` (a zip, kept 30 days).
+4. Unzip it, copy `app-debug.apk` to the phone, open it, allow "install unknown apps". 
+
+This is a DEBUG APK: good for testing on your own phone, not for the Play Store (that needs a signed release build).
+
+Smaller APK: `DM_NO_VIDEOS=1 npm run build` leaves the history videos (`art/videos/*.mp4`) out; the cutscenes then play with the canvas renderer.
+
+Not tested yet: the Gradle build and a real CI run (they cannot run in the author's sandbox). If the first run fails, read the failing step in the Actions log.
+
+## Roster, dig site and museum (data-driven)
+
+`src/data/roster.js` is the only list of fossils (47). Eras, level ranges (50 levels per fossil), journey cards, dig site, museum and cutscenes are all derived from it. To add a fossil: add one `F(...)` entry (10 parts from a shape recipe, 2-3 facts, cutscene motion); levels and screens follow. Old save ids are migrated by `migrateFossilId`.

@@ -2,6 +2,8 @@
 // Palette: stone, wood, glass, soft chimes. Master 0.6, UI 0.4, max 6 voices, combo pitch +1 semitone per step (cap +7).
 // This file may hold raw millisecond numbers (it is the sound side of the motion standard).
 import { EVENTS } from './motion.js';
+import { makeRng, next, hashSeed } from '../core/rng.js';
+import { partTimes } from '../data/cutscene.js';
 
 const MASTER = 0.6, UI = 0.4, MAX_VOICES = 6, MAX_STEPS = 7, HAPTIC_GAP = 80;
 export const HAPTIC_MS = { light: 8, medium: 16, heavy: 30 };
@@ -113,3 +115,70 @@ export function haptic(kind) {
   navigator.vibrate(HAPTIC_MS[kind] || HAPTIC_MS.light);
 }
 export const SOUND_EVENTS = EVENTS;
+
+// ---- music bed for the history cutscenes ---------------------------------------------------------------------------
+// One soft synthesised bed per cutscene: a slow pad, a low drone, sparse plucks from the era's scale, a bell for every unearthed
+// part (rising through the scale, so the reveal is heard) and a closing chord. It only needs a WebAudio context, so the same
+// code plays live in the game (startBed) and renders offline into the mp4 (OfflineAudioContext in tools/render-cutscene).
+// Deterministic: the random plucks use a seeded RNG, so a re-render is identical.
+const SCALES = { penta: [0, 2, 4, 7, 9], minor: [0, 3, 5, 7, 10], dorian: [0, 2, 3, 5, 7, 9, 10], lydian: [0, 2, 4, 6, 7, 9, 11], phryg: [0, 1, 3, 5, 7, 8, 10] };
+export const BED_MOODS = {
+  cambrian: { root: 50, scale: 'lydian', bpm: 54 }, devonian: { root: 52, scale: 'penta', bpm: 60 }, carboniferous: { root: 48, scale: 'dorian', bpm: 58 },
+  permian: { root: 45, scale: 'phryg', bpm: 52 }, triassic: { root: 55, scale: 'minor', bpm: 62 }, jurassic: { root: 50, scale: 'dorian', bpm: 66 },
+  cretaceous: { root: 53, scale: 'minor', bpm: 70 }, 'age-of-mammals': { root: 57, scale: 'penta', bpm: 60 }, 'ice-age': { root: 52, scale: 'dorian', bpm: 48 },
+  'early-humans': { root: 48, scale: 'penta', bpm: 64 }
+};
+const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+const degree = (mood, i) => { const sc = SCALES[mood.scale]; return mood.root + sc[((i % sc.length) + sc.length) % sc.length] + 12 * Math.floor(i / sc.length); };
+
+// Schedules the whole bed on `ctx` into `dest`, starting at time t0. Returns the bed's master gain (fade it to stop early).
+export function renderBed(ctx, dest, t0, script, fossil) {
+  const mood = BED_MOODS[fossil.era] || BED_MOODS.cambrian, D = script.duration, beat = 60 / mood.bpm, rnd = makeRng(hashSeed(fossil.index || 0, 5));
+  const out = ctx.createGain(); out.connect(dest);
+  out.gain.setValueAtTime(0.0001, t0); out.gain.exponentialRampToValueAtTime(1, t0 + 1.4); out.gain.setValueAtTime(1, t0 + D - 2.2); out.gain.exponentialRampToValueAtTime(0.0001, t0 + D - 0.05);
+  const pan = (v) => { if (!ctx.createStereoPanner) return out; const p = ctx.createStereoPanner(); p.pan.value = v; p.connect(out); return p; };
+  const env = (g, at, atk, hold, rel, vol) => { g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + atk); g.gain.setValueAtTime(vol, at + atk + hold); g.gain.exponentialRampToValueAtTime(0.0001, at + atk + hold + rel); };
+  const osc = (type, f, at, atk, hold, rel, vol, to, slideTo) => {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f, at); if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, at + atk + hold + rel);
+    env(g, at, atk, hold, rel, vol); o.connect(g); g.connect(to); o.start(at); o.stop(at + atk + hold + rel + 0.05);
+  };
+  // pad: a triad of the scale on every 4th beat, cycling 0 - 3 - 4 - 2
+  const chordLen = beat * 4, prog = [0, 3, 4, 2], lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1100; lp.connect(out);
+  for (let k = 0, at = 0; at < D - 0.5; k++, at += chordLen) {
+    const d0 = prog[k % 4];
+    for (const [j, off] of [[0, 0], [2, 0], [4, 0]]) osc('triangle', hz(degree(mood, d0 + j) + 12 * off), t0 + at, 1.2, chordLen - 1.2, 1.6, 0.075, lp);
+  }
+  osc('sine', hz(mood.root - 12), t0, 2, D - 4.5, 2, 0.16, out);                     // low drone
+  // plucks
+  for (let at = beat * 2; at < D - 2; at += beat / 2) if (next(rnd) < 0.42) {
+    const n = degree(mood, 7 + Math.floor(next(rnd) * 8)), to = pan(next(rnd) * 1.4 - 0.7);
+    osc('sine', hz(n), t0 + at, 0.01, 0.02, 1.3, 0.1, to); osc('triangle', hz(n + 12), t0 + at, 0.01, 0.01, 0.7, 0.03, to);
+  }
+  // a bell for each unearthed part, rising through the scale; the last one is a full chord (and a drum for the finale)
+  const times = partTimes(script);
+  times.forEach((at, i) => {
+    const last = i === times.length - 1, n = degree(mood, 7 + i), to = pan(-0.5 + (i / Math.max(1, times.length - 1)));
+    osc('sine', hz(n), t0 + at, 0.005, 0.05, last ? 2.4 : 1.1, last ? 0.2 : 0.15, to); osc('sine', hz(n + 12) * 1.002, t0 + at, 0.005, 0.02, last ? 1.6 : 0.6, 0.06, to);
+    if (last) for (const j of [0, 2, 4, 7]) osc('triangle', hz(degree(mood, 7 + j)), t0 + at, 0.02, 0.2, 2.6, 0.08, out);
+    if (last && script.finale) { osc('sine', hz(mood.root - 24) * 1.9, t0 + at, 0.004, 0.02, 1.3, 0.5, out, hz(mood.root - 24)); }
+  });
+  // closing chord on the outro
+  const outro = script.beats.find((b) => b.kind === 'outro');
+  if (outro) for (const j of [0, 2, 4]) osc('triangle', hz(degree(mood, j + 7)), t0 + outro.t0, 0.15, 1.2, 1.5, 0.07, out);
+  return out;
+}
+
+let bed = null;
+// Live playback in the game. Respects the mute setting; silent when WebAudio is not unlocked yet.
+export function startBed(script, fossil) {
+  stopBed();
+  if (state.muted || !state.ctx) return;
+  const g = renderBed(state.ctx, state.master, state.ctx.currentTime + 0.05, script, fossil);
+  bed = g;
+}
+export function stopBed() {
+  if (!bed || !state.ctx) { bed = null; return; }
+  const t = state.ctx.currentTime, g = bed; bed = null;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+  setTimeout(() => g.disconnect(), 450);
+}

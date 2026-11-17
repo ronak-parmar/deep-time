@@ -93,3 +93,6 @@ Code: `src/core/obstacles.js` (data table, layout parsing, hit rules, hazards), 
 ## Tests
 
 Match shapes (3, 4, 5 straight, T, L, cross, 6, 7+), unique-cell counting, spawn cell choice, every combination pair, chain termination, special fires once, gravity does not remove new specials, dead-board reshuffle, each obstacle's hit rules, each objective's completion, win and fail timing, reward granted once, bot solvability for generated levels.
+
+## Level range (M1)
+Levels are validated for the whole range 1..2350 (plus a cycle margin) by `npm run levels:check`; `tests/obstacles.test.js` checks up to TOTAL_LEVELS + 150. Era boundaries come from the roster, not fixed 100-level blocks.

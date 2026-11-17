@@ -4,7 +4,8 @@ import { UI_SLOTS, SLOT_NAMES, slotFiles, bgFiles, propsPrefix, parseProp } from
 
 // art/ (owner art) overrides games/dino-match/art-standins/ (temporary). Missing folders just give empty maps.
 const standins = import.meta.glob('../../art-standins/{backgrounds,props,ui}/**/*.{png,webp}', { eager: true, query: '?url', import: 'default' });
-const owner = import.meta.glob('../../../../art/{backgrounds/runtime/*.webp,backgrounds/*.png,props/**/*.png,ui/**/*.png}', { eager: true, query: '?url', import: 'default' });
+// backgrounds/_*.png (contact sheets) are working files and never shipped
+const owner = import.meta.glob(['../../../../art/{backgrounds/runtime/*.webp,backgrounds/*.png,props/**/*.png,ui/**/*.png}', '!../../../../art/backgrounds/_*.png'], { eager: true, query: '?url', import: 'default' });
 const rel = (p) => p.replace(/^.*\/((backgrounds|props|ui)\/.*)$/, '$1');
 
 let URLS = new Map(), SOURCE = new Map();

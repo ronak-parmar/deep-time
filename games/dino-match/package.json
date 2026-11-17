@@ -8,10 +8,17 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "levels:check": "node scripts/check-levels.mjs"
+    "levels:check": "node scripts/check-levels.mjs",
+    "android:add": "cap add android",
+    "android:sync": "vite build && cap sync android"
   },
   "devDependencies": {
     "vite": "^5.4.0",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "@capacitor/cli": "^6.2.3"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.3",
+    "@capacitor/core": "^6.2.3"
   }
 }

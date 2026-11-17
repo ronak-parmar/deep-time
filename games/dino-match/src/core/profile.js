@@ -1,6 +1,7 @@
 import { CONFIG } from './config.js';
 import { syncLives, loseLife } from './lives.js';
 import { freshTutorial, normaliseTutorial } from './tutorial.js';
+import { migrateFossilId, fossilById } from './fossils.js';
 
 export const PROFILE_VERSION = 2;
 
@@ -40,8 +41,13 @@ export function migrateProfile(raw) {
   p.pickaxes = Math.max(0, Math.floor(num(p.pickaxes, 0)));
   p.lives = clamp(Math.floor(num(p.lives, CONFIG.lives.max)), 0, CONFIG.lives.max);
   p.lastLifeTimestamp = Number.isFinite(p.lastLifeTimestamp) ? p.lastLifeTimestamp : null;
-  p.fossilProgress = raw.fossilProgress && typeof raw.fossilProgress === 'object' ? { ...raw.fossilProgress } : {};
-  p.completedFossils = Array.isArray(raw.completedFossils) ? [...raw.completedFossils] : [];
+  // fossil ids: old saves used "<era>-1"; unknown ids are dropped, parts are clamped to 0..parts
+  p.fossilProgress = {};
+  for (const [k, v] of Object.entries(raw.fossilProgress && typeof raw.fossilProgress === 'object' ? raw.fossilProgress : {})) {
+    const id = migrateFossilId(k);
+    if (fossilById(id)) p.fossilProgress[id] = Math.max(p.fossilProgress[id] || 0, clamp(Math.floor(num(v, 0)), 0, CONFIG.fossils.parts));
+  }
+  p.completedFossils = [...new Set((Array.isArray(raw.completedFossils) ? raw.completedFossils : []).map(migrateFossilId).filter((id) => fossilById(id)))];
   p.boosters = { ...base.boosters, ...(raw.boosters || {}) };
   p.settings = { ...base.settings, ...(raw.settings || {}) };
   p.tutorial = normaliseTutorial(raw.tutorial);

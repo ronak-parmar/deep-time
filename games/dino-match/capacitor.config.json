@@ -1,0 +1,11 @@
+{
+  "appId": "com.deeptime.dinomatch",
+  "appName": "Dino Match",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

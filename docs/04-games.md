@@ -70,3 +70,6 @@ Pickaxes are never sold or bought with ads. Ads and coins only help win levels.
 ### Audience (decided for now)
 
 - Everyone, 13+, as in CLAUDE.md. A kids / child-directed build (non-personalised ads, minimal data, local saves) is deferred. Note: under India's DPDP law anyone under 18 counts as a child, with obligations from 13 May 2027, so revisit before launching in India.
+
+## Roster-driven eras (M1)
+The fossil roster (`games/dino-match/src/data/roster.js`, 47 fossils) drives everything. Each fossil = 50 levels (`CONFIG.fossils.levelsPerFossil`), so era length = 50 x fossil count. Levels per era: Cambrian 150, Devonian 150, Carboniferous 150, Permian 200, Triassic 300, Jurassic 400, Cretaceous 350, Age of mammals 200, Ice age 300, Early humans 150. Total 2350, then the game cycles with harder numbers. A fossil has 10 parts and 5 pickaxes per part (50 pickaxes). Facts list: docs/13-fossil-facts.md.

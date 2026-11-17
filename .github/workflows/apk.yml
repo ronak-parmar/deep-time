@@ -1,0 +1,57 @@
+name: Build debug APK
+
+# Builds Dino Match and packages it as a DEBUG Android APK (not for the Play Store).
+# Run it by hand: GitHub > Actions > "Build debug APK" > Run workflow. It also runs on every push to main.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies (repo root, npm workspaces)
+        run: npm ci
+
+      - name: Run tests (the build stops here if any test fails)
+        run: npm test --workspace games/dino-match
+
+      - name: Build the web app
+        run: npm run build --workspace games/dino-match
+
+      - name: Add the Android project if it is not in the repo, then sync the web build into it
+        working-directory: games/dino-match
+        run: |
+          if [ ! -d android ]; then npx cap add android; fi
+          npx cap sync android
+
+      - name: Build the debug APK
+        working-directory: games/dino-match/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dino-match-debug-apk
+          path: games/dino-match/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

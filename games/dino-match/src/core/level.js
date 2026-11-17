@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
 import { makeRng, shuffle, hashSeed, next, int } from './rng.js';
-import { eraOf, eraIndexOf, cycleOf, levelInEra } from './eras.js';
+import { eraOf, eraIndexOf, cycleOf, levelInEra, eraLength } from './eras.js';
 import { winRate } from './bot.js';
 import { unlockedKinds } from './specials.js';
 import { defaultTargets, validateTargets } from './targets.js';
@@ -115,7 +115,7 @@ export function movesFor(blocks, target, layout = null, collects = []) {
 // Difficulty target in 0..0.8 (docs/03).
 export function difficultyTarget(level) {
   const L = CONFIG.levels;
-  const progress = (levelInEra(level) - 1) / (L.perEra - 1);
+  const progress = (levelInEra(level) - 1) / Math.max(1, eraLength(level) - 1);
   let t = L.base + L.perEraStep * eraIndexOf(level) + L.acrossEra * progress + L.cycleBump * cycleOf(level);
   if (level % 10 === 0) t += L.milestoneBump;
   else if (level % 5 === 0 || levelInEra(level) === 1) t *= L.breatherFactor;

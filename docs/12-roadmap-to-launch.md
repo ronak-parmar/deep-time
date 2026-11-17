@@ -23,3 +23,8 @@ Rule: no external image generators (Gemini, Canva) any more. All art is built in
 ## Honest limits
 - Art made in code is clean and consistent but not hand-painted quality; the four real backgrounds are the bar. The owner can swap any asset later by dropping a file with the same slot name.
 - Real-device testing, store accounts, AdMob ids and the final go/no-go are the owner's.
+
+## Status update
+- M0: Capacitor wrap and APK workflow written, not yet run on CI.
+- M1: dig site, museum, roster (47) written; facts need web verification.
+- M2: cutscene engine done; mp4 render pipeline (tools/render-cutscene) still to do.

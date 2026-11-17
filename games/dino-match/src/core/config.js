@@ -22,15 +22,15 @@ export const CONFIG = {
   // --- v1 progression and economy (docs/04 "v1 progression and economy") ---
   economy: { pickaxesPerFirstWin: 1, doubleCoinsMultiplier: 2 },
   lives: { max: 5, regenMinutes: 25, refillCoins: 100 },
-  fossils: { parts: 10, pickaxesPerPart: 5, perEra: 2 },
+  // A fossil has 10 parts at 5 pickaxes each = 50 pickaxes = 50 first wins = 50 levels. The roster (data/roster.js) decides how many
+  // fossils each era has, so an era is 50 levels x its fossil count and the number of eras' levels is derived, not configured.
+  fossils: { parts: 10, pickaxesPerPart: 5, levelsPerFossil: 50 },
   nearMiss: { blocks: 2, extraMoves: 5, coinCost: 50, maxPerAttempt: 1 },
 
   levels: {
-    perEra: 100,
-    eras: 10,
     onboarding: 15,          // hand-authored (docs/03)
     base: 0.10, perEraStep: 0.025, acrossEra: 0.30, cap: 0.80,
-    cycleBump: 0.05,         // per full cycle after level 1000
+    cycleBump: 0.05,         // per full cycle (after the last roster level)
     breatherFactor: 0.5,     // every 5th level and the first of an era
     milestoneBump: 0.10,     // every 10th level
     band: 0.10,              // bot win rate must land in 1 - target +/- band
@@ -39,7 +39,7 @@ export const CONFIG = {
     gemsPerMove: 2.6,        // collect targets: gems of the wanted colour broken per move, for the move budget
     plannedSlack: 0.25,       // levels with crates or artefacts: the bot (no planning) only has to reach this much less than 1 - target
     moveFactorEasy: 1.4, moveFactorHard: 0.8, minMoveFactor: 1.2, humanMargin: 1.3,   // moves per hit point at target 0 and at the cap (calibrated with the bot)
-    historyEvery: 50
+    historyEvery: 50         // = fossils.levelsPerFossil: a history cutscene every time a fossil's 50 levels are done
   },
 
   // --- specials (docs/11 phase A): unlock level per kind, chain cap. Shapes/combos are data in specials.js ---
