@@ -4,6 +4,7 @@ import { eraOf } from '../core/eras.js';
 import { CONFIG } from '../core/config.js';
 import { roll, RECIPES } from '../render/motion.js';
 import { cue } from '../render/sound.js';
+import { targetProgress, targetLabel } from '../core/targets.js';
 
 // Result: one template, win or lose, one primary action each.
 // win:  title, stars, score, coins + pickaxe lines, rewarded double-coins (mock), Next level, Dig site, Home
@@ -26,18 +27,18 @@ export function mountResult(root, p) {
   const outOfLives = !won && lives <= 0;
   const card = h('section', { class: 'dt-result', 'aria-label': won ? 'Level won' : 'Level lost' },
     h('div', { class: 'dt-result__head' },
-      h('h2', { class: 'display', id: 'result-title' }, won ? 'Fossil found!' : 'Out of moves'),
+      h('h2', { class: 'display', id: 'result-title' }, won ? (state.hasDig ? 'Fossil found!' : 'Level complete!') : 'Out of moves'),
       won ? Stars(stars) : null,
       h('p', { class: 'title dt-num dt-result__score' }, state.score.toLocaleString('en-US')),
       won
         ? h('div', { class: 'result__rows' },
-            h('p', { class: 'body-small dim' }, `${era.fossil} uncovered, level ${level.level}`),
+            h('p', { class: 'body-small dim' }, state.hasDig ? `${era.fossil} uncovered, level ${level.level}` : `Level ${level.level} complete`),
             coinsLine,
             rewards.pickaxes > 0
               ? h('p', { class: 'body-small result__pick dt-num', id: 'pick-line' }, `+${rewards.pickaxes} pickaxe`)
               : h('p', { class: 'body-small dim', id: 'pick-line' }, 'Replay: no pickaxe this time'))
         : h('div', { class: 'result__rows' },
-            h('p', { class: 'body-small dim dt-num' }, `You dug ${state.dug} of ${state.dirtTotal} blocks`),
+            ...targetProgress(state).map((t) => h('p', { class: 'body-small dim dt-num result__target' + (t.done ? ' result__target--done' : ''), 'data-target': t.type }, `${targetLabel(t)}: ${t.got} of ${t.n}`)),
             h('p', { class: 'body-small result__life dt-num', id: 'life-line' }, `Lost 1 life. ${lives} of ${CONFIG.lives.max} left`))),
     reward ? h('div', { class: 'dt-result__offer' }, reward) : null,
     h('div', { class: 'dt-result__actions' },

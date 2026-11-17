@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { UI_SLOTS, SLOT_NAMES, slotFiles, bgFiles, parseProp, HUD_LAYOUT, PROP_ANCHORS } from '../src/render/artManifest.js';
 import * as art from '../src/render/art.js';
@@ -7,7 +7,7 @@ import { drawBackdrop } from '../src/render/paint.js';
 import { eraIds, THEMES } from '../src/render/eraTheme.js';
 
 const REQUIRED = ['hud-sign', 'hud-plaque', 'moves-medallion', 'target-sign', 'gear-button', 'back-button', 'progress-frame', 'progress-fill', 'star-on', 'star-off',
-  'booster-pick', 'booster-burst', 'booster-brush', 'count-badge-blue', 'count-badge-red', 'count-badge-green', 'tile-cream', 'tile-dirt', 'tile-cracked',
+  'booster-pick', 'booster-burst', 'booster-brush', 'count-badge-blue', 'count-badge-red', 'count-badge-green', 'tile-cream', 'tile-dirt', 'tile-sand', 'tile-stone', 'tile-cracked',
   'tablet-skull', 'tablet-footprint', 'tablet-fern', 'dirt-crumbs'];
 const root = join(import.meta.dirname, '..');
 const here = (r) => existsSync(join(root, 'art-standins', r)) || existsSync(join(root, '../../art', r));
@@ -21,12 +21,19 @@ describe('art manifest', () => {
     }
   });
   it('tile slots have four variants, with unique file names', () => {
-    for (const n of ['tile-cream', 'tile-dirt', 'tile-cracked']) expect(slotFiles(n)).toHaveLength(4);
+    for (const n of ['tile-cream', 'tile-dirt', 'tile-sand', 'tile-stone', 'tile-cracked']) expect(slotFiles(n)).toHaveLength(4);
     const all = SLOT_NAMES.flatMap(slotFiles); expect(new Set(all).size).toBe(all.length);
   });
   it('stretchable plates have insets', () => { for (const n of ['hud-sign', 'hud-plaque', 'target-sign', 'progress-frame', 'progress-fill']) expect(UI_SLOTS[n].nine, n).toBeTruthy(); });
   it('every slot file exists as a stand-in or as real art', () => { for (const n of SLOT_NAMES) for (const f of slotFiles(n)) expect(here(f), f).toBe(true); });
   it('every era has a background (stand-in or real art)', () => { for (const id of eraIds()) expect(bgFiles(id).some(here), id).toBe(true); });
+  it('the four real painted eras load their runtime webp (not the stand-in)', () => {
+    for (const id of ['cambrian', 'devonian', 'carboniferous', 'permian']) { expect(bgFiles(id)[0]).toBe(`backgrounds/runtime/${id}.webp`); expect(existsSync(join(root, '../../art', bgFiles(id)[0])), id).toBe(true); expect(art.sourceOf(art.bgFile(id)), id).toBe('art'); }
+  });
+  it('tools/gen-ui.py has a builder for every manifest slot, and art/ui holds every generated file', () => {
+    const py = readFileSync(join(root, '../../tools/gen-ui.py'), 'utf8');
+    for (const n of SLOT_NAMES) { expect(py.includes(`'${n}':`), n).toBe(true); for (const f of slotFiles(n)) expect(existsSync(join(root, '../../art', f)), f).toBe(true); }
+  });
   it('HUD layout fits the 360 px stage without overlaps', () => {
     const r = Object.values(HUD_LAYOUT).sort((a, b) => a.x - b.x);
     for (let i = 0; i < r.length; i++) { expect(r[i].x + r[i].w).toBeLessThanOrEqual(360); if (i) expect(r[i].x).toBeGreaterThanOrEqual(r[i - 1].x + r[i - 1].w); }

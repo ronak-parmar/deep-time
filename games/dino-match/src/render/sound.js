@@ -24,7 +24,17 @@ export const SOUND_MAP = {
   buttonPress:    { sound: 'tick',      haptic: 'light', ui: true },
   screenChange:   { sound: null,        haptic: null },
   counterChange:  { sound: 'tick',      haptic: null, ui: true },
-  lifeRegained:   { sound: 'chime',     haptic: 'light' }
+  lifeRegained:   { sound: 'chime',     haptic: 'light' },
+  hitBlock:       { sound: 'chip',      haptic: 'light' },
+  createSpecial:  { sound: 'chime',     haptic: 'light' },
+  fireSpecial:    { sound: 'boom',      haptic: 'medium' },
+  obstacleHit:    { sound: 'chip',      haptic: 'light' },
+  obstacleBreak:  { sound: 'crumble',   haptic: 'medium' },
+  collectItem:    { sound: 'chime',     haptic: 'light' },
+  tarSpread:      { sound: 'lowTone',   haptic: null },
+  lavaErupt:      { sound: 'boom',      haptic: 'medium' },
+  targetPop:      { sound: 'tick',      haptic: null, ui: true },
+  targetDone:     { sound: 'star',      haptic: 'light' }
 };
 
 const state = { muted: false, haptics: true, ctx: null, master: null, voices: 0, lastHaptic: -1e9 };
@@ -78,6 +88,8 @@ const VOICES = {
   fanfareBig: () => { [523, 659, 784, 1046, 1319].forEach((f, i) => tone(f, i === 4 ? 0.9 : 0.2, { type: 'triangle', vol: 0.32, delay: i * 0.12 })); tone(262, 0.9, { type: 'sine', vol: 0.25, delay: 0.5 }); },
   star: (p) => { tone(784 * p, 0.2, { type: 'sine', vol: 0.35 }); tone(1568 * p, 0.2, { type: 'sine', vol: 0.15, delay: 0.03 }); },
   lowTone: () => { tone(196, 0.45, { type: 'sine', vol: 0.3, slide: 0.8 }); tone(147, 0.5, { type: 'sine', vol: 0.25, delay: 0.14, slide: 0.8 }); },
+  chip: (p) => { noise(0.08, { lp: 1800, vol: 0.35 }); tone(180 * p, 0.09, { type: 'triangle', vol: 0.25, slide: 0.6 }); },
+  boom: () => { noise(0.35, { lp: 700, vol: 0.55 }); tone(90, 0.3, { type: 'sine', vol: 0.45, slide: 0.4 }); noise(0.2, { hp: 2500, vol: 0.18, delay: 0.02 }); },
   chime: () => { tone(1175, 0.3, { type: 'sine', vol: 0.28 }); tone(1568, 0.3, { type: 'sine', vol: 0.2, delay: 0.09 }); }
 };
 

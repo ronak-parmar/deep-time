@@ -8,7 +8,7 @@ Match-3 with a dig-the-fossil goal. Vite + vanilla JS + canvas. Part of the Deep
 cd games/dino-match
 npm install        # first time (or `npm install` at the repo root: npm workspaces)
 npm run dev        # http://localhost:5173, playable from level 1
-npm test           # 61 unit tests (vitest), core logic only
+npm test           # 217 unit tests (vitest): core rules, specials, dig, targets, art manifest, motion
 npm run build      # static build in dist/ (base './', works from a file path or a Capacitor WebView)
 npm run levels:check -- 1 200   # generate levels and run the validity/solvability check
 ```
@@ -16,20 +16,29 @@ npm run levels:check -- 1 200   # generate levels and run the validity/solvabili
 Add `?debug` to the URL of a build to expose `window.__dino` (state, hint, renderer) for scripted tests. It is always on in `npm run dev`.
 Progress is saved in `localStorage` (key `dino-match.profile.v1`). To restart from level 1, clear it.
 
-## How it plays (the basic mechanism)
+## How it plays
 
-- Swap two neighbours (swipe, or tap one then the other). 3 or more in a row or column pop, gems fall, new gems drop in, cascades chain.
-- A swap that makes no match bounces back: no move spent, nothing dug.
-- Every valid move digs exactly ONE dirt block. Dig all N blocks and the fossil is uncovered ("Fossil found!", win, next level).
+- Swap two neighbours (swipe, or tap one then the other). 3 or more in a row or column pop, gems fall, new gems drop in, cascades chain. A swap that makes no match bounces back: no move spent.
+- **Digging comes from matches** (docs/11): the dig plaque above the board holds blocks (tar 1 hit point, sand 2, stone 3), each tagged with a gem colour shown as a badge. Clearing gems of that colour hits the block: a 3-match is 1 hit, 4 is 2, 5+ is 3; special blasts hit several blocks; the wrong colour does nothing. Cracks and dots show the damage. Clear every block and the fossil is uncovered (win). Moves are the budget.
+- **Specials**: 4 in a line = Firecracker (clears its row or column), T or L of 5 = Bomb (3x3), 6 connected = Dynamite (5x5 diamond), 7+ or a plus = TNT (7x7), straight 5 = Rainbow (swap it with a gem to clear that colour). Swap two specials for a combination. Unlock levels: firecracker 5, bomb 15, dynamite 25, tnt 35, rainbow 45. Hint pulses after 6 s idle; dead boards reshuffle fairly (specials stay put).
+- **Targets**: every level has 1 to 3 targets (`dig` first, `collect` gems of a colour second); the pre-level screen shows them, the HUD Target panel tracks them.
 - Out of moves first: "Out of moves", one primary action (Try again).
-- Level N belongs to era `floor((N-1)/100) % 10` (Cambrian ... Early humans, cycling after 1000). Each era has its own scenery and gem sprites (`art/sprites/<era>/<colour>.png`), falling back to code-drawn gems when an era has no sprites yet.
+- Level N belongs to era `floor((N-1)/100) % 10`. Each era has its own scenery and gem sprites, falling back to code-drawn gems.
+
+### Try the specials fast
+Open `http://localhost:5173/?debug` (with `npm run dev`). The Debug box (top left) jumps to any level, or starts a board that is one swap away from each special or each combination: pick e.g. `bomb-t`, press Board, swap the two gems the hint pulses on (or wait 6 s). Pairs are named `combo:bomb+firecracker`. Scripted: `window.__dino.go.test('bomb-t')` then `__dino.renderer.onSwap(...window.__testSwap)`.
 
 ## Layout
 
 ```
 src/core/     PURE logic, no DOM, no canvas. Everything the tests cover.
-  config.js     every tunable number (bonus hooks default OFF)
-  rules.js      digForMove(move) = THE dig rule; judge(state) = THE win/lose rule; starsFor
+  config.js     every tunable number (dig hits, block types, special unlocks, chain depth)
+  rules.js      hitsForMatch / applyHits / digStep = THE dig rule; judge(state) = THE win/lose rule; starsFor
+  specials.js   special kinds, creation patterns, effect shapes, combination table (data)
+  match.js      match groups, rule priority, special creation, spawn cell, legalSwaps
+  chain.js      chain queue (each special once per move, depth cap 40)
+  targets.js    target types (dig, collect), progress, labels
+  testboards.js boards one swap away from each special (debug picker and tests)
   game.js       state, swap() -> event log, gravity/refill, deadlock reshuffle, save (JSON)
   board.js      match detection (3+ rows/cols), valid swaps
   level.js      generator (seed = level number), onboarding table, difficulty curve, validateLevel
@@ -50,18 +59,18 @@ docs/screens/ screenshots of every screen
 
 ### How core and renderer talk
 `swap(state, a, b)` mutates the state to its final position and returns an **event log**
-(`swap`, `clear`, `dig`, `fall`, `shuffle`, `end`). The renderer only replays that log with tweens, then snaps to the true state. Nothing in the renderer knows the rules, so reworking the rules means editing `core/` only.
+(`swap`, `combo`, `fire`, `clear`, `create`, `hit`, `fall`, `shuffle`, `end`). The renderer only replays that log with tweens, then snaps to the true state. Nothing in the renderer knows the rules, so reworking the rules means editing `core/` only.
 
-### The two rule functions
-- `digForMove(move)` in `core/rules.js`: how many blocks a valid move digs. v1 returns 1. The hooks `CONFIG.dig.extraBigMatch` and `extraPerCascadeStep` (both 0) are read here and nowhere else.
-- `judge(state)` in `core/rules.js`: `'won' | 'lost' | 'playing'`.
+### The rule functions
+- `digStep(blocks, matches, blast)` in `core/rules.js`: how a clear step hurts the plaque blocks (see How it plays). Block layouts are level data (`blocks`, compact text `'T0 S1 K2'`).
+- `judge(state)` in `core/rules.js`: `'won' | 'lost' | 'playing'` (all targets done / out of moves).
 
 ## Decisions
 
-- **Dig rule**: exactly one block per valid move, no bonuses. Bonus hooks exist in `config.js`, defaulted OFF, and are covered by a test.
-- **Dirt is a counter, not cells.** The N blocks sit in a panel above the board over the fossil; blocks crumble in a seeded order (`dirtOrder`). Blocks are not tied to board cells, which keeps gravity simple.
-- **Difficulty without bonuses**: with one dig per move, a level is winnable iff `moves >= N`, so the generator always gives `moves = N + slack`; slack shrinks from about 6 to 0 as the difficulty target rises (docs/03 curve: 0.10 + 0.025 per era + up to 0.30 across the era, cap 0.80, breathers on every 5th level and era start, milestones on every 10th). The difficulty comes from N (7 to 18 blocks) and colour count (5 or 6). When the bonus hooks are switched on, the generator instead binary-searches the move budget so the bot's win rate lands in `1 - target +/- 0.10`.
-- **Levels 1-15** are hand-authored (6x6 then 7x7, 4-5 colours, very forgiving, short tips on levels 1-3).
+- **Dig rule**: owner feedback replaced "one block per valid move" with match-driven digging (above). The plaque stays above the board and nothing is added to the board.
+- **Dirt is a plaque, not cells.** The blocks sit in a panel above the board over the fossil and are not tied to board cells, which keeps gravity simple.
+- **Difficulty**: the curve is unchanged (docs/03: 0.10 + 0.025 per era + up to 0.30 across the era, cap 0.80, breathers on every 5th level and era start, milestones on every 10th). It now drives block count (5 to 13), the share of sand and stone, and the colour spread of the blocks; the move budget comes from the plaque's hit points, tuned with the casual-play bot (`generateLevel(n, { tune: true })`, used in play and by `npm run levels:check`) with a human margin.
+- **Levels 1-10** are fully hand-authored (docs/11: block lists, tips, firecracker at 5, sand at 5, stone at 9); 11-15 keep the authored board size with generated blocks.
 - **Gems**: colours red, green, blue, yellow, purple, amber with fixed silhouettes (octagon, oval, diamond, triangle, purple pentagon, teardrop). Era sprites replace the drawn gems when present. Cambrian uses 4-5 colours early; 6 appear from Devonian (docs/03 "sixth stone kind").
 - **No deadlocks**: if no valid swap remains the same pieces are reshuffled (seeded) with a short message.
 - **Stars**: 1 for a win, 2 with 25% of the moves left, 3 with 50%.
@@ -123,15 +132,30 @@ One timing config: `src/render/motion.js`. Duration tokens (`D`), stagger, squas
 
 ## Painted art layers (how to add an era's art)
 
+See the painted eras: `npm run dev`, open `http://localhost:5173/preview-eras.html` (all ten boards, built with the real renderer; Cambrian, Devonian, Carboniferous and Permian show the real painted backgrounds, the other six keep the vector look) or play at `http://localhost:5173/`.
+
+
 The renderer draws, back to front: painted background, painted prop layers, ambient particles, the board (painted tiles), HUD plates, boosters. Code only does layout, text and animation. Every layer falls back to the vector look when its file is missing, so the game never breaks and each era (and each UI slot) switches over as art arrives.
 
 - Where files go (the owner's `art/` folder wins over the temporary `games/dino-match/art-standins/` with the same layout):
-  - Background: `art/backgrounds/<era>.png` (era id such as `cambrian`, `ice-age`; the art-folder id `iceage` and the brief's `bg-iceage.png` also work). Portrait 9:16, for example 1080x1920. Keep the middle calm and dark, scenery on the edges. It is drawn 6% oversize so it can drift.
+  - Background: the game loads `art/backgrounds/runtime/<era>.webp` (768x1360). Drop the full-size original (for example 1536x2720 `<era>.jpg`) into `art/backgrounds/` and run `python tools/prep-bg.py`; originals are kept and never shipped. A plain `art/backgrounds/<era>.png` also works (era id such as `cambrian`, `ice-age`; art-folder ids `iceage`, `mammals`, `humans` also work). Portrait 9:16. Keep the middle calm and dark, scenery on the edges. It is drawn 6% oversize so it can drift.
   - Props: `art/props/<era>/<name>-<anchor>[-glow].png`, transparent. Anchor is `tl tr bl br` (corners), `t b` (full-width edge), `l r` (side edge) or `c`. Corner and side props are drawn 150 px wide, edge props 360 px. A `-glow` suffix makes the prop pulse. Example: `fern-tl.png`, `lava-br-glow.png`.
   - UI kit: `art/ui/<slot>.png`, transparent. All slot names, sizes and 9-slice insets are in `src/render/artManifest.js` (the only place to edit). Paint at 2x to 3x the listed size. Plates with `nine` insets stretch between them. Tiles are `tile-cream-1..4.png`, `tile-dirt-1..4.png`, `tile-cracked-1..4.png`.
 - Per-era feel is in `eraTheme.js` under `paint`: `drift` (parallax px), `sway` (prop shear), `glow` (pulse depth) and `ambient` (drifting dust, bubbles, snow, embers or spores). All of it uses `LOOP.scene` from `motion.js`, is slow and subtle, uses no per-frame allocations and is off under reduced motion.
+- Generated kit (no external image generator): `python tools/gen-ui.py art/ui --contact contact.png` paints every manifest slot procedurally (layered noise textures, wobbled edges, bevel light from the top left, ambient occlusion, thick outline; rendered at 4x, written at 2x). Contact sheet: `docs/screens/painted/kit-contact-sheet.png`. Restart `npm run dev` after adding files to `art/` (the glob is read at start). `--only name,name` rebuilds single slots.
+- Procedural era backgrounds: `python tools/gen-bg.py [era ...]` paints triassic, jurassic, cretaceous, mammals, iceage and humans (calm dark centre, scenery on the edges, same 768x1360 webp as the four painted ones) into `art/backgrounds/runtime/`. In-game contact sheet: `docs/screens/backgrounds/contact-in-game.png`. Delete a file there to get the vector fallback back for that era.
 - Cutting a kit sheet: `python tools/prep-ui.py sheet.png map.json art/ui --preview contact.png`. The sheet is flat navy `#12172A` with separated elements. `map.json` lists slot names in reading order (see `tools/prep-ui-map.example.json`). The preview numbers each cut so a wrong mapping is easy to see. Use `--hard 22` for very dark elements such as the tar tiles, `--merge` to keep leaf and vine bits attached.
 - Compare with the vector look: add `?vector` to the URL (or set `window.__noArt = true`).
 - Stand-ins: `art-standins/` holds temporary images (crops of `art/reference/ui-target.jpg`, procedural plates, flat-colour backgrounds, and test props for Jurassic). Rebuild with `python art-standins/make-standins.py art/reference/ui-target.jpg`. Delete a stand-in file once the real one exists; delete the folder when all art is in.
 - Reserved slots not used by a screen yet: `gear-button`, `tablet-*`, `dirt-crumbs`.
 - Painted layout: the HUD row is still 56 px and the DOM text sits on the plates using `HUD_LAYOUT` in the manifest. The dirt counter plaque stays above the board and fossils stay on the Dig site.
+
+
+## Obstacles and objectives (phase B)
+
+Eight obstacles sit in board cells (tar pit, cracked sandstone, fossil tile, skeleton tile, vine stone, ancient crate, lava rock, unbreakable rock) plus the artefact piece, and the target framework has seven objective types (dig, collect, fossils, skeleton, drop, stones, clearAll). Rules and schedule: `docs/11-objectives-obstacles-specials.md` (Phase B as built). Try them: `?debug`, open the DBG tab, enter 11 (tar), 18 (rock), 25 (sandstone), 35 (fossil tiles), 55 (skeleton), 70 (artefact), 101 (vine), 201 (crate) or 301 (lava), Go. Screens: `docs/screens/phaseB/`. New files: `src/core/obstacles.js`, `src/render/obstacles.js`, `tests/obstacles.test.js`.
+
+
+## Early levels and tutorial
+
+Levels 1 to 5 are collect-only (no plaque; "Break 10 red" and similar); the dig plaque starts on level 6. Levels 1 to 6 show a one-time skippable tutorial (spotlight, hand pointer, tap to continue) kept in `profile.tutorial`. To see it again clear the save (browser storage for the page) or use a private window. Screens: `docs/screens/collect/`. Details: `docs/11-objectives-obstacles-specials.md` (early levels and tutorial).

@@ -2,6 +2,8 @@ import { ERAS } from '../core/eras.js';
 import { buildScenery, drawSceneryLive } from './scenery.js';
 import { loadEraSprites, spriteFor } from './atlas.js';
 import { drawGemShape, GEM_COLORS } from './gems.js';
+import { drawSpecial } from './specials.js';
+import { drawObstacle, drawArtefact, drawCracks } from './obstacles.js';
 import { drawFossil } from './fossils.js';
 import { reducedMotion } from '../ui/motion.js';
 import { eraPalette } from '../ui/tokens.js';
@@ -9,6 +11,7 @@ import { themeFor } from './eraTheme.js';
 import { buildFrame, drawPlaque, drawHudPlate, drawAmbient, ringPath, FRAME_T, FRAME_M } from './frame.js';
 import { rgba } from './util.js';
 import { D, STAGGER, SQUASH, SHAKE, FALL, HOLD, HINT_AFTER, LOOP, EASE, RECIPES, dur, shakeOf, fallSquash, DEBUG } from './motion.js';
+import { drawFx } from './specials.js';
 import { ParticlePool } from './particles.js';
 import { cue, unlock } from './sound.js';
 import { loadEra, preloadUi, slot, slotsReady, drawSlot } from './art.js';
@@ -22,9 +25,9 @@ const font = (s) => FONTS[s] || (FONTS[s] = `800 ${s}px Nunito, system-ui, sans-
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.scale = 1;
-    this.tweens = []; this.pool = new ParticlePool();
+    this.tweens = []; this.fx = []; this.pool = new ParticlePool();
     this.texts = Array.from({ length: TEXTS }, () => ({ on: false, x: 0, y: 0, s: 18, c: '#fff', t: '', age: 0, life: 0 }));
-    this.shakeAmp = 0; this.shakeEnd = 0; this.flash = 0; this.glow = 0;
+    this.shakeAmp = 0; this.shakeEnd = 0; this.flash = 0; this.glow = 0; this.obst = [];
     this.banner = { on: false, t: '', a: 0, y: 0, s: 1, c: '#FFC24B' };
     this.scenery = null; this.art = null; this.eraId = null; this.state = null; this.locked = true; this.skip = false; this.celebrating = false;
     this.sel = null; this.selT0 = 0; this.drag = null; this.h0 = -1; this.h1 = -1; this.hasHint = false;
@@ -52,34 +55,38 @@ export class Renderer {
     this.state = state;
     const { w } = state;
     this.cs = Math.min(50, Math.floor(320 / w));
-    const n = state.dirtTotal, rows = n <= 6 ? 1 : n <= 12 ? 2 : 3, cols = Math.ceil(n / rows);
+    this.hasDig = state.dirtTotal > 0;       // levels 1-5 have no plaque: the board and the Target panel only
+    const n = Math.max(1, state.dirtTotal), rows = n <= 6 ? 1 : n <= 12 ? 2 : 3, cols = Math.ceil(n / rows);
     this.bs = Math.min(46, Math.floor(300 / cols), Math.floor(112 / rows));
     this.rows = rows; this.cols = cols;
-    this.panel = { x: (W - cols * this.bs) / 2 - 12, y: 92, w: cols * this.bs + 24, h: rows * this.bs + 20 };
+    this.panel = this.hasDig ? { x: (W - cols * this.bs) / 2 - 12, y: 92, w: cols * this.bs + 24, h: rows * this.bs + 20 } : { x: W / 2, y: 92, w: 0, h: 0 };
     this.blockPos = [];
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; this.hasDig && i < n; i++) {
       const r = Math.floor(i / cols), inRow = r === rows - 1 ? n - r * cols : cols;
       const x0 = this.panel.x + 12 + ((cols - inRow) * this.bs) / 2;
       this.blockPos.push({ x: x0 + (i - r * cols) * this.bs, y: this.panel.y + 10 + r * this.bs });
     }
-    this.blocks = this.blockPos.map(() => ({ s: 1, rot: 0, alive: true }));
-    for (const b of state.dirtOrder.slice(0, state.dug)) this.blocks[b].alive = false;
-    this.boardX = (W - w * this.cs) / 2; this.boardY = this.panel.y + this.panel.h + 14;
+    this.blocks = state.blocks.map((b) => ({ s: 1, rot: 0, alive: b.hp > 0, hp: b.hp, max: b.max, t: b.t, c: b.c, jolt: 0 }));
+    this.fx = [];
+    this.boardX = (W - w * this.cs) / 2; this.boardY = this.hasDig ? this.panel.y + this.panel.h + 14 : 124;
     this.glow = 0; this.flash = 0; this.sel = null; this.hasHint = false; this.banner.on = false; this.skip = false;
     this.pool.clear(); this.tweens.length = 0; this.pieces = new Map();
-    this.grid = state.cells.map((p, i) => this.makePiece(p, i));
+    this.obst = this.obstView(state);
+    this.grid = state.cells.map((p, i) => (p ? this.makePiece(p, i) : null));
     this.lastInput = this.vnow;
   }
   clearLevel() { this.state = null; this.locked = true; }
   cx(i) { return this.boardX + (i % this.state.w) * this.cs + this.cs / 2; }
   cy(i) { return this.boardY + Math.floor(i / this.state.w) * this.cs + this.cs / 2; }
+  obstView(state) { return (state.obst || []).map((o) => (o ? { k: o.k, hp: o.hp, max: o.max, heat: o.heat || 0, s: 1, a: 1, jolt: 0 } : null)); }
   makePiece(p, i, fromY) {
-    const piece = { id: p.id, c: p.c, x: this.cx(i), y: fromY ?? this.cy(i), s: 1, sx: 1, sy: 1, a: 1 };
+    const piece = { id: p.id, c: p.c, k: p.s || null, art: !!p.a, o: p.o || 'h', x: this.cx(i), y: fromY ?? this.cy(i), s: 1, sx: 1, sy: 1, a: 1 };
     this.pieces.set(p.id, piece); return piece;
   }
   sync() {
-    this.grid = this.state.cells.map((p, i) => { const o = this.pieces.get(p.id) || this.makePiece(p, i); o.x = this.cx(i); o.y = this.cy(i); o.s = 1; o.sx = 1; o.sy = 1; o.a = 1; return o; });
-    const live = new Set(this.state.cells.map((p) => p.id));
+    this.grid = this.state.cells.map((p, i) => { if (!p) return null; const o = this.pieces.get(p.id) || this.makePiece(p, i); o.x = this.cx(i); o.y = this.cy(i); o.s = 1; o.sx = 1; o.sy = 1; o.a = 1; return o; });
+    this.obst = this.obstView(this.state);
+    const live = new Set(this.state.cells.filter(Boolean).map((p) => p.id));
     for (const id of this.pieces.keys()) if (!live.has(id)) this.pieces.delete(id);
   }
 
@@ -108,6 +115,7 @@ export class Renderer {
     if (this.locked || !this.state) return;
     const p = this.pt(e), i = this.cellAt(p);
     if (i < 0) { this.sel = null; return; }
+    if (this.obst[i]) { this.sel = null; this.doShake('tiny'); return; }   // obstacles cannot be selected or swapped
     const { w } = this.state;
     if (this.sel !== null && this.sel !== i) {
       const dx = Math.abs((this.sel % w) - (i % w)), dy = Math.abs(Math.floor(this.sel / w) - Math.floor(i / w));
@@ -124,7 +132,7 @@ export class Renderer {
     const { w, h } = this.state, i = this.drag.i, x = i % w, y = Math.floor(i / w), horiz = Math.abs(dx) > Math.abs(dy);
     const nx = x + (horiz ? Math.sign(dx) : 0), ny = y + (horiz ? 0 : Math.sign(dy));
     this.drag = null; this.sel = null;
-    if (nx >= 0 && ny >= 0 && nx < w && ny < h) this.onSwap?.(i, ny * w + nx);
+    if (nx >= 0 && ny >= 0 && nx < w && ny < h) { if (this.obst[ny * w + nx]) { this.doShake('tiny'); return; } this.onSwap?.(i, ny * w + nx); }
   }
 
   // ---- replaying the core's event log (section 4 recipes) ----------------------------------------
@@ -134,7 +142,14 @@ export class Renderer {
     for (const ev of events) {
       if (ev.t === 'swap') await this.animSwap(ev, hooks);
       else if (ev.t === 'clear') await this.animClear(ev, hooks);
-      else if (ev.t === 'dig') pending.push(this.animDig(ev, hooks, ev.dug >= ev.total));
+      else if (ev.t === 'hit') pending.push(this.animHit(ev, hooks));
+      else if (ev.t === 'obstacle') pending.push(this.animObstacle(ev, hooks));
+      else if (ev.t === 'collect') await this.animCollect(ev, hooks);
+      else if (ev.t === 'erupt') await this.animErupt(ev);
+      else if (ev.t === 'spread') await this.animSpread(ev);
+      else if (ev.t === 'fire') await this.animFire(ev);
+      else if (ev.t === 'create') await this.animCreate(ev);
+      else if (ev.t === 'combo') this.animCombo(ev);
       else if (ev.t === 'fall') await this.animFall(ev);
       else if (ev.t === 'shuffle') await this.animShuffle(ev);
       else if (ev.t === 'end') { status = ev.status; await Promise.all(pending); await this.animEnd(ev); }
@@ -201,39 +216,114 @@ export class Renderer {
   async animShuffle(ev) {
     this.text('No moves left. Shuffling', W / 2, this.boardY + (this.state.h * this.cs) / 2, '#F2F8FF', 20);
     if (ev.fresh) return;
-    const next = new Array(this.grid.length);
+    const next = this.grid.slice();
     const jobs = ev.moves.map((m) => { const p = this.pieces.get(m.id); next[m.to] = p; return { p, sx: p.x, sy: p.y, to: m.to }; });
     await this.tween(D.slow, (t) => { const e = EASE.out(t); for (const j of jobs) { j.p.x = j.sx + (this.cx(j.to) - j.sx) * e; j.p.y = j.sy + (this.cy(j.to) - j.sy) * e; } });
     this.grid = next;
   }
 
-  // dirt block: 3 shards + dust + small shake. The last block adds the section 4 "last block" beat.
-  async animDig(ev, hooks) {
-    const R = RECIPES.digBlock;
-    for (let k = 0; k < ev.blocks.length; k++) {
-      const b = this.blocks[ev.blocks[k]], pos = this.blockPos[ev.blocks[k]], x = pos.x + this.bs / 2, y = pos.y + this.bs / 2;
+  // plaque blocks: every hit jolts the block and shows a crack stage; the hit that breaks it crumbles it (3 shards, dust, small shake).
+  async animHit(ev, hooks) {
+    const H = RECIPES.hitBlock, R = RECIPES.digBlock;
+    for (const h of ev.hits) {
+      const b = this.blocks[h.b], pos = this.blockPos[h.b], x = pos.x + this.bs / 2, y = pos.y + this.bs / 2;
+      b.hp = h.hp;
+      if (!h.broke) {
+        cue('hitBlock'); this.pool.emit('dust', x, y, '#9A7A55', 4, 1.2); this.pool.emit('shard', x, y, '#4A3526', H.shards, 2.2); this.doShake(H.shake);
+        await this.tween(H.dur, (t) => { b.jolt = Math.sin(t * Math.PI) * (1 - t); });
+        b.jolt = 0; continue;
+      }
       cue('digBlock');
       this.pool.emit('dust', x, y, '#9A7A55', 10, 1.8); this.pool.emit('shard', x, y, '#4A3526', R.shards, 3.2); this.pool.emit('shard', x, y, '#6B4A2F', 2, 2.6);
-      this.doShake(R.shake); hooks.onDig?.(ev.dug, ev.total);
+      this.doShake(R.shake);
       await this.tween(R.dur, (t) => { b.s = 1 - EASE[R.ease](t); b.rot = t * 0.7; });
       b.alive = false; b.s = 0;
+      hooks.onDig?.(this.blocks.filter((q) => !q.alive).length, ev.total);
     }
+    hooks.onHit?.(ev);
   }
+
+  // board obstacles: a hit jolts the tile and shows a crack stage; the hit that breaks it crumbles it (shards, dust, small shake).
+  async animObstacle(ev, hooks) {
+    const H = RECIPES.obstacleHit, R = RECIPES.obstacleBreak;
+    await Promise.all(ev.hits.map(async (h) => {
+      const o = this.obst[h.i]; if (!o) return;
+      const x = this.cx(h.i), y = this.cy(h.i); o.hp = h.hp;
+      if (!h.broke) {
+        cue('obstacleHit'); this.pool.emit('dust', x, y, '#B89A6A', 4, 1.2); this.pool.emit('shard', x, y, '#5A4630', H.shards, 2.2); this.doShake(H.shake);
+        await this.tween(H.dur, (t) => { o.jolt = Math.sin(t * Math.PI) * (1 - t); }); o.jolt = 0; return;
+      }
+      cue('obstacleBreak'); this.pool.emit('dust', x, y, '#B89A6A', 10, 1.8); this.pool.emit('shard', x, y, '#5A4630', R.shards, 3.2); this.doShake(R.shake);
+      if (h.drop) this.text('+' + h.drop.coins + ' coins', x, y - this.cs * 0.4, '#FFD86A', 16);
+      await this.tween(R.dur, (t) => { const e = EASE[R.ease](t); o.s = 1 - e; o.a = 1 - e; });
+      this.obst[h.i] = null;
+    }));
+    hooks.onObstacle?.(ev);
+  }
+  // an artefact reached the bottom row: it pops, sparkles and leaves the board
+  async animCollect(ev, hooks) {
+    const R = RECIPES.collectItem;
+    cue('collectItem');
+    const items = ev.items.map((it) => ({ it, p: this.pieces.get(it.id) })).filter((q) => q.p);
+    for (const { p } of items) { this.sparks(p.x, p.y, '#FFD86A', 12); this.text('Artefact!', p.x, p.y - this.cs * 0.4, '#FFD86A', 18); }
+    await this.tween(R.dur, (t) => { const e = t < 0.4 ? 1 + (R.pop - 1) * EASE.pop(t / 0.4) : R.pop * (1 - EASE.out((t - 0.4) / 0.6)); for (const { p } of items) { p.s = e; p.a = 1 - Math.max(0, (t - 0.4) / 0.6); } });
+    for (const { it, p } of items) { const gi = this.grid.indexOf(p); if (gi >= 0) this.grid[gi] = null; this.pieces.delete(it.id); }
+    hooks.onCollect?.(ev);
+  }
+  // gems under new tar shrink away while the tar pit grows in
+  async growTar(items, from) {
+    const jobs = items.map((it) => { const p = this.pieces.get(it.id); this.obst[it.i] = { k: 'tar', hp: 1, max: 1, heat: 0, s: 0, a: 1, jolt: 0 }; return { o: this.obst[it.i], p, i: it.i }; });
+    for (const j of jobs) { this.pool.emit('dust', this.cx(j.i), this.cy(j.i), '#2A2030', 6, 1.4); }
+    await this.tween(RECIPES.tarSpread.dur, (t) => { const e = EASE.out(t); for (const j of jobs) { j.o.s = e; if (j.p) { j.p.s = 1 - e; } } });
+    for (const j of jobs) { const gi = j.p ? this.grid.indexOf(j.p) : -1; if (gi >= 0) this.grid[gi] = null; if (j.p) this.pieces.delete(j.p.id); }
+    void from;
+  }
+  async animSpread(ev) { cue('tarSpread'); this.doShake(RECIPES.tarSpread.shake); await this.growTar(ev.items, ev.items[0]?.from); }
+  async animErupt(ev) {
+    const R = RECIPES.lavaErupt, lv = this.obst[ev.i];
+    cue('lavaErupt'); this.doShake(R.shake); this.sparks(this.cx(ev.i), this.cy(ev.i), '#FF8A3D', 14); this.pool.emit('dust', this.cx(ev.i), this.cy(ev.i), '#3A2A2A', 10, 1.8);
+    if (lv) { lv.heat = 0; await this.tween(R.dur / 2, (t) => { lv.jolt = Math.sin(t * Math.PI * 4) * (1 - t); }); lv.jolt = 0; }
+    await this.growTar(ev.items, ev.i);
+  }
+
+  // special activations: grouped by chain depth, each depth a little after the last; the blast effect is drawn by specials.js
+  async animFire(ev) {
+    const R = RECIPES.fireSpecial, maxD = ev.fires.reduce((m, f) => Math.max(m, f.depth), 1);
+    const gap = Math.min(R.stagger, Math.floor((D.celebrate * 2) / Math.max(1, maxD - 1)));
+    cue('fireSpecial');
+    for (const f of ev.fires) {
+      const x = this.cx(f.i), y = this.cy(f.i);
+      this.fx.push({ kind: f.kind, o: f.o, x, y, cells: f.cells.map((i) => ({ x: this.cx(i), y: this.cy(i) })), t0: this.vnow + dur(gap) * (f.depth - 1), life: dur(R.dur), big: f.kind === 'combo', cs: this.cs });
+      this.sparks(x, y, '#FFE9A8', 10);
+    }
+    this.doShake(R.shake);
+    await this.wait(gap * (maxD - 1) + R.dur);
+    this.fx.length = 0;
+  }
+  async animCreate(ev) {
+    const R = RECIPES.createSpecial, p = this.makePiece({ id: ev.id, c: ev.c, s: ev.s, o: ev.o }, ev.i);
+    this.grid[ev.i] = p; p.s = 0;
+    cue('createSpecial'); this.sparks(p.x, p.y, '#FFE9A8', 10);
+    await this.tween(R.dur, (t) => { p.s = EASE[R.ease](t); });
+    p.s = 1;
+  }
+  animCombo(ev) { this.text('Combo!', W / 2, this.boardY + 16, '#FFC24B', 22, D.slow * 3); }
 
   async animEnd(ev) {
     const P = this.panel, cx = W / 2, B = this.banner;
     if (ev.status === 'won') {
       const L = RECIPES.lastBlock, F = RECIPES.foundBanner;
       this.celebrating = true; this.skip = false;
+      const py = this.hasDig ? P.y + P.h / 2 : this.boardY + 24;
       await this.wait(L.hold);                                   // short hold on the last crumble
       cue('lastBlock'); this.doShake(L.shake);
-      this.pool.emit('sparkle', cx, P.y + P.h / 2, '#FFE9A8', 10, 4); this.pool.emit('sparkle', cx, P.y + P.h / 2, '#FFC24B', 10, 5);
+      this.pool.emit('sparkle', cx, py, '#FFE9A8', 10, 4); this.pool.emit('sparkle', cx, py, '#FFC24B', 10, 5);
       const flash = this.tween(L.flash, (t) => { this.flash = 0.55 * (1 - EASE.out(t)); });
       const glow = this.tween(L.dur, (t) => { this.glow = EASE.out(t); });
       await Promise.all([flash, glow]); this.flash = 0;
       cue('foundBanner');
       { const C = RECIPES.fossilComplete; this.pool.emit('confetti', cx, this.boardY, '#FFC24B', 30, 4); this.pool.emit('confetti', cx, this.boardY, '#6FD3FF', 20, 4); this.doShake(C.shake); }
-      B.on = true; B.t = 'Fossil found!'; B.c = '#FFC24B';
+      B.on = true; B.t = this.hasDig ? 'Fossil found!' : 'Level complete!'; B.c = '#FFC24B';   // the fossil banner only shows on dig levels
       const lift = reducedMotion() ? 0 : -48;
       await this.tween(F.dur, (t) => { const e = EASE[F.ease](t); B.a = Math.min(1, t * 3); B.y = lift * (1 - e); B.s = reducedMotion() ? 1 : 0.6 + 0.4 * e; }, true);
       await this.wait(F.hold, true);
@@ -277,6 +367,7 @@ export class Renderer {
     c.save();
     if (this.shakeAmp && now < this.shakeEnd) { const k = (this.shakeEnd - now) / this.shakeLen * this.shakeAmp; c.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k); } else this.shakeAmp = 0;
     this.drawPanel(c); this.drawBoard(c, now);
+    if (this.fx.length) drawFx(c, this.fx, now);
     this.pool.draw(c);
     this.drawTexts(c);
     if (boostersPainted()) drawBoosters(c, this.boosterCounts || CONFIG.boosters.start, CONFIG.boosters.enabled, (cc, t, x, y, sz) => this.label(cc, t, x, y, sz));
@@ -306,6 +397,7 @@ export class Renderer {
   }
 
   drawPanel(c) {
+    if (!this.hasDig) return;
     const era = ERAS.find((e) => e.id === this.eraId), P = this.panel;
     this.label(c, 'Dig up: ' + era.fossil, W / 2, 76, 14, '#E8D3A0');
     if (!drawSlot(c, 'hud-plaque', P.x, P.y, P.w, P.h)) drawPlaque(c, this.theme, P.x, P.y, P.w, P.h);
@@ -316,15 +408,24 @@ export class Renderer {
     c.restore();
     for (let i = 0; i < this.blocks.length; i++) { const b = this.blocks[i]; if (b.alive && b.s > 0) this.drawDirt(c, this.blockPos[i], b, i); }
   }
+  // One plaque block: painted tile by type (tar / sand / stone), the gem it needs as a small badge, cracks for lost hit points.
   drawDirt(c, pos, b, i = 0) {
-    const h = (this.bs / 2 - 1) * b.s;
-    if (slot('tile-dirt')) { c.save(); c.translate(pos.x + this.bs / 2, pos.y + this.bs / 2); c.rotate(b.rot); drawSlot(c, 'tile-dirt', -h, -h, h * 2, h * 2, i); c.restore(); return; }
-    c.save(); c.translate(pos.x + this.bs / 2, pos.y + this.bs / 2); c.rotate(b.rot);
-    const g = c.createLinearGradient(0, -h, 0, h); g.addColorStop(0, '#5A4230'); g.addColorStop(1, '#2F2118');
-    this.rr(c, -h, -h, h * 2, h * 2, 6); c.fillStyle = g; c.fill(); c.lineWidth = 2; c.strokeStyle = '#1E140D'; c.stroke();
-    c.fillStyle = 'rgba(0,0,0,.35)';
-    for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(DIRT_DOTS[k][0] * h * 2, DIRT_DOTS[k][1] * h * 2, DIRT_DOTS[k][2] * h * 2, 0, 6.283); c.fill(); }
-    c.fillStyle = 'rgba(255,255,255,.09)'; this.rr(c, -h + 3, -h + 3, h * 2 - 6, 4, 2); c.fill();
+    const h = (this.bs / 2 - 1) * b.s, slotName = BLOCK_SLOT[b.t] || 'tile-dirt';
+    c.save(); c.translate(pos.x + this.bs / 2 + b.jolt * 3 * (i % 2 ? 1 : -1), pos.y + this.bs / 2); c.rotate(b.rot);
+    if (slot(slotName)) drawSlot(c, slotName, -h, -h, h * 2, h * 2, i);
+    else {
+      const g = c.createLinearGradient(0, -h, 0, h), col = BLOCK_FALLBACK[b.t] || BLOCK_FALLBACK.tar; g.addColorStop(0, col[0]); g.addColorStop(1, col[1]);
+      this.rr(c, -h, -h, h * 2, h * 2, 6); c.fillStyle = g; c.fill(); c.lineWidth = 2; c.strokeStyle = '#1E140D'; c.stroke();
+      c.fillStyle = 'rgba(0,0,0,.35)';
+      for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(DIRT_DOTS[k][0] * h * 2, DIRT_DOTS[k][1] * h * 2, DIRT_DOTS[k][2] * h * 2, 0, 6.283); c.fill(); }
+    }
+    if (b.hp < b.max) drawCracks(c, h, b.max - b.hp, i);
+    // gem badge: the colour that digs this block (shape and colour, so it never relies on colour alone)
+    const gr = h * 0.5;
+    c.fillStyle = 'rgba(12,9,6,.6)'; c.beginPath(); c.arc(0, 0, gr * 1.25, 0, 6.283); c.fill();
+    const sp = spriteFor(this.eraId, b.c);
+    if (sp) { const d = gr * 2.3; c.drawImage(sp, -d / 2, -d / 2, d, d); } else if (GEM_COLORS[b.c]) drawGemShape(c, b.c, gr);
+    if (b.max > 1) { c.fillStyle = '#FFE9A8'; for (let k = 0; k < b.hp; k++) { c.beginPath(); c.arc((k - (b.hp - 1) / 2) * 5, h - 4, 1.8, 0, 6.283); c.fill(); } }   // remaining hit points
     c.restore();
   }
 
@@ -349,6 +450,7 @@ export class Renderer {
       const hi = this.hasHint && (i === this.h0 || i === this.h1);
       this.drawGem(c, p, (this.sel === i ? selK : 1) * (hi ? pulse : 1), hi);
     }
+    for (let i = 0; i < this.obst.length; i++) { const o = this.obst[i]; if (o) drawObstacle(c, o, this.cx(i), this.cy(i), cs, i, now, reducedMotion()); }   // drawn over gems: falling gems come from behind them
     c.restore();
     if (tiles) return;   // painted tiles replace the vector frame
     const key = this.eraId + '|' + fw + '|' + fh + '|' + this.scale;
@@ -365,11 +467,18 @@ export class Renderer {
     if (r <= 0) return;
     c.save(); c.globalAlpha = Math.max(0, p.a); c.translate(p.x, p.y); c.scale(p.sx, p.sy);
     c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(0, r * 0.85, r * 0.8, r * 0.22, 0, 0, 6.283); c.fill();
-    const sp = spriteFor(this.eraId, p.c);
-    if (sp) { const d = r * 2.3; c.drawImage(sp, -d / 2, -d / 2, d, d); } else drawGemShape(c, p.c, r);
+    const sp = p.c >= 0 ? spriteFor(this.eraId, p.c) : null;
+    if (p.art) drawArtefact(c, r, this.vnow, reducedMotion());
+    else if (p.k === 'rainbow') drawSpecial(c, p, r, this.vnow, reducedMotion());
+    else {
+      if (sp) { const d = r * 2.3; c.drawImage(sp, -d / 2, -d / 2, d, d); } else drawGemShape(c, p.c, r);
+      if (p.k) drawSpecial(c, p, r, this.vnow, reducedMotion());
+    }
     if (hinted) { c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r * 1.15, 0, 6.283); c.stroke(); }
     c.restore();
   }
 }
+const BLOCK_SLOT = { tar: 'tile-dirt', sand: 'tile-sand', stone: 'tile-stone' };
+const BLOCK_FALLBACK = { tar: ['#5A4230', '#2F2118'], sand: ['#C9A064', '#8A6338'], stone: ['#9A9BA0', '#5C5D63'] };
 const DIRT_DOTS = [[-0.3, -0.25, 0.1], [0.28, -0.1, 0.08], [-0.1, 0.3, 0.09], [0.3, 0.3, 0.07]];
 void STAGGER; void SHAKE; void HOLD;

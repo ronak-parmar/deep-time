@@ -25,6 +25,8 @@ export const UI_SLOTS = {
   'count-badge-green': { w: 20, h: 20, note: 'small round badge, blank' },
   'tile-cream':   { w: 48, h: 48, n: 4, note: 'cream sandstone board tile' },
   'tile-dirt':    { w: 48, h: 48, n: 4, note: 'black tar dirt tile' },
+  'tile-sand':    { w: 48, h: 48, n: 4, note: 'packed sand block, 2 hit points (dig plaque)' },
+  'tile-stone':   { w: 48, h: 48, n: 4, note: 'grey rock block, 3 hit points (dig plaque)' },
   'tile-cracked': { w: 48, h: 48, n: 4, note: 'cracked pale stone, fossil layer' },
   'tablet-skull':     { w: 48, h: 48, note: 'carved tablet with a skull impression (reserved for the Dig site)' },
   'tablet-footprint': { w: 48, h: 48, note: 'carved tablet with a footprint (reserved)' },
@@ -43,7 +45,7 @@ export const slotFiles = (name) => {
 const DIR = { 'age-of-mammals': 'mammals', 'ice-age': 'iceage', 'early-humans': 'humans' };
 export const eraDir = (id) => DIR[id] || id;
 // Background candidates in priority order: art/backgrounds/<era>.png, then the art brief name bg-<dir>.png.
-export const bgFiles = (id) => [`backgrounds/${id}.png`, `backgrounds/${eraDir(id)}.png`, `backgrounds/bg-${eraDir(id)}.png`];
+export const bgFiles = (id) => [`backgrounds/runtime/${id}.webp`, `backgrounds/runtime/${eraDir(id)}.webp`, `backgrounds/${id}.png`, `backgrounds/${eraDir(id)}.png`, `backgrounds/bg-${eraDir(id)}.png`];
 export const propsPrefix = (id) => [`props/${id}/`, `props/${eraDir(id)}/`];
 
 // Prop files are named <name>-<anchor>[-glow].png, for example fern-tl.png or lava-br-glow.png.

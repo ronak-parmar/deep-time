@@ -5,6 +5,8 @@ import { ERAS, eraOf } from '../core/eras.js';
 import { plaqueUrl } from '../render/frame.js';
 import { CONFIG } from '../core/config.js';
 import { syncLives, nextLifeIn } from '../core/lives.js';
+import { generateLevel } from '../core/level.js';
+import { targetIcon } from '../ui/targets.js';
 
 // Home: stats, title, the one primary action (Play), Dig site, the era journey.
 export function mountHome(root, { profile, now, onPlay, onDig, onSetting }) {
@@ -22,6 +24,14 @@ export function mountHome(root, { profile, now, onPlay, onDig, onSetting }) {
   });
   const journey = h('ul', { class: 'home__journey', style: { listStyle: 'none', margin: 0, padding: 0 }, 'aria-label': 'Era journey' }, ...cards);
 
+  // journey nodes: the next five levels, each with the icons of its targets
+  const nodes = h('ol', { class: 'home__nodes', 'aria-label': 'Next levels', style: { listStyle: 'none', margin: 0, padding: 0 } },
+    ...Array.from({ length: 5 }, (_, k) => {
+      const n = profile.level + k, lv = generateLevel(n);
+      return h('li', { class: 'node' + (k === 0 ? ' node--current' : ''), 'aria-label': `Level ${n}`, 'aria-current': k === 0 ? 'step' : null },
+        h('span', { class: 'heading dt-num node__n' }, String(n)),
+        h('span', { class: 'node__icons' }, ...lv.targets.map((t) => targetIcon(t, 18))));
+    }));
   const livesEl = h('span', { class: 'chip heading dt-num chip--lives', id: 'lives-chip' });
   const timerEl = h('span', { class: 'caption dim dt-num', id: 'lives-timer' });
   const refresh = () => {
@@ -53,6 +63,7 @@ export function mountHome(root, { profile, now, onPlay, onDig, onSetting }) {
       h('p', { class: 'heading home__era' }, era.name)),
     h('section', { class: 'home__fact' }, h('span', { class: 'caption' }, 'Did you know'), h('p', { class: 'body' }, era.fact)),
     h('div', { class: 'home__spacer' }),
+    nodes,
     Button({ full: true, onClick: onPlay, id: 'play' }, `Play level ${profile.level}`),
     Button({ full: true, variant: 'secondary', onClick: onDig, id: 'dig' }, 'Dig site'),
     toggles,

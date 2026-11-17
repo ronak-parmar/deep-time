@@ -1,5 +1,6 @@
 import { CONFIG } from './config.js';
 import { syncLives, loseLife } from './lives.js';
+import { freshTutorial, normaliseTutorial } from './tutorial.js';
 
 export const PROFILE_VERSION = 2;
 
@@ -16,6 +17,7 @@ export function newProfile() {
     stars: {},                   // level -> best stars; a level present here has been won
     winStreak: 0,
     boosters: { ...CONFIG.boosters.start },
+    tutorial: freshTutorial(),    // levels 1-6 first-time tutorial: { seen: [levels], off }
     settings: { consent: null, reducedMotion: null, muted: false, haptics: true }
   };
 }
@@ -42,6 +44,7 @@ export function migrateProfile(raw) {
   p.completedFossils = Array.isArray(raw.completedFossils) ? [...raw.completedFossils] : [];
   p.boosters = { ...base.boosters, ...(raw.boosters || {}) };
   p.settings = { ...base.settings, ...(raw.settings || {}) };
+  p.tutorial = normaliseTutorial(raw.tutorial);
   return p;
 }
 

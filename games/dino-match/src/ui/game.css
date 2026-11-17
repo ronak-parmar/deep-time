@@ -136,3 +136,53 @@ button { font-family: inherit; }
 .dt-stars .dt-star-img { width: 40px; height: 40px; }
 .dt-progress--art { background-color: transparent; border: 0; height: 28px; border-image-slice: fill; position: relative; }
 .dt-progress--art .dt-progress__bar { position: absolute; left: 14px; top: 7px; height: 14px; max-width: calc(100% - 26px); background-size: 100% 100%; border-radius: 0; }
+
+/* target panel (HUD), pre-level screen, journey nodes (phase A) */
+.play__hud .stat--target { width: 90px; }
+.target-panel { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.target-panel--many { gap: 4px; flex-wrap: nowrap; }
+.tgt { display: inline-flex; align-items: center; gap: 3px; position: relative; }
+.target-panel--many .tgt .tgt-val { font-size: 13px; line-height: 16px; }
+.tgt .tgt-val { font-size: 18px; line-height: 22px; }
+.tgt-icon { flex: none; display: block; object-fit: contain; }
+.tgt-tick { display: none; color: #7CE0A0; }
+.tgt--done .tgt-tick { display: inline-flex; }
+.tgt--done .tgt-val { color: #7CE0A0 !important; }
+.tgt--pop { animation: tgtpop var(--m-base) var(--m-ease-pop); }
+.tgt--done.tgt--pop { animation-duration: var(--m-slow); }
+@keyframes tgtpop { 40% { transform: scale(var(--m-pop)); } }
+.has-hud-art .stat--target .caption { font-size: 10px; line-height: 12px; color: #FBEFD0; text-shadow: 0 1px 2px rgba(20,10,0,.85); }
+.prelevel { text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--space-2, 8px); max-width: 328px; }
+.prelevel__cap { text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); margin: 0; }
+.prelevel__targets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.prelevel__target { display: flex; align-items: center; gap: 8px; justify-content: center; }
+.prelevel__colours { display: flex; align-items: center; gap: 6px; }
+.prelevel__moves { margin: 0; color: var(--action); font-weight: 800; }
+.prelevel__new { margin: 0; color: var(--reward); }
+.prelevel__tip { margin: 0; }
+.remaining { list-style: none; margin: 0; padding: 0; text-align: center; color: var(--text-dim); }
+.home__nodes { display: flex; justify-content: space-between; gap: 6px; margin: 0 0 var(--space-2, 8px); }
+.node { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border-radius: 12px; background: rgba(11,18,32,.55); border: 1px solid var(--hairline); }
+.node--current { border-color: var(--action); background: rgba(40,60,100,.7); }
+.node__n { font-size: 16px; line-height: 20px; }
+.node__icons { display: flex; gap: 2px; min-height: 18px; }
+
+/* debug picker (only with ?debug) */
+.dbg { position: fixed; right: 4px; bottom: 4px; z-index: 50; color: #fff; font: 12px/1.3 system-ui, sans-serif; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.dbg__tab { opacity: .45; font-size: 10px; padding: 1px 5px; border-radius: 6px; border: 0; background: rgba(0,0,0,.6); color: #fff; } .dbg__tab[aria-expanded=true] { opacity: 1; }
+.dbg__body { background: rgba(0,0,0,.85); padding: 6px 8px; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; max-width: 200px; } .dbg__body[hidden] { display: none; }
+.dbg__row { display: flex; gap: 4px; } .dbg__in { width: 120px; font-size: 12px; } .dbg button { font-size: 12px; padding: 2px 6px; } .dbg__hint { opacity: .7; font-size: 10px; }
+
+/* first-time tutorial (levels 1-6): spotlight, hand pointer, card. Timing only through the docs/09 tokens. */
+.tut { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+.tut--tap { pointer-events: auto; cursor: pointer; }
+.tut__spot { position: fixed; border-radius: 14px; box-shadow: 0 0 0 200vmax rgba(8,12,22,.74); outline: 2px solid var(--action, #FFC24B); outline-offset: 0; pointer-events: none; transition: left var(--m-base) var(--m-ease-out), top var(--m-base) var(--m-ease-out), width var(--m-base) var(--m-ease-out), height var(--m-base) var(--m-ease-out); }
+.tut__card { position: fixed; left: 50%; transform: translateX(-50%); width: min(300px, 88vw); box-sizing: border-box; padding: 12px 14px; border-radius: 14px; background: rgba(20,28,46,.96); border: 1px solid var(--hairline, #3A4A6A); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
+.tut__text { margin: 0; }
+.tut__hint { margin: 0; }
+.tut__hand { position: fixed; left: 0; top: 0; width: 44px; height: 44px; pointer-events: none; transform: translate(var(--x0), var(--y0)); animation: tut-swipe calc(var(--m-slow) * 4) var(--m-ease-out) infinite; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.tut__trail { position: fixed; height: 0; border-top: 3px dashed rgba(255,226,140,.85); transform-origin: 0 0; pointer-events: none; }
+.tut__hand[hidden], .tut__trail[hidden], .tut__hint[hidden] { display: none; }
+@keyframes tut-swipe { 0%, 12% { transform: translate(var(--x0), var(--y0)) scale(1); } 22% { transform: translate(var(--x0), var(--y0)) scale(var(--m-press)); } 72% { transform: translate(var(--x1), var(--y1)) scale(var(--m-press)); } 85%, 100% { transform: translate(var(--x1), var(--y1)) scale(1); } }
+.tut--still .tut__hand { animation: none; transform: translate(var(--x1), var(--y1)); }
+@media (prefers-reduced-motion: reduce) { .tut__hand { animation: none; transform: translate(var(--x1), var(--y1)); } .tut__spot { transition: none; } }

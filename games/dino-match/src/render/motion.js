@@ -87,7 +87,19 @@ export const RECIPES = {
   buttonPress:   { dur: D.instant, ease: 'out', scale: SQUASH.pressScale, release: D.quick, releaseEase: 'pop' },
   screenChange:  { dur: D.base, ease: 'out', leave: D.quick, slide: 16 },
   counterChange: { dur: D.slow, ease: 'out', pulse: SQUASH.tapScale },
-  lifeRegained:  { dur: D.base, ease: 'pop' }
+  lifeRegained:  { dur: D.base, ease: 'pop' },
+  // phase A additions (docs/09 section 4 rows added with them)
+  hitBlock:      { dur: D.quick, ease: 'out', particles: 'dust', shards: 2, shake: 'tiny' },
+  createSpecial: { dur: D.base, ease: 'pop', pop: SQUASH.pop, particles: 'sparkle' },
+  fireSpecial:   { dur: D.slow, ease: 'out', shake: 'medium', particles: 'sparkle', stagger: STAGGER.list },
+  // phase B additions (obstacles)
+  obstacleHit:   { dur: D.quick, ease: 'out', particles: 'dust', shards: 2, shake: 'tiny' },
+  obstacleBreak: { dur: D.base, ease: 'in', particles: 'dust', shards: PARTICLES.shard.count, shake: 'small' },
+  collectItem:   { dur: D.slow, ease: 'pop', pop: SQUASH.pop, particles: 'sparkle' },
+  tarSpread:     { dur: D.slow, ease: 'out', shake: 'tiny' },
+  lavaErupt:     { dur: D.slow, ease: 'out', shake: 'medium', particles: 'dust' },
+  targetPop:     { dur: D.base, ease: 'pop', pop: SQUASH.pop },
+  targetDone:    { dur: D.slow, ease: 'pop', pop: SQUASH.pop }
 };
 export const EVENTS = Object.keys(RECIPES);
 

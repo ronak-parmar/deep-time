@@ -21,7 +21,7 @@ export async function mountLab({ renderer, ui }) {
   const clearLog = (st, idx, step = 1) => ({ t: 'clear', step, score: 30 * step, cells: idx.map((i) => ({ i, id: st.cells[i].id, c: st.cells[i].c })) });
   const bottom = (st, n) => Array.from({ length: n }, (_, k) => (st.h - 1) * st.w + k);
   const play = async (ev, hooks) => { renderer.locked = false; await renderer.play(ev, hooks || {}); renderer.locked = false; };
-  const lastDig = () => renderer.state.dirtOrder.slice(0, 1);
+  const hitOf = (broke) => ({ t: 'hit', step: 1, hits: [{ b: 0, hp: broke ? 0 : 1, max: 2, c: 0, broke }], dug: broke ? 1 : 0, total: renderer.state.dirtTotal });
 
   const demos = {
     tapGem: async () => { const st = await fresh(); renderer.sel = 8; renderer.selT0 = renderer.vnow; cue('tapGem'); void st; },
@@ -30,8 +30,18 @@ export async function mountLab({ renderer, ui }) {
     matchClear: async () => { const st = await fresh(); await play([clearLog(st, [0, 1, 2], 1)]); },
     fallRefill: async () => { const st = await fresh(); const idx = bottom(st, 3); await play([clearLog(st, idx), { t: 'fall', moves: [], spawns: idx.map((to, k) => ({ id: nid++, c: k % 6, to, fromRow: -1 - k })) }]); },
     cascadeStep: async () => { const st = await fresh(); await play([clearLog(st, [0, 1, 2], 1), clearLog(st, [8, 9, 10, 11, 12], 4)]); },
-    digBlock: async () => { await fresh(); await play([{ t: 'dig', blocks: lastDig(), dug: 1, total: renderer.state.dirtTotal }]); },
-    lastBlock: async () => { await fresh(); const n = renderer.state.dirtTotal; renderer.blocks.forEach((b, i) => { if (i !== 0) b.alive = false; }); await play([{ t: 'dig', blocks: [0], dug: n, total: n }, { t: 'end', status: 'won', stars: 3 }]); },
+    digBlock: async () => { await fresh(); await play([hitOf(true)]); },
+    hitBlock: async () => { await fresh(); await play([hitOf(false)]); },
+    createSpecial: async () => { const st = await fresh(); const id = nid++; await play([clearLog(st, [0, 1, 2, 3], 1), { t: 'create', step: 1, i: 1, id, c: 0, s: 'firecracker', o: 'h' }]); },
+    fireSpecial: async () => { const st = await fresh(); await play([{ t: 'fire', step: 1, fires: [{ i: 10, id: 1, kind: 'bomb', o: 'h', depth: 1, cells: [9, 10, 11, 16, 17, 18, 2, 3, 4] }, { i: 17, id: 2, kind: 'firecracker', o: 'h', depth: 2, cells: [14, 15, 16, 17, 18, 19, 20] }] }, clearLog(st, [9, 10, 11, 14, 15, 16, 17, 18, 19, 20], 1)]); },
+    obstacleHit: async () => { const st = await fresh(); renderer.obst[10] = { k: 'sandstone', hp: 2, max: 2, s: 1, a: 1, jolt: 0 }; st.cells[10] = null; await play([{ t: 'obstacle', step: 1, hits: [{ i: 10, k: 'sandstone', hp: 1, max: 2, by: 'match', broke: false }] }]); },
+    obstacleBreak: async () => { const st = await fresh(); renderer.obst[10] = { k: 'crate', hp: 1, max: 1, s: 1, a: 1, jolt: 0 }; st.cells[10] = null; await play([{ t: 'obstacle', step: 1, hits: [{ i: 10, k: 'crate', hp: 0, max: 1, by: 'blast', broke: true, drop: { coins: 3 } }] }]); },
+    collectItem: async () => { const st = await fresh(); const i = (st.h - 1) * st.w + 3, id = nid++; st.cells[i] = { id, c: -3, a: 1 }; renderer.grid[i] = renderer.makePiece({ id, c: -3, a: 1 }, i); await play([{ t: 'collect', items: [{ i, id, kind: 'artefact' }] }]); },
+    tarSpread: async () => { const st = await fresh(); renderer.obst[9] = { k: 'tar', hp: 1, max: 1, s: 1, a: 1, jolt: 0 }; await play([{ t: 'spread', items: [{ i: 10, id: st.cells[10].id, from: 9 }] }]); },
+    lavaErupt: async () => { const st = await fresh(); renderer.obst[16] = { k: 'lava', hp: 3, max: 3, heat: 2, s: 1, a: 1, jolt: 0 }; await play([{ t: 'erupt', i: 16, items: [10, 15, 17].map((i) => ({ i, id: st.cells[i].id })) }]); },
+    targetPop: async () => { cue('targetPop'); },
+    targetDone: async () => { cue('targetDone'); },
+    lastBlock: async () => { await fresh(); const n = renderer.state.dirtTotal; renderer.blocks.forEach((b, i) => { if (i !== 0) b.alive = false; }); await play([{ ...hitOf(true), dug: n, total: n }, { t: 'end', status: 'won', stars: 3 }]); },
     foundBanner: async () => { await fresh(); await play([{ t: 'end', status: 'won', stars: 3 }]); },
     winScreen: async () => { await fresh(); const st = renderer.state; st.score = 4200; demo = mountResult(ui, { won: true, level, state: st, stars: 3, rewards: { coins: 40, pickaxes: 1 }, lives: 5, ads: { show: async () => true, report() {} }, onNext() {}, onRetry() {}, onHome() {}, onDig() {}, onDouble() {} }); },
     loseScreen: async () => { await fresh(); demo = mountResult(ui, { won: false, level, state: renderer.state, stars: 0, rewards: { coins: 0, pickaxes: 0 }, lives: 3, ads: { show: async () => true, report() {} }, onNext() {}, onRetry() {}, onHome() {}, onDig() {}, onDouble() {} }); await play([{ t: 'end', status: 'lost', stars: 0 }]); },

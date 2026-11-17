@@ -162,7 +162,7 @@ describe('fossils', () => {
 });
 
 describe('near-miss offer', () => {
-  const lost = (dug) => { const s = createState(generateLevel(1)); s.status = 'lost'; s.moves = 0; s.dug = dug; return s; };
+  const lost = (dug) => { const s = createState(generateLevel(6)); s.status = 'lost'; s.moves = 0; s.dug = dug; return s; };
   it('is offered within 2 blocks of done', () => {
     const s = lost(0); s.dug = s.dirtTotal - 2;
     expect(nearMissOffer(s)).toEqual({ extraMoves: 5, coinCost: 50, blocksLeft: 2 });

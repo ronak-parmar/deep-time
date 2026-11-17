@@ -14,6 +14,11 @@ import { CONFIG } from './core/config.js';
 import { mountBoot } from './screens/boot.js';
 import { mountHome } from './screens/home.js';
 import { mountPlay } from './screens/play.js';
+import { mountPrelevel } from './screens/prelevel.js';
+import { mountTutorial } from './screens/tutorial.js';
+import { needsTutorial, markTutorialSeen, skipTutorial } from './core/tutorial.js';
+import { setupTest, ALL_TESTS } from './core/testboards.js';
+import { targetProgress } from './core/targets.js';
 import { mountResult } from './screens/result.js';
 import { mountDig } from './screens/dig.js';
 import { mountOutOfLives } from './screens/lives.js';
@@ -44,6 +49,7 @@ document.body.classList.toggle('is-reduced', reducedMotion());
 let profile, screen = null, game = null;
 // Old screen fades out (and stops taking input) while the new one slides in; it is removed after the leave time.
 const swapScreen = (next) => {
+  game?.tut?.destroy();                       // a tutorial overlay never outlives its play screen
   const old = screen; screen = next;
   if (!old) return;
   old.el?.classList.add('leaving');
@@ -59,14 +65,14 @@ const refreshLives = async () => { const p = syncLives(profile, now()); if (p !=
 
 // ---- screens -----------------------------------------------------------------------------
 async function showHome() {
-  game = null; renderer.clearLevel();
+  game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   await renderer.setEra(eraOf(profile.level).id);
   swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onPlay: () => startLevel(profile.level), onDig: () => showDig(showHome) }));
 }
 
 async function showDig(back) {
-  game = null; renderer.clearLevel();
+  game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   await renderer.setEra(eraOf(profile.level).id);
   swapScreen(mountDig(ui, {
@@ -80,7 +86,7 @@ async function showDig(back) {
 }
 
 async function showOutOfLives(levelNo) {
-  game = null; renderer.clearLevel();
+  game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   ads.report(AD_EVENTS.livesEmpty, { level: levelNo });
   const view = mountOutOfLives(ui, {
@@ -100,20 +106,30 @@ async function showOutOfLives(levelNo) {
 }
 
 // ---- a level -----------------------------------------------------------------------------
-async function startLevel(n) {
+// opts.skipPre skips the pre-level screen (retry, scripted tests). opts.test = a debug board name from core/testboards.js.
+async function startLevel(n, opts = {}) {
   await refreshLives();
   if (!canStartLevel(profile, now())) return showOutOfLives(n);
-  const level = generateLevel(n);
+  const level = generateLevel(n, { tune: !opts.test });
   const state = createState(level);
+  if (opts.test) { const t = setupTest(state, opts.test); if (t) { state.moves = state.movesMax = 40; window.__testSwap = t.swap; } }
   await renderer.setEra(eraOf(n).id);
   renderer.startLevel(state);
-  const view = mountPlay(ui, { level, state, tip: level.tip, onHome: () => { renderer.locked = true; showHome(); } });
-  swapScreen(view);
-  game = { level, state, view };
-  renderer.getHint = () => hintMove(state);
-  renderer.onSwap = (a, b) => onSwap(a, b);
-  renderer.locked = false;
-  ads.report(AD_EVENTS.levelStart, { level: n });
+  renderer.locked = true; game?.tut?.destroy(); game = null;
+  const begin = () => {
+    const view = mountPlay(ui, { level, state, tip: null, onHome: () => { renderer.locked = true; showHome(); } });
+    swapScreen(view);
+    game = { level, state, view, tut: null };
+    if (!opts.test && needsTutorial(profile, n)) {    // first-time tutorial, levels 1-6: shown once, skippable, kept in the profile
+      game.tut = mountTutorial({ level, state, renderer, onDone: () => persist(markTutorialSeen(profile, n)), onSkip: () => persist(skipTutorial(profile)) });
+    }
+    renderer.getHint = () => hintMove(state);
+    renderer.onSwap = (a, b) => onSwap(a, b);
+    renderer.locked = false;
+    ads.report(AD_EVENTS.levelStart, { level: n });
+  };
+  if (opts.skipPre || opts.test) return begin();
+  swapScreen(mountPrelevel(ui, { level, state, onPlay: begin, onBack: showHome }));
 }
 
 async function onSwap(a, b) {
@@ -126,12 +142,14 @@ async function onSwap(a, b) {
     onDig: (dug, total) => g.view.update({ dug, total })
   });
   if (game !== g) return; // left the level while animating
-  g.view.update({ moves: g.state.moves, dug: g.state.dug, total: g.state.dirtTotal });
+  g.view.update({ moves: g.state.moves, state: g.state });
+  if (r.valid) g.tut?.moved();
   if (g.state.status === 'playing') { renderer.locked = false; return; }
   finish(g);
 }
 
 async function finish(g) {
+  g.tut?.destroy();
   const won = g.state.status === 'won';
   if (!won) {
     const offer = nearMissOffer(g.state);
@@ -148,11 +166,11 @@ function showNearMiss(g, offer) {
   const resume = () => {
     view.destroy();
     addMoves(g.state, offer.extraMoves);
-    g.view.update({ moves: g.state.moves, dug: g.state.dug, total: g.state.dirtTotal });
+    g.view.update({ moves: g.state.moves, state: g.state });
     renderer.locked = false;
   };
   const view = mountOffer(ui, {
-    offer, coins: profile.coins, ads,
+    offer, progress: targetProgress(g.state), coins: profile.coins, ads,
     onCoins: async () => { const p = spendCoins(profile, offer.coinCost); if (!p) return; await persist(p); resume(); },
     onAd: () => { ads.report(AD_EVENTS.rewardedCompleted, { kind: 'extra_moves' }); resume(); },
     onDecline: () => { view.destroy(); settle(g, false); }
@@ -162,13 +180,15 @@ function showNearMiss(g, offer) {
 async function settle(g, won) {
   const n = g.level.level;
   const stars = won ? starsFor(g.state) : 0;
-  const { profile: p, rewards } = settleLevel(profile, n, { won, stars }, now());
+  let { profile: p, rewards } = settleLevel(profile, n, { won, stars }, now());
+  const found = won ? g.state.coinsFound || 0 : 0;                   // coins dropped by ancient crates are kept on a win
+  if (found) { p = { ...p, coins: p.coins + found }; rewards = { ...rewards, coins: rewards.coins + found }; }
   await persist(p);
   ads.report(won ? AD_EVENTS.levelComplete : AD_EVENTS.levelFailed, { level: n, stars });
   let current = p;
   swapScreen(mountResult(ui, {
     won, level: g.level, state: g.state, stars, rewards, lives: p.lives, ads,
-    onNext: () => startLevel(n + 1), onRetry: () => startLevel(n), onHome: showHome,
+    onNext: () => startLevel(n + 1), onRetry: () => startLevel(n, { skipPre: true }), onHome: showHome,
     onDig: () => showDig(showHome),
     onWait: () => showOutOfLives(n),
     onDouble: async () => { ads.report(AD_EVENTS.rewardedCompleted, { kind: 'double_coins' }); current = doubleCoins(profile, rewards.coins); await persist(current); }
@@ -196,6 +216,9 @@ if (import.meta.env.DEV || location.search.includes('debug')) {
   window.__dino = {
     get game() { return game; }, renderer, get profile() { return profile; }, hint: () => game && hintMove(game.state), CONFIG,
     setProfile: async (patch) => { await persist({ ...profile, ...patch }); },
-    go: { home: showHome, dig: () => showDig(showHome), lives: showOutOfLives, level: startLevel }
+    go: { home: showHome, dig: () => showDig(showHome), lives: showOutOfLives, level: startLevel, play: (n) => startLevel(n, { skipPre: true }), test: (name, n = 40) => startLevel(n, { test: name }) },
+    tests: ALL_TESTS
   };
 }
+// Debug picker (?debug): jump to any level, or start a board that is one swap away from each special / combination.
+if (location.search.includes('debug')) import('./screens/debugpicker.js').then((m) => m.mountPicker({ ALL_TESTS, go: (n) => startLevel(n, { skipPre: true }), test: (name) => startLevel(40, { test: name }), home: () => showHome() }));

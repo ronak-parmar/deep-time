@@ -54,6 +54,16 @@ Particles: `sparkle` 6 to 10 per gem, life 450 ms, gem colour. `dust` 8 to 12 pe
 | Screen change | outgoing fades `quick`, incoming slides 16 px and fades `base` `out` | none | none |
 | Counter change | number rolls `slow`, small scale pulse | tick | none |
 | Life regained | heart pops `pop` | chime | light |
+| Hit block (plaque, block survives) | block jolts `quick` `out`, 2 shards, a little dust, `tiny` shake, crack stage shows | chip | light |
+| Create special | piece pops in `base` `pop` (1.15 overshoot), sparkles | chime | light |
+| Fire special | blast flash and beams `slow` `out`, chained fires start `list` (80 ms) after each other (capped so a chain never exceeds 2 s), `medium` shake, sparkles | boom | medium |
+| Obstacle hit (board, survives) | tile jolts `quick` `out`, 2 shards, a little dust, `tiny` shake, crack stage shows | chip | light |
+| Obstacle breaks (board) | tile crumbles `base` `in` (3 shards, dust), `small` shake; a crate shows its coin drop | crumble | medium |
+| Collect item (artefact reaches the bottom row) | piece pops `slow` `pop` and fades with sparkles, a label floats up | chime | light |
+| Tar spreads | a new tar pit grows in `slow` `out` from its neighbour, the gem under it shrinks away, `tiny` shake | lowTone | none |
+| Lava erupts | lava flares and shakes `medium`, tar pits grow in over `slow` `out` with dust, gems under them shrink away | boom | medium |
+| Target changes (HUD) | the target row pulses `base` `pop` | tick | none |
+| Target done (HUD) | row pulses `slow` `pop`, tick glyph appears | star | light |
 
 New events must be added to this table before they are built.
 
