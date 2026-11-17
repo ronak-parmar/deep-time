@@ -119,7 +119,7 @@ describe('old saves', () => {
   it('maps the old era-number ids onto the new roster', () => {
     expect(migrateFossilId('cambrian-1')).toBe('cambrian-trilobite');
     expect(migrateFossilId('cambrian-2')).toBe('cambrian-opabinia');
-    expect(migrateFossilId('age-of-mammals-1')).toBe('mammals-hyracotherium');
+    expect(migrateFossilId('age-of-mammals-1')).toBe('mammals-eohippus');
     expect(migrateFossilId('cambrian-anomalocaris')).toBe('cambrian-anomalocaris');
     const p = migrateProfile({ v: 2, fossilProgress: { 'cambrian-1': 4, bogus: 3 }, completedFossils: ['cambrian-2', 'zzz'] });
     expect(p.fossilProgress).toEqual({ 'cambrian-trilobite': 4 }); expect(p.completedFossils).toEqual(['cambrian-opabinia']);
