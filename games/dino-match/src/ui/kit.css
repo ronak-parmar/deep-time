@@ -1,0 +1,165 @@
+/* UI kit (docs/06): painted plates for every screen outside a level. Timing only through the docs/09 tokens. */
+:root { --kit-cream: #F6E7C4; --kit-gold: #FFE08A; --kit-ink: #3A2008; --kit-outline: #4A2A0A; }
+
+/* ---- text: the HUD look (gold, brown outline, warm shadow); body in warm cream, never pure white */
+.kit-title, .kit-ribbon__t, .kit-panel .title, .kit-panel .display, .dt-modal__card .title, .dt-result .display { font-family: Nunito, system-ui, sans-serif; font-weight: 800; color: var(--kit-gold); letter-spacing: .01em;
+  text-shadow: 0 2px 0 var(--kit-outline), 1.5px 0 0 var(--kit-outline), -1.5px 0 0 var(--kit-outline), 0 -1.5px 0 var(--kit-outline), 1.5px 1.5px 0 var(--kit-outline), -1.5px 1.5px 0 var(--kit-outline), 0 3px 6px rgba(0,0,0,.45); }
+.kit-panel, .dt-modal__card, .dt-result { color: var(--kit-cream); }
+.kit-panel .body, .kit-panel .body-small, .kit-panel .caption, .kit-panel p, .kit-panel li, .dt-modal__card .body, .dt-modal__card .body-small, .dt-modal__card .caption, .dt-result .body, .dt-result .body-small, .dt-result .caption { color: var(--kit-cream); text-shadow: 0 1px 0 rgba(30,14,4,.8), 0 0 6px rgba(30,14,4,.5); }
+.kit-panel .dim, .dt-modal__card .dim, .dt-result .dim { color: #D9C49A; }
+
+/* ---- the plate */
+.kit-panel, .dt-modal__card, .dt-result { position: relative; box-sizing: border-box; border: 22px solid transparent; border-image: var(--kit-panel) 60 fill / 22px stretch; background: var(--kit-panel) border-box 0 0 / 100% 100% no-repeat; border-radius: 0; box-shadow: none; filter: drop-shadow(0 8px 10px rgba(0,0,0,.55)); }
+.kit-panel--small { border-image-source: var(--kit-panel-small); background-image: var(--kit-panel-small); }
+.kit-panel { width: 100%; max-width: 328px; margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 2px 4px 4px; }
+.dt-modal__card, .dt-result { margin-top: 30px; padding: 2px 4px 4px; }
+.kit-ribbon { position: relative; z-index: 1; margin: -52px auto 6px; min-width: 170px; max-width: 100%; box-sizing: border-box; border: 18px solid transparent; border-width: 18px 26px; border-image: var(--kit-ribbon) 36 52 fill / 18px 26px stretch; background: var(--kit-ribbon) border-box 0 0 / 100% 100% no-repeat; padding: 0 2px; font-size: 20px; line-height: 20px; text-align: center; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
+.kit-ribbon__t { display: block; }
+
+/* ---- backdrop and entrance */
+.scrim { background: radial-gradient(ellipse at 50% 45%, rgba(40,24,10,.55), rgba(10,6,2,.86)); }
+.kit-drop { animation: kitdrop var(--m-slow) var(--m-ease-pop) backwards; }
+.scrim > .dt-modal__card, .scrim > .dt-result, .scrim .dt-result { animation: kitdrop var(--m-slow) var(--m-ease-pop) backwards; }
+@keyframes kitdrop { from { opacity: 0; transform: translateY(-26px) scale(.9); } to { opacity: 1; transform: none; } }
+
+/* ---- buttons: chunky painted 9-slice, gold = main action, stone = the rest; pressed = the flat image, 2px lower */
+.kit-btn, .dt-btn.dt-btn--primary, .dt-btn.dt-btn--secondary { position: relative; box-sizing: border-box; min-height: 52px; min-width: 96px; padding: 0 6px; border: 0 solid transparent; border-width: 18px 20px 22px; border-image-width: 18px 20px 22px 20px; border-radius: 0; box-shadow: none; background: var(--kit-btn-stone) border-box 0 0 / 100% 100% no-repeat; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+  font-family: Nunito, system-ui, sans-serif; font-weight: 800; font-size: 17px; line-height: 16px; letter-spacing: .01em; filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); transition: transform var(--m-quick) var(--m-ease-pop); }
+.kit-btn--gold, .dt-btn.dt-btn--primary { background-image: var(--kit-btn-gold); border-image-source: var(--kit-btn-gold); border-image-slice: 36 40 44 40 fill; color: var(--kit-ink); text-shadow: 0 1px 0 rgba(255,238,170,.85); }
+.kit-btn--stone, .dt-btn.dt-btn--secondary { background-image: var(--kit-btn-stone); border-image-source: var(--kit-btn-stone); border-image-slice: 36 40 44 40 fill; color: var(--kit-cream); text-shadow: 0 2px 0 rgba(30,14,4,.9), 0 0 4px rgba(0,0,0,.5); }
+.kit-btn--gold:active:not(:disabled), .dt-btn.dt-btn--primary:active:not(:disabled) { background-image: var(--kit-btn-gold-down); border-image-source: var(--kit-btn-gold-down); transform: translateY(2px); filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+.kit-btn--stone:active:not(:disabled), .dt-btn.dt-btn--secondary:active:not(:disabled) { background-image: var(--kit-btn-stone-down); border-image-source: var(--kit-btn-stone-down); transform: translateY(2px); filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+.kit-btn:disabled, .dt-btn:disabled { filter: grayscale(.85) brightness(.8) drop-shadow(0 2px 2px rgba(0,0,0,.4)); cursor: default; }
+.kit-btn--full, .dt-btn.dt-btn--full { width: 100%; }
+.kit-btn__t { display: inline-flex; align-items: center; gap: 6px; }
+.kit-btn svg, .dt-btn svg { flex: none; }
+
+/* ---- medallion with a glow and a sparkle on arrival */
+.kit-medal { position: relative; width: var(--s, 64px); height: var(--s, 64px); flex: none; display: flex; align-items: center; justify-content: center; background: var(--kit-medallion) center / 100% 100% no-repeat; color: var(--kit-gold); filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)) drop-shadow(0 0 10px rgba(255,200,90,.45)); }
+.kit-medal--teal { background-image: var(--kit-medallion-teal); filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)) drop-shadow(0 0 10px rgba(90,220,200,.45)); }
+.kit-medal svg { filter: drop-shadow(0 0 4px rgba(255,214,120,.9)); }
+.kit-medal--spark::after { content: ''; position: absolute; right: -3px; top: -4px; width: 18px; height: 18px; background: radial-gradient(circle, #FFF8D8 0 18%, rgba(255,232,150,0) 20%), conic-gradient(from 0deg, transparent 0 20deg, #FFF3B8 20deg 25deg, transparent 25deg 70deg, #FFF3B8 70deg 75deg, transparent 75deg 160deg, #FFF3B8 160deg 165deg, transparent 165deg 250deg, #FFF3B8 250deg 255deg, transparent 255deg); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); background: #FFF3B8; animation: kitspark calc(var(--m-slow) * 3) var(--m-ease-out) var(--m-slow) 1 both; pointer-events: none; }
+@keyframes kitspark { 0% { opacity: 0; transform: scale(.2) rotate(0); } 35% { opacity: 1; transform: scale(1.15) rotate(40deg); } 100% { opacity: 0; transform: scale(.5) rotate(90deg); } }
+
+/* ---- carved rows */
+.kit-slot { box-sizing: border-box; border: 16px solid transparent; border-width: 16px 18px 18px; border-image: var(--kit-slot) 32 36 36 36 fill / 16px 18px 18px 18px stretch; background: var(--kit-slot) border-box 0 0 / 100% 100% no-repeat; padding: 0; margin: -8px 0; display: flex; align-items: center; gap: 10px; color: var(--kit-cream); }
+
+@media (prefers-reduced-motion: reduce) { .kit-drop, .scrim > .dt-modal__card, .scrim .dt-result { animation-name: enterFade; } .kit-medal--spark::after { animation: none; opacity: 0; } }
+.is-reduced .kit-drop, .is-reduced .scrim .dt-result, .is-reduced .scrim > .dt-modal__card { animation-name: enterFade; } .is-reduced .kit-medal--spark::after { animation: none; opacity: 0; }
+
+/* lists on a dark parchment screen: ribbons are inline section heads there, rows sit with a small gap */
+.howto__sec .kit-ribbon { margin: 6px auto 8px; }
+.howto__sec .kit-slot { margin: 0 0 6px; }
+/* round-corner stone icon buttons (back, close) */
+.screen:not(.play) .icon-btn { box-sizing: border-box; width: 48px; height: 48px; min-width: 48px; padding: 0; border: 0 solid transparent; border-width: 18px 20px 22px; border-image: var(--kit-btn-stone) 36 40 44 40 fill / 18px 20px 22px 20px stretch; background: var(--kit-btn-stone) border-box 0 0 / 100% 100% no-repeat; border-radius: 0; color: var(--kit-cream); display: inline-flex; align-items: center; justify-content: center; filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+.screen:not(.play) .icon-btn svg { filter: drop-shadow(0 1px 0 rgba(30,14,4,.9)); margin-top: -4px; }
+.screen:not(.play) .icon-btn:active:not(:disabled) { border-image-source: var(--kit-btn-stone-down); background-image: var(--kit-btn-stone-down); transform: translateY(2px); }
+
+/* wait banner and chips on the dark screens */
+.dig__wait { color: var(--kit-cream); }
+.chip { color: var(--kit-cream); text-shadow: 0 2px 0 rgba(30,14,4,.9); font-weight: 800; }
+.chip--coin { color: var(--kit-gold); } .chip--pick { color: #BFE9F2; } .chip--lives { color: #FF9C8A; }
+
+/* =====================================================================================================================
+   AI kit (art/ui/kit/*.webp, from tools/prep-ui-sheet.py). Only active when kitart.js finds the plates (html.ai-kit).
+   Every size is a FRACTION of the image width/height, so a higher-resolution sheet with the same layout drops in unchanged.
+   Fractions below were measured on the 1080 px sheet (px in comments are at that resolution):
+     panel        573x428   parchment inset  L .122  T .288  R .127  B .206 ; vertical 3-slice through the parchment: top 215 (50.2%), bottom from 262 (38.8%)
+     panel-small  353x306   parchment inset  L .170  T .240  R .170  B .255 ; 3-slice: top 120 (39.2%), bottom from 185 (39.5%)
+     btn-gold     523x158   horizontal 3-slice: left 120 (22.9%), right 135 (25.8%) ; label centred in the pill
+     btn-stone    359x125   horizontal 3-slice: 75 (20.9%) each side
+     currency     381x138   horizontal 3-slice: left 135 (35.4%, coin + leaves), right 40 (10.5%)
+   The ribbon, vines and fossils are never stretched: only the plain parchment/gold middle is.
+   ===================================================================================================================== */
+html.ai-kit { --ai-ink: #3A2008; --ai-ink-soft: #5B3A18; --ai-dim: #7C5630; --ai-halo: #FFF1CC; }
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result) { --w: 328px; --bh: 56px; position: relative; isolation: isolate; box-sizing: border-box; width: var(--w); max-width: none; margin: 0; border: 0; border-image: none; background: none; filter: none; border-radius: 0; box-shadow: none;
+  padding: calc(var(--w) * .288) calc(var(--w) * .127) calc(var(--w) * .206) calc(var(--w) * .122); min-height: calc(var(--w) * .747); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--ai-ink); }
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result)::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; box-sizing: border-box; border: solid transparent; border-width: calc(var(--w) * .3752) 0 calc(var(--w) * .2897);
+  border-image: var(--ai-panel) 50.2% 0 38.8% 0 fill / calc(var(--w) * .3752) 0 calc(var(--w) * .2897) 0 stretch; filter: drop-shadow(0 9px 10px rgba(0, 0, 0, .55)); }
+html.ai-kit .kit-panel--small { min-height: calc(var(--w) * .867); padding: calc(var(--w) * .24) calc(var(--w) * .17) calc(var(--w) * .255); }
+html.ai-kit .kit-panel--small::before { border-width: calc(var(--w) * .34) 0 calc(var(--w) * .3428); border-image: var(--ai-panel-small) 39.2% 0 39.5% 0 fill / calc(var(--w) * .34) 0 calc(var(--w) * .3428) 0 stretch; }
+html.ai-kit .dig__dock.kit-panel--small { --w: 340px; }
+html.ai-kit .intro__card.kit-panel { --w: 300px; }
+
+/* the ribbon is part of the plate image: the title is just text laid on it */
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result) .kit-ribbon { position: absolute; z-index: 2; left: calc(var(--w) * .215); right: calc(var(--w) * .215); top: calc(var(--w) * .122); height: calc(var(--w) * .1); margin: 0; padding: 0; min-width: 0; border: 0; border-image: none; background: none; filter: none; display: flex; align-items: center; justify-content: center; font-size: calc(var(--w) * .058); line-height: 1.05; white-space: nowrap; }
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result) .kit-ribbon__t { overflow: visible; }
+
+/* dark brown text with a light halo on parchment (the ribbon title keeps the gold HUD look) */
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result) :is(p, li, .body, .body-small, .caption, .title, .display, .heading, span:not(.kit-ribbon__t):not(.chip)) { color: var(--ai-ink-soft); text-shadow: 1px 0 0 var(--ai-halo), -1px 0 0 var(--ai-halo), 0 1px 0 var(--ai-halo), 0 -1px 0 var(--ai-halo), 0 2px 4px rgba(120, 70, 20, .25); }
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result) :is(.title, .display) { color: var(--ai-ink); }
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result) .dim { color: var(--ai-dim); }
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result) .kit-ribbon__t { color: var(--kit-gold); text-shadow: 0 2px 0 var(--kit-outline), 1.5px 0 0 var(--kit-outline), -1.5px 0 0 var(--kit-outline), 0 -1.5px 0 var(--kit-outline), 1.5px 1.5px 0 var(--kit-outline), -1.5px 1.5px 0 var(--kit-outline), 0 3px 5px rgba(0, 0, 0, .5); }
+html.ai-kit .dt-result .result__coins, html.ai-kit .dt-result .result__pick { font-weight: 800; }
+html.ai-kit .dt-glyph--img { display: inline-block; vertical-align: middle; flex: none; filter: drop-shadow(0 1px 1px rgba(60, 30, 5, .55)); }
+
+/* buttons: gold pill = main action, stone slab = the rest. Horizontal 3-slice, label centred, press = scale + brightness */
+html.ai-kit :is(.kit-btn, .dt-btn.dt-btn--primary, .dt-btn.dt-btn--secondary) { --L: calc(var(--bh) * .76); --R: calc(var(--bh) * .854); min-height: var(--bh); height: auto; flex-shrink: 0; min-width: calc(var(--L) + var(--R) + 40px); padding: 2px 0 5px; line-height: 1.1; text-align: center; box-sizing: border-box; border: solid transparent; border-width: 0 var(--R) 0 var(--L); border-image: var(--ai-btn-gold) 0 25.8% 0 22.9% fill / 0 var(--R) 0 var(--L) stretch; background: none; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .45)); transition: transform var(--m-instant) var(--m-ease-out), filter var(--m-instant) var(--m-ease-out); font-size: 18px; color: var(--ai-ink); text-shadow: 1px 0 0 var(--ai-halo), -1px 0 0 var(--ai-halo), 0 1px 0 var(--ai-halo), 0 -1px 0 var(--ai-halo); }
+html.ai-kit :is(.kit-btn--stone, .dt-btn.dt-btn--secondary) { --L: calc(var(--bh) * .6); --R: calc(var(--bh) * .6); border-image: var(--ai-btn-stone) 0 20.9% 0 20.9% fill / 0 var(--R) 0 var(--L) stretch; }
+html.ai-kit :is(.kit-btn--gold, .dt-btn.dt-btn--primary) { border-image-source: var(--ai-btn-gold); background-image: none; }
+html.ai-kit :is(.kit-btn--stone, .dt-btn.dt-btn--secondary) { border-image-source: var(--ai-btn-stone); background-image: none; }
+html.ai-kit :is(.kit-btn, .dt-btn):active:not(:disabled) { transform: scale(.96); filter: brightness(.88) drop-shadow(0 1px 2px rgba(0, 0, 0, .45)); border-image-source: revert-layer; }
+html.ai-kit :is(.kit-btn--gold, .dt-btn.dt-btn--primary):active:not(:disabled) { border-image-source: var(--ai-btn-gold); }
+html.ai-kit :is(.kit-btn--stone, .dt-btn.dt-btn--secondary):active:not(:disabled) { border-image-source: var(--ai-btn-stone); }
+html.ai-kit :is(.kit-btn, .dt-btn):disabled { filter: grayscale(.8) brightness(.85) drop-shadow(0 2px 2px rgba(0, 0, 0, .4)); }
+html.ai-kit :is(.kit-btn, .dt-btn) svg:not(.dt-glyph--img) { color: var(--ai-ink); }
+html.ai-kit .kit-btn--full, html.ai-kit .dt-btn.dt-btn--full { width: 100%; }
+
+/* round close button (the X), top-right corner of a plate */
+.kit-close { position: absolute; z-index: 3; top: calc(var(--w, 328px) * .31 - 23px); right: -8px; width: 46px; height: 46px; padding: 0; border: 0; background: var(--ai-close) center / contain no-repeat; cursor: pointer; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .5)); transition: transform var(--m-instant) var(--m-ease-out); }
+.kit-close:active { transform: scale(.92); filter: brightness(.85) drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
+html:not(.ai-kit) .kit-close { background: var(--kit-btn-stone) center / 100% 100% no-repeat; } html:not(.ai-kit) .kit-close::after { content: 'x'; color: var(--kit-cream); font-weight: 800; }
+
+/* currency bar: the coin pill (coin is baked into the left end) */
+.kit-cur { --bh: 34px; display: inline-flex; align-items: center; justify-content: flex-end; box-sizing: border-box; height: var(--bh); min-width: calc(var(--bh) * 2.4); padding: 0 2px 2px 0; border: solid transparent; border-width: 0 calc(var(--bh) * .29) 0 calc(var(--bh) * .978); border-image: var(--ai-currency) 0 10.5% 0 35.4% fill / 0 calc(var(--bh) * .29) 0 calc(var(--bh) * .978) stretch; font-weight: 800; font-size: 15px; color: var(--ai-ink, #3A2008); text-shadow: 1px 0 0 #FFF1CC, -1px 0 0 #FFF1CC, 0 1px 0 #FFF1CC; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .5)); }
+
+/* medallion behind round art (intro): the ammonite relief stays visible as a frame, the art sits on a parchment disc */
+html.ai-kit .kit-medal { background: var(--ai-medallion) center / 100% 100% no-repeat; }
+html.ai-kit .kit-medal > * { position: relative; z-index: 1; }
+html.ai-kit .kit-medal::before { content: ''; position: absolute; inset: 21%; border-radius: 50%; background: radial-gradient(circle at 45% 40%, #F7E4B8, #E1B97A 85%); box-shadow: inset 0 0 6px rgba(120, 70, 20, .6); }
+html.ai-kit .kit-medal--teal::before { background: radial-gradient(circle at 45% 40%, #D8F0E4, #8CC7B4 85%); }
+
+/* carved rows (how to play): the stone slab as a row */
+html.ai-kit .kit-slot { --bh: 72px; box-sizing: border-box; min-height: var(--bh); margin: 0 0 6px; padding: 4px 0; border: solid transparent; border-width: 0 calc(var(--bh) * .6); border-image: var(--ai-btn-stone) 0 20.9% 0 20.9% fill / 0 calc(var(--bh) * .6) 0 calc(var(--bh) * .6) stretch; background: none; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .4)); }
+html.ai-kit .kit-slot .howto__txt .heading, html.ai-kit .kit-slot .heading { color: var(--ai-ink); text-shadow: 1px 0 0 var(--ai-halo), -1px 0 0 var(--ai-halo), 0 1px 0 var(--ai-halo), 0 -1px 0 var(--ai-halo); }
+html.ai-kit .kit-slot .body-small, html.ai-kit .kit-slot p, html.ai-kit .kit-slot .caption { color: var(--ai-ink-soft); text-shadow: 0 1px 0 var(--ai-halo); }
+
+/* small round back button -> a short stone slab */
+html.ai-kit .screen:not(.play) .icon-btn { --bh: 46px; width: 74px; height: var(--bh); min-width: 0; padding: 0 0 3px; border: solid transparent; border-width: 0 calc(var(--bh) * .6); border-image: var(--ai-btn-stone) 0 20.9% 0 20.9% fill / 0 calc(var(--bh) * .6) 0 calc(var(--bh) * .6) stretch; background: none; color: var(--ai-ink); }
+html.ai-kit .screen:not(.play) .icon-btn svg { margin-top: 0; filter: none; }
+html.ai-kit .screen:not(.play) .icon-btn:active:not(:disabled) { border-image-source: var(--ai-btn-stone); background-image: none; transform: scale(.94); filter: brightness(.88) drop-shadow(0 3px 3px rgba(0, 0, 0, .4)); }
+.dt-stars .dt-star-img--ai { width: 58px; height: 54px; object-fit: contain; filter: drop-shadow(0 3px 3px rgba(60, 30, 5, .5)); }
+.dt-stars .dt-star-img--off { filter: grayscale(1) brightness(.55) contrast(.8) drop-shadow(0 2px 2px rgba(60, 30, 5, .4)); opacity: .8; }
+html.ai-kit .dt-stars { gap: 4px; }
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result) .kit-btn { --bh: 50px; }
+html.ai-kit .kit-panel--small .kit-close { top: calc(var(--w, 328px) * .2 - 23px); right: -10px; }
+html.ai-kit :is(.kit-btn, .dt-btn, .kit-close):focus { outline: none; }
+html.ai-kit :is(.kit-btn, .dt-btn, .kit-close):focus-visible { outline: none; filter: brightness(1.08) drop-shadow(0 0 7px rgba(255, 244, 190, .95)) drop-shadow(0 3px 3px rgba(0, 0, 0, .45)); }
+
+/* screens that now hold a plate */
+html.ai-kit .kit-slot { padding: 16px 0 28px; }
+html.ai-kit :is(.kit-panel, .dt-modal__card, .dt-result) > * { flex-shrink: 0; }
+html.ai-kit .dt-reward__benefit { font-size: 15px; line-height: 18px; }
+html.ai-kit .howto__row { min-height: 0; }
+html.ai-kit .lives { display: flex; align-items: center; justify-content: center; padding: 8px; background: rgba(11, 18, 32, .86); }
+html.ai-kit .lives__panel { --w: 340px; justify-content: flex-start; gap: 6px; }
+html.ai-kit .lives__panel .lives__timer { font-size: 34px; line-height: 38px; }
+html.ai-kit .lives__panel .lives__hearts { gap: 4px; }
+html.ai-kit .lives__panel .dt-reward { width: 100%; }
+html.ai-kit .museum__sheet { align-items: center; justify-content: center; padding: 8px; }
+html.ai-kit .museum__panel { --w: 340px; width: var(--w); max-height: none; overflow: visible; border: 0; border-radius: 0; background: none; justify-content: flex-start; gap: 6px; }
+html.ai-kit .museum__panel .museum__big { width: 100%; border-radius: 10px; box-shadow: 0 0 0 2px rgba(120, 70, 20, .55), inset 0 0 8px rgba(0, 0, 0, .3); }
+html.ai-kit .museum__facts { text-align: left; padding-left: 16px; gap: 4px; font-size: 13px; line-height: 17px; }
+/* dock under the dig window: the buttons may run out over the plate's frame, the label never wraps */
+html.ai-kit .dig__dock { --w: 344px; }
+html.ai-kit .dig__dock .kit-btn { width: calc(100% + var(--w) * .16); margin: 0 calc(var(--w) * -.08); --bh: 46px; font-size: 16px; white-space: nowrap; }
+html.ai-kit .dt-reward { border: 2px solid #7A4A16; background: linear-gradient(#8FD66A, #4FA33A); color: #20380F; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .45), 0 3px 3px rgba(0, 0, 0, .35); border-radius: 14px; }
+html.ai-kit .dt-reward :is(.dt-reward__benefit, .dt-reward__note) { color: #20380F; text-shadow: 0 1px 0 rgba(235, 255, 215, .7); }
+html.ai-kit .dt-result__offer { width: 100%; margin-top: 0; }
+html.ai-kit .kit-panel.intro__card { margin-left: calc(var(--w) / -2); }
+html.ai-kit .intro--center .kit-panel.intro__card { margin-left: 0; }
+html.ai-kit .intro--soft .intro__card { --w: 280px; }
+.kit-medal[hidden] { display: none; }
+html.ai-kit .kit-panel.intro__card { position: absolute; }
+html.ai-kit .intro--center .kit-panel.intro__card { position: relative; }
+html.ai-kit .intro__card .intro__bart { width: 112px; height: 112px; }

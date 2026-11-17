@@ -4,6 +4,7 @@ import { h } from './dom.js';
 import { glyph } from './glyphs.js';
 import { slotUrl, slotsReady } from '../render/art.js';
 import { UI_SLOTS } from '../render/artManifest.js';
+import { aiUrl, aiKitOn } from './kitart.js';
 
 export function Button({ variant = 'primary', full = false, onClick, id, label, disabled }, ...kids) {
   return h('button', { type: 'button', id, 'aria-label': label, disabled, onClick, class: `dt-btn dt-btn--${variant} heading${full ? ' dt-btn--full' : ''}` }, ...kids);
@@ -12,6 +13,10 @@ export function Button({ variant = 'primary', full = false, onClick, id, label, 
 export function Stars(count) {
   const wrap = h('div', { class: 'dt-stars', role: 'img', 'aria-label': `${count} of 3 stars` });
   for (let i = 0; i < 3; i++) {
+    if (aiKitOn() && aiUrl('star')) {    // the painted star from the AI kit; the empty one is the same star, dark
+      const im = h('img', { class: 'dt-star-img dt-star-img--ai' + (i < count ? ' pop-in' : ' dt-star-img--off'), src: aiUrl('star'), alt: '', draggable: 'false' });
+      im.style.animationDelay = `calc(var(--m-stagger-reward) * ${i + 1})`; wrap.append(im); continue;
+    }
     if (slotsReady('star-on', 'star-off')) {    // painted stars; vector glyph otherwise
       const im = h('img', { class: 'dt-star-img' + (i < count ? ' pop-in' : ''), src: slotUrl(i < count ? 'star-on' : 'star-off'), alt: '', draggable: 'false' });
       im.style.animationDelay = `calc(var(--m-stagger-reward) * ${i + 1})`; wrap.append(im); continue;
@@ -63,6 +68,7 @@ export async function watchAd(ads, btn) {
 
 // Header stat chip: glyph + value (+ optional small text).
 export function Chip(name, value, label, cls = '') {
+  if (name === 'coin' && aiKitOn() && aiUrl('currency')) return h('span', { class: `kit-cur dt-num ${cls}`, role: 'status', 'aria-label': `${label} ${value}` }, String(value));
   return h('span', { class: `chip heading dt-num ${cls}`, role: 'status', 'aria-label': `${label} ${value}` }, glyph(name, 18), String(value));
 }
 

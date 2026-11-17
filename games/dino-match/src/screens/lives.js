@@ -1,4 +1,5 @@
 import { h } from '../ui/dom.js';
+import { Panel } from '../ui/kit.js';
 import { Button, RewardButton, watchAd, mmss } from '../ui/components.js';
 import { glyph } from '../ui/glyphs.js';
 import { CONFIG } from '../core/config.js';
@@ -28,13 +29,10 @@ export function mountOutOfLives(root, { profile, level, now, ads, onPlay, onDig,
   refresh();
   const iv = setInterval(refresh, 1000);
   const el = h('main', { class: 'screen lives' },
-    h('div', { class: 'lives__head' },
+    Panel({ title: 'Out of lives', class: 'lives__panel', label: 'Out of lives' },
       h('div', { class: 'lives__hearts', 'aria-hidden': 'true' }, ...Array.from({ length: CONFIG.lives.max }, () => glyph('heart', 28))),
-      h('h1', { class: 'display', id: 'lives-title' }, 'Out of lives'),
-      timer, note),
-    h('div', { class: 'lives__actions' },
+      timer, note,
       play,
-      h('div', { class: 'lives__gap' }),
       adBtn,
       coinBtn,
       Button({ variant: 'secondary', full: true, id: 'dig', onClick: onDig }, 'Dig site'),

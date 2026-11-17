@@ -3,7 +3,10 @@ import { reducedMotion } from './ui/motion.js';
 import { D, dur, RECIPES } from './render/motion.js';
 import { cue, unlock, setMuted, setHaptics } from './render/sound.js';
 import { Renderer } from './render/renderer.js';
-import { createState, swap, hintMove, addMoves } from './core/game.js';
+import { createState, swap, hintMove, addMoves, useBooster } from './core/game.js';
+import { boosterTargets, owned, spendBooster, buyBooster, giftBooster, applyPreBooster } from './core/boosters.js';
+import { BOOSTERS, unlockedBoosters } from './data/boosters.js';
+import { mountShop } from './screens/shop.js';
 import { generateLevel } from './core/level.js';
 import { eraOf } from './core/eras.js';
 import { settleLevel, doubleCoins, spendCoins } from './core/profile.js';
@@ -17,6 +20,10 @@ import { mountPlay } from './screens/play.js';
 import { mountPrelevel } from './screens/prelevel.js';
 import { mountTutorial } from './screens/tutorial.js';
 import { needsTutorial, markTutorialSeen, skipTutorial } from './core/tutorial.js';
+import './ui/kit.js';
+import { mountIntro } from './screens/intro.js';
+import { mountHowTo } from './screens/howto.js';
+import { INTROS, introsFor, introNeeded, markIntroSeen, comboId, comboIntroFor, isPreIntro } from './data/intros.js';
 import { setupTest, ALL_TESTS } from './core/testboards.js';
 import { targetProgress } from './core/targets.js';
 import { mountResult } from './screens/result.js';
@@ -38,11 +45,17 @@ const ads = createMockAdPort();
 const now = () => Date.now() + (window.__clockOffset || 0);
 
 // Scale the 360 x 640 stage to the window, centred.
+// Outside a level the stage grows taller on tall phones (no letterbox); in a level it stays 360 x 640 and is centred.
+let tall = true;
 function fit() {
   const s = Math.min(innerWidth / 360, innerHeight / 640);
-  stage.style.transform = `translate(${(innerWidth - 360 * s) / 2}px, ${(innerHeight - 640 * s) / 2}px) scale(${s})`;
+  const h = tall ? Math.max(640, innerHeight / s) : 640;
+  stage.style.height = h + 'px';
+  stage.style.transform = `translate(${(innerWidth - 360 * s) / 2}px, ${(innerHeight - h * s) / 2}px) scale(${s})`;
+  document.getElementById('game').style.top = (h - 640) / 2 + 'px';
   renderer.resize(s);
 }
+const setTall = (b) => { if (tall !== b) { tall = b; fit(); } };
 addEventListener('resize', fit);
 fit();
 document.body.classList.toggle('is-reduced', reducedMotion());
@@ -66,13 +79,25 @@ const refreshLives = async () => { const p = syncLives(profile, now()); if (p !=
 
 // ---- screens -----------------------------------------------------------------------------
 async function showHome() {
+  setTall(true);
   game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   await renderer.setEra(eraOf(profile.level).id);
-  swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onPlay: () => startLevel(profile.level), onDig: () => showDig(showHome), onMuseum: () => showMuseum(showHome) }));
+  swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onPlay: () => startLevel(profile.level), onPlayLevel: (n) => startLevel(n), onHowTo: () => showHowTo(showHome), onDig: () => showDig(showHome), onMuseum: () => showMuseum(showHome), onShop: () => openShop({ onClose: showHome }) }));;
+}
+
+// Shop (docs/16): over whatever is on screen. Buying persists the profile; onClose runs when the player leaves it.
+function openShop({ onClose, focus = null, level = profile.level } = {}) {
+  return mountShop(ui, { profile, level, focus, onBuy: async (id) => { const q = buyBooster(profile, id); if (!q) return null; await persist(q); cue('boosterSelect'); game?.view.boosters?.update(q.boosters); return q; }, onClose });
+}
+
+function showHowTo(back, all = false) {
+  setTall(true);
+  swapScreen(mountHowTo(ui, { profile, onBack: back, all }));
 }
 
 async function showDig(back) {
+  setTall(true);
   game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   await renderer.setEra(eraOf(profile.level).id);
@@ -90,10 +115,12 @@ async function showDig(back) {
 
 // History cutscene (never an ad): after a fossil is completed, or replayed from the museum.
 function showHistory(fossil, back) {
+  setTall(true);
   swapScreen(mountHistory(ui, { fossil, onDone: back }));
 }
 
 async function showMuseum(back) {
+  setTall(true);
   game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   await renderer.setEra(eraOf(profile.level).id);
@@ -105,6 +132,7 @@ async function showMuseum(back) {
 }
 
 async function showOutOfLives(levelNo) {
+  setTall(true);
   game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   ads.report(AD_EVENTS.livesEmpty, { level: levelNo });
@@ -135,25 +163,98 @@ async function startLevel(n, opts = {}) {
   await renderer.setEra(eraOf(n).id);
   renderer.startLevel(state);
   renderer.locked = true; game?.tut?.destroy(); game = null;
-  const begin = () => {
-    const view = mountPlay(ui, { level, state, tip: null, onHome: () => { renderer.locked = true; showHome(); } });
+  const begin = async (chosen = []) => {
+    for (const id of chosen) {                       // pre-level boosters: spend, then change the fresh board before anything is drawn
+      const q = spendBooster(profile, id); if (!q) continue;
+      await persist(q); applyPreBooster(state, id); renderer.startLevel(state);
+    }
+    setTall(false);
+    const view = mountPlay(ui, { level, state, tip: null, onHome: () => { cancelBooster(); renderer.locked = true; showHome(); }, boosters: opts.test ? null : { counts: { ...profile.boosters }, onTap: (id) => boosterTap(id), onCancel: () => cancelBooster() } });
     swapScreen(view);
     game = { level, state, view, tut: null };
     if (!opts.test && needsTutorial(profile, n)) {    // first-time tutorial, levels 1-6: shown once, skippable, kept in the profile
       game.tut = mountTutorial({ level, state, renderer, onDone: () => persist(markTutorialSeen(profile, n)), onSkip: () => persist(skipTutorial(profile)) });
+    } else if (!opts.test) {                          // new element on this level (data/intros.js): a card per element, once
+      const list = introsFor(profile, level).filter((e) => !isPreIntro(e));
+      if (list.length) game.tut = mountIntro({ entries: list, renderer, state, onDone: () => introDone(list), onSkip: () => persist(skipTutorial(profile)) });
     }
-    renderer.getHint = () => hintMove(state);
+    renderer.getHint = () => { const m = hintMove(state); if (m && !opts.test && introNeeded(profile, 'hint')) softIntro(INTROS.hint); return m; };
     renderer.onSwap = (a, b) => onSwap(a, b);
+    renderer.onTarget = (i) => runBooster(i);
     renderer.locked = false;
     ads.report(AD_EVENTS.levelStart, { level: n });
   };
   if (opts.skipPre || opts.test) return begin();
-  swapScreen(mountPrelevel(ui, { level, state, onPlay: begin, onBack: showHome }));
+  const preIds = unlockedBoosters(n, 'pre');
+  const pre = { ids: preIds, counts: { ...profile.boosters }, onShop: (id) => openShop({ focus: id, level: n, onClose: () => { pv.setCounts(profile.boosters); } }) };
+  const pv = mountPrelevel(ui, { level, state, onPlay: begin, onBack: showHome, pre: preIds.length ? pre : null });
+  swapScreen(pv);
+  const preIntros = introsFor(profile, level).filter(isPreIntro);   // a pre-level booster met for the first time: explained here, gifted, and already picked
+  if (preIntros.length) mountIntro({ entries: preIntros, renderer, state, onDone: async () => { let p = markIntroSeen(profile, ...preIntros.map((e) => e.id)); for (const e of preIntros) p = giftBooster(p, e.booster); await persist(p); pv.setCounts(p.boosters); for (const e of preIntros) pv.select(e.booster); }, onSkip: () => persist(skipTutorial(profile)) });
+}
+
+// ---- boosters (docs/16) ----------------------------------------------------------------------
+// tap a booster -> (targeted ones) choose a tile -> useBooster() in core -> the same event replay as a move. An empty one opens the shop.
+// The first time a booster is taught its card gifts one and the player must use it (forced), with a clear Cancel.
+const PROMPT = { cell: 'Tap a tile to smash', row: 'Tap a row to clear', area: 'Tap the middle of the area', colour: 'Tap a gem: its colour goes', none: '' };
+function introDone(list) {
+  let p = markIntroSeen(profile, ...list.map((e) => e.id)); const bst = list.filter((e) => e.booster);
+  for (const e of bst) p = giftBooster(p, e.booster);
+  persist(p).then(() => { const g = game; if (!g || !bst.length) return; g.view.boosters?.update(p.boosters); g.tut = null; forceBooster(bst[0].booster); });
+}
+function forceBooster(id) {
+  const g = game; if (!g) return;
+  g.force = id; g.view.boosters?.setForce(id);
+  const b = BOOSTERS[id]; g.view.prompt(b.target === 'none' ? `Your turn: tap ${b.name}` : `Your turn: tap ${b.name}, then a tile`, 'Not now');
+  if (b.target !== 'none') boosterTap(id, true);
+}
+function cancelBooster() {
+  const g = game; renderer.setTargeting(null); if (!g) return;
+  g.pending = null; g.force = null; g.view.boosters?.setActive(null); g.view.boosters?.setForce(null); g.view.prompt(null);
+}
+function boosterTap(id, auto = false) {
+  const g = game; if (!g || renderer.locked || g.state.status !== 'playing') return;
+  const b = BOOSTERS[id];
+  if (g.tut?.el?.classList.contains('intro--soft')) { g.tut.destroy(); g.tut = null; }
+  if (g.tut) return;                                             // an intro card is open
+  if (g.pending === id && !auto) { const f = g.force; cancelBooster(); if (f) { g.force = null; } return; }
+  if (owned(profile, id) <= 0) { cancelBooster(); renderer.locked = true; openShop({ focus: id, level: g.level.level, onClose: () => { if (game === g) { g.view.boosters?.update(profile.boosters); renderer.locked = false; } } }); return; }
+  cue('boosterSelect');
+  if (b.target === 'none') { g.pending = id; return runBooster(-1); }
+  g.pending = id; g.view.boosters?.setActive(id);
+  const valid = new Set(); for (let i = 0; i < g.state.w * g.state.h; i++) if (boosterTargets(g.state, id, i)) valid.add(i);
+  renderer.setTargeting(id, valid);
+  g.view.prompt(g.force === id ? `Your turn: ${PROMPT[b.target].toLowerCase()}` : PROMPT[b.target], g.force === id ? 'Not now' : 'Cancel');
+}
+async function runBooster(i) {
+  const g = game; if (!g || !g.pending || renderer.locked) return;
+  const id = g.pending, r = useBooster(g.state, id, i);
+  if (!r.valid) { renderer.doShake('tiny'); return; }            // a tile the booster cannot use: nothing spent, still choosing
+  const q = spendBooster(profile, id); if (q) await persist(q);
+  const wasForced = g.force === id;
+  renderer.setTargeting(null); g.pending = null; g.force = null; g.view.boosters?.setActive(null); g.view.boosters?.setForce(null); g.view.prompt(null);
+  g.view.boosters?.update(profile.boosters);
+  await renderer.play(r.events, { onMove: () => g.view.update({ moves: g.state.moves }), onDig: (dug, total) => g.view.update({ dug, total }) });
+  if (game !== g) return;
+  g.view.update({ moves: g.state.moves, state: g.state });
+  void wasForced;
+  if (g.state.status === 'playing') { renderer.locked = false; return; }
+  finish(g);
+}
+
+// Small card for things that happen mid-level (hint, shuffle, a first combo). Never blocks; the next move removes it.
+function softIntro(entry, seenId = entry.id) {
+  if (!game || game.tut) return;
+  persist(markIntroSeen(profile, seenId));
+  game.tut = mountIntro({ entries: [entry], renderer, state: game.state, soft: true });
 }
 
 async function onSwap(a, b) {
   const g = game;
   if (!g || renderer.locked) return;
+  if (g.force || g.pending) { renderer.doShake('tiny'); return; }   // a booster is being chosen (or its first use is required): no swaps
+  if (g.tut?.el?.classList.contains('intro--soft')) { g.tut.destroy(); g.tut = null; }
+  const sa = g.state.cells[a]?.s, sb = g.state.cells[b]?.s, combo = sa && sb ? comboIntroFor(sa, sb) : null;
   const r = swap(g.state, a, b);
   if (!r.events.length) return;
   await renderer.play(r.events, {
@@ -163,7 +264,14 @@ async function onSwap(a, b) {
   if (game !== g) return; // left the level while animating
   g.view.update({ moves: g.state.moves, state: g.state });
   if (r.valid) g.tut?.moved();
-  if (g.state.status === 'playing') { renderer.locked = false; return; }
+  if (g.state.status === 'playing') {
+    renderer.locked = false;
+    if (!g.level.test) {
+      if (combo && introNeeded(profile, combo.id)) softIntro({ title: combo.ids.map((k) => INTROS[k].title).join(' + '), text: combo.text, art: INTROS[combo.ids[0]].art, spot: 'board' }, combo.id);
+      else if (r.events.some((e) => e.t === 'shuffle') && introNeeded(profile, 'shuffle')) softIntro(INTROS.shuffle);
+    }
+    return;
+  }
   finish(g);
 }
 
@@ -235,9 +343,12 @@ if (import.meta.env.DEV || location.search.includes('debug')) {
   window.__dino = {
     get game() { return game; }, renderer, get profile() { return profile; }, hint: () => game && hintMove(game.state), CONFIG,
     setProfile: async (patch) => { await persist({ ...profile, ...patch }); },
-    go: { home: showHome, dig: () => showDig(showHome), museum: () => showMuseum(showHome), history: (id) => showHistory(FOSSILS.find((f) => f.id === id), showHome), lives: showOutOfLives, level: startLevel, play: (n) => startLevel(n, { skipPre: true }), test: (name, n = 40) => startLevel(n, { test: name }) },
+    boosters: { give: async (n = 3) => { let p = profile; for (const k of Object.keys(BOOSTERS)) p = { ...p, boosters: { ...p.boosters, [k]: (p.boosters[k] || 0) + n } }; await persist(p); game?.view.boosters?.update(p.boosters); }, shop: (f) => openShop({ focus: f }), tap: (id) => boosterTap(id), use: (i) => runBooster(i), force: (id) => forceBooster(id) },
+    go: { home: showHome, howto: (all) => showHowTo(showHome, all), dig: () => showDig(showHome), museum: () => showMuseum(showHome), history: (id) => showHistory(FOSSILS.find((f) => f.id === id), showHome), lives: showOutOfLives, level: startLevel, play: (n) => startLevel(n, { skipPre: true }), test: (name, n = 40) => startLevel(n, { test: name }) },
+    result: (won = true) => { const g = game; if (!g) return; g.state.status = won ? 'won' : 'lost'; if (won) g.state.score = g.state.score || 12480; return settle(g, won); },
+    offer: () => { const g = game; if (g) return showNearMiss(g, { extraMoves: 5, coinCost: 50, blocksLeft: 2 }); },
     tests: ALL_TESTS
   };
 }
 // Debug picker (?debug): jump to any level, or start a board that is one swap away from each special / combination.
-if (location.search.includes('debug')) import('./screens/debugpicker.js').then((m) => m.mountPicker({ ALL_TESTS, go: (n) => startLevel(n, { skipPre: true }), test: (name) => startLevel(40, { test: name }), home: () => showHome() }));
+if (location.search.includes('debug')) import('./screens/debugpicker.js').then((m) => m.mountPicker({ ALL_TESTS, go: (n) => startLevel(n, { skipPre: true }), test: (name) => startLevel(40, { test: name }), home: () => showHome(), intros: () => showHowTo(showHome, true) }));

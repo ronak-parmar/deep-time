@@ -26,7 +26,7 @@ const ONBOARDING = [
   { size: 6, colors: 4, blocks: 'T0 T1 T0 T1', moves: 14, tip: 'Match the colours shown on the blocks to dig.', seed: 1 },
   { size: 6, colors: 4, blocks: 'T0 T1 T2 T0 T1', moves: 14, tip: 'Bigger matches hit harder: 4 in a row hits twice. A wrong colour does nothing.', seed: 7 },
   { size: 6, colors: 5, blocks: 'T0 T1 T2 S3 T4', collect: [[2, 8]], moves: 20, tip: 'Dig the blocks and break the gems. Sand takes two hits.', seed: 8 },
-  { size: 7, colors: 5, blocks: 'T0 T1 S2 S3 T4 S0 T1 S2 T3', moves: 18, tip: 'Swap two Firecrackers together for a cross blast.', seed: 9 },
+  { size: 7, colors: 5, blocks: 'T0 T1 S2 S3 T4 S0 T1 S2 T3', moves: 18, tip: 'Match 5 in an L or T shape to make a Bomb.', seed: 9 },
   { size: 7, colors: 5, blocks: 'S0 S1 T2 T3 S4 K0 T1 S2 T3 K4', collect: [[1, 10]], moves: 22, tip: 'Stone takes three hits. A match of 5 breaks it in one go.', seed: 10 },
   { size: 7, colors: 5 }, { size: 7, colors: 5 }, { size: 7, colors: 5 }, { size: 7, colors: 5 }, { size: 7, colors: 5 }
 ];
@@ -38,9 +38,9 @@ const ONB_DIRT = [4, 5, 6, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12];   // plaqu
 // V vine stone, C crate, L lava rock, # rock, a artefact. extra = targets next to the dig target; moves come from the tuned generator.
 export const INTRO = {
   11: { layout: ['.......', '.......', '..T.T..', '.......', '..T.T..', '.......', '.......'], extra: [{ type: 'clearAll', k: 'tar', n: 4 }], tip: 'Tar pits clear when you match next to them, or blast them.' },
-  18: { layout: ['#.....#', '.......', '.......', '...#...', '.......', '.......', '#.....#'], extra: [], tip: 'Rocks never break. Gems fall around them.' },
-  25: { layout: ['.......', '.S...S.', '.......', '...S...', '.......', '.S...S.', '.......'], extra: [{ type: 'stones', n: 5 }], tip: 'Sandstone cracks after two hits and then crumbles.' },
-  35: { layout: ['.......', '..F.F..', '.......', '.......', '..F....', '.......', '.......'], extra: [{ type: 'fossils', n: 3 }], tip: 'Break a fossil tile to collect the fossil buried under it.' },
+  21: { layout: ['#.....#', '.......', '.......', '...#...', '.......', '.......', '#.....#'], extra: [], tip: 'Rocks never break. Gems fall around them.' },
+  31: { layout: ['.......', '.S...S.', '.......', '...S...', '.......', '.S...S.', '.......'], extra: [{ type: 'stones', n: 5 }], tip: 'Sandstone cracks after two hits and then crumbles.' },
+  41: { layout: ['.......', '..F.F..', '.......', '.......', '..F....', '.......', '.......'], extra: [{ type: 'fossils', n: 3 }], tip: 'Break a fossil tile to collect the fossil buried under it.' },
   55: { layout: ['.......', '..BBB..', '...B...', '..BBB..', '...B...', '.......', '.......'], extra: [{ type: 'skeleton', n: 8 }], tip: 'Uncover every tile of the buried skeleton.' },
   70: { layout: ['..a.a..', '.......', '.......', '.......', '.......', '.......', '.......'], extra: [{ type: 'drop', n: 2 }], tip: 'Match gems under an artefact so it falls to the bottom row.' },
   101: { layout: ['.......', '.V...V.', '.......', '.......', '.V...V.', '.......', '.......'], extra: [{ type: 'clearAll', k: 'vine', n: 4 }], tip: 'Vine stone needs two matches next to it. Blasts do not cut vines.' },

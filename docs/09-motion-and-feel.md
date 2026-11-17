@@ -62,6 +62,8 @@ Particles: `sparkle` 6 to 10 per gem, life 450 ms, gem colour. `dust` 8 to 12 pe
 | Collect item (artefact reaches the bottom row) | piece pops `slow` `pop` and fades with sparkles, a label floats up | chime | light |
 | Tar spreads | a new tar pit grows in `slow` `out` from its neighbour, the gem under it shrinks away, `tiny` shake | lowTone | none |
 | Lava erupts | lava flares and shakes `medium`, tar pits grow in over `slow` `out` with dust, gems under them shrink away | boom | medium |
+| Booster picked (bar button) | medallion lifts and glows `quick` `pop`, tiles that can be targeted breathe a gold ring, a prompt with Cancel slides in | chime | light |
+| Booster used | effect on the board `slow` `out` (dust and shards for Pickaxe and Rockslide, green sparkles for Brush, gold for Amber Lure, shake for Tremor), `small` shake, then the normal clear / hit / fall events | crumble then chime | medium |
 | Target changes (HUD) | the target row pulses `base` `pop` | tick | none |
 | Target done (HUD) | row pulses `slow` `pop`, tick glyph appears | star | light |
 

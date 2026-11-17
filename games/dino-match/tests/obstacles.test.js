@@ -256,7 +256,7 @@ describe('level data and generator', () => {
   it('each obstacle appears first on its intro level, never before (data schedule)', () => {
     const first = {};
     for (let n = 1; n <= 320; n++) { const c = generateLevel(n); if (!c.layout) continue; for (const ch of c.layout.join('')) if (ch !== '.') first[ch] = first[ch] ?? n; }
-    const want = { T: 11, '#': 18, S: 25, F: 35, B: 55, a: 70, V: 101, C: 201, L: 301 };
+    const want = { T: 11, '#': 21, S: 31, F: 41, B: 55, a: 70, V: 101, C: 201, L: 301 };
     for (const [g, n] of Object.entries(want)) expect(first[g], g).toBe(n);
   });
   it('generated levels from 1 to the end of the first cycle and one more are valid and layouts keep columns playable', () => {

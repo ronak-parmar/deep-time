@@ -1,4 +1,5 @@
 import { h } from '../ui/dom.js';
+import { Panel } from '../ui/kit.js';
 import { Button, Chip } from '../ui/components.js';
 import { glyph } from '../ui/glyphs.js';
 import { CONFIG } from '../core/config.js';
@@ -42,10 +43,9 @@ export function mountMuseum(root, { profile, onBack, onDig, onWatch }) {
     g.setTransform(2, 0, 0, 2, 0, 0); g.fillStyle = '#D9C79F'; g.fillRect(0, 0, 304, 150);
     drawFossilArt(g, f.shape, 4, 4, 296, 142, { look: 'bone', glow: 0.25, margin: 0.04 });
     const close = () => { sheet?.remove(); sheet = null; };
-    sheet = h('div', { class: 'museum__sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': f.name },
-      h('div', { class: 'museum__panel' },
+    sheet = h('div', { class: 'museum__sheet scrim', role: 'dialog', 'aria-modal': 'true', 'aria-label': f.name, onClick: (ev) => { if (ev.target === sheet) close(); } },
+      Panel({ title: f.name, class: 'museum__panel', onClose: close },
         c,
-        h('h2', { class: 'title' }, f.name),
         h('p', { class: 'caption dim' }, `${f.sci}, ${f.when}`),
         h('ul', { class: 'museum__facts body-small' }, ...f.facts.map((t) => h('li', {}, t))),
         Button({ full: true, id: 'watch', onClick: () => { close(); onWatch(f); } }, glyph('video', 18), ' Watch history'),

@@ -6,7 +6,9 @@ import { findGroups, classify, spawnCell, legalSwaps } from './match.js';
 import { runChain } from './chain.js';
 import { comboFor, unlockedKinds, SPECIALS } from './specials.js';
 import { defaultTargets, creditClear } from './targets.js';
-import { buildObstacles, hitObstacles, hazards, freshCounters } from './obstacles.js';
+import { buildObstacles, hitObstacles, hazards, freshCounters, strikeObstacles } from './obstacles.js';
+import { boosterTargets } from './boosters.js';
+import { BOOSTERS } from '../data/boosters.js';
 
 // ---- state ------------------------------------------------------------------------------
 // state = { level, w, h, colors, cells, rng, nextId, moves, movesMax, dug, dirtTotal, dirtOrder, targets, specials,
@@ -158,7 +160,7 @@ function clearStep(state, move, groups, activation, swappedTo, fired, events) {
   events.push({ t: 'clear', step, cells: info, score: gained });
   creditClear(state, info.map((x) => x.c));
   const inGroup = new Set(groups.flatMap((g) => g.cells));
-  const blastCells = new Set(res.fires.flatMap((f) => f.area || f.cells));
+  const blastCells = new Set([...res.fires.flatMap((f) => f.area || f.cells), ...(activation && activation.area ? activation.area : [])]);
   const oh = hitObstacles(state, inGroup, blastCells);
   if (oh.length) { events.push({ t: 'obstacle', step, hits: oh }); if (oh.some((e) => e.k === 'tar' && e.broke)) move.tarCleared = true; }
   const hits = digStep(state.blocks, groups.map((g) => ({ c: g.c, n: g.cells.length })), info.filter((x) => !inGroup.has(x.i)).map((x) => x.c));
@@ -220,7 +222,7 @@ function collectArtefacts(state, events) {
 
 // Dead board: no legal move left. FAIR reshuffle: specials stay where they are; only plain gems are shuffled, and only into a
 // position with no match and at least one legal move. Never creates an instant match. (Obstacles will stay put the same way.)
-export function reshuffle(state) {
+export function reshuffle(state, forced = false) {
   const { w, h } = state;
   const slots = [];
   state.cells.forEach((p, i) => { if (p && !p.s && !p.a) slots.push(i); });
@@ -241,6 +243,51 @@ export function reshuffle(state) {
     if (!findMatches(state.cells, w, h).length && legalSwaps(state.cells, w, h).length) return { t: 'shuffle', moves: [], fresh: true };
   }
   throw new Error('could not reshuffle');
+}
+
+// ---- boosters (docs/16) -------------------------------------------------------------------
+// useBooster(state, id, target) applies one in-level booster and returns { valid, events, ... } like swap(): the same events, so the renderer
+// replays it with the same animations. It costs no move. Illegal target or status -> { valid:false, events:[] } and NOTHING changes (so the
+// caller must not spend the booster). Order of events: { t:'booster', id, target, area } first (the effect animation / sound hook), then the
+// usual clear / obstacle / hit / fall / shuffle / end.
+export function useBooster(state, id, target) {
+  const b = BOOSTERS[id];
+  if (!b || b.kind !== 'level' || state.status !== 'playing') return { valid: false, events: [], reason: 'not-available' };
+  const events = [];
+  if (id === 'moves5') {
+    state.moves += CONFIG.boosters.plusMoves; state.movesMax += CONFIG.boosters.plusMoves; state.extended = (state.extended || 0) + 1;
+    events.push({ t: 'booster', id, target: -1, area: [], moves: CONFIG.boosters.plusMoves }, { t: 'end', status: state.status, stars: 0 });
+    return { valid: true, events, status: state.status };
+  }
+  if (id === 'tremor') {
+    events.push({ t: 'booster', id, target: -1, area: [] }, reshuffle(state, true), { t: 'end', status: state.status, stars: 0 });
+    return { valid: true, events, status: state.status };
+  }
+  const tg = boosterTargets(state, id, target);
+  if (!tg) return { valid: false, events: [], reason: 'bad-target' };
+  events.push({ t: 'booster', id, target, area: tg.area });
+  const move = { groups: [], steps: 0, biggest: 0 }, fired = new Set();
+  if (id === 'brush') {                                   // no gem moves: obstacles lose a layer, broken ones leave a hole that refills
+    const hits = strikeObstacles(state, tg.strike);
+    events.push({ t: 'obstacle', step: 1, hits });
+    events.push(gravity(state));
+  } else {
+    const struck = strikeObstacles(state, tg.strike);     // the pickaxe's direct hit on what lies under the tile
+    if (struck.length) events.push({ t: 'obstacle', step: 1, hits: struck });
+    move.steps = 1;
+    clearStep(state, move, [], { cells: tg.gems, seeds: [], area: id === 'pick' ? [] : tg.area }, -1, fired, events);
+    events.push(gravity(state));
+  }
+  while (collectArtefacts(state, events)) events.push(gravity(state));
+  for (let guard = 0; guard < 60; guard++) {              // cascades after the refill, exactly like after a swap
+    const groups = findGroups(state.cells, state.w, state.h); if (!groups.length) break;
+    move.steps += 1; clearStep(state, move, groups, null, -1, fired, events); events.push(gravity(state));
+    while (collectArtefacts(state, events)) events.push(gravity(state));
+  }
+  state.status = judge(state);
+  if (state.status === 'playing' && !hasMove(state)) events.push(reshuffle(state));
+  events.push({ t: 'end', status: state.status, stars: state.status === 'won' ? starsFor(state) : 0 });
+  return { valid: true, events, dug: state.dug, status: state.status };
 }
 
 // Grant extra moves after a near-miss offer was accepted (coins or rewarded ad). Back to 'playing'.

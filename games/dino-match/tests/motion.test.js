@@ -5,7 +5,7 @@ import { RECIPES, EVENTS, D, EASE, EASE_CSS, SHAKE, PARTICLES } from '../src/ren
 import { SOUND_MAP } from '../src/render/sound.js';
 
 // docs/09 section 4: every event needs a recipe (and a sound + haptic mapping).
-const SECTION4 = ['tapGem', 'swapValid', 'swapInvalid', 'matchClear', 'fallRefill', 'cascadeStep', 'digBlock', 'lastBlock', 'foundBanner', 'winScreen', 'loseScreen', 'pickaxeSpend', 'fossilComplete', 'buttonPress', 'screenChange', 'counterChange', 'lifeRegained', 'hitBlock', 'createSpecial', 'fireSpecial', 'targetPop', 'targetDone', 'obstacleHit', 'obstacleBreak', 'collectItem', 'tarSpread', 'lavaErupt'];
+const SECTION4 = ['tapGem', 'swapValid', 'swapInvalid', 'matchClear', 'fallRefill', 'cascadeStep', 'digBlock', 'lastBlock', 'foundBanner', 'winScreen', 'loseScreen', 'pickaxeSpend', 'fossilComplete', 'buttonPress', 'screenChange', 'counterChange', 'lifeRegained', 'hitBlock', 'createSpecial', 'fireSpecial', 'targetPop', 'targetDone', 'boosterSelect', 'boosterUse', 'obstacleHit', 'obstacleBreak', 'collectItem', 'tarSpread', 'lavaErupt'];
 
 describe('motion recipes', () => {
   it('has a recipe for every section 4 event', () => { for (const e of SECTION4) expect(RECIPES[e], e).toBeTruthy(); expect(EVENTS.sort()).toEqual([...SECTION4].sort()); });

@@ -12,8 +12,9 @@ export const CONFIG = {
     blockTypes: { tar: { hp: 1 }, sand: { hp: 2 }, stone: { hp: 3 } }
   },
 
-  // --- boosters: inert in v1 (placeholders in the UI) ---
-  boosters: { enabled: false, kinds: ['pick', 'burst', 'brush'], start: { pick: 2, burst: 1, brush: 1 } },
+  // --- boosters (docs/16): the list, prices and teach levels are data in data/boosters.js; owned counts live in the profile.
+  // start = counts a new profile owns (the first of each is gifted by its intro card). luckySpecials = what Lucky Start may place.
+  boosters: { enabled: true, kinds: ['pick', 'rockslide', 'brush', 'amber', 'tremor', 'moves5', 'lucky', 'start3'], start: {}, plusMoves: 5, preMoves: 3, luckySpecials: ['firecracker', 'bomb'] },
 
   score: { perGem: 10 },
   stars: { two: 0.25, three: 0.5 },     // share of the move budget left for 2 / 3 stars
@@ -43,11 +44,11 @@ export const CONFIG = {
   },
 
   // --- specials (docs/11 phase A): unlock level per kind, chain cap. Shapes/combos are data in specials.js ---
-  specials: { unlock: { firecracker: 5, bomb: 15, dynamite: 25, tnt: 35, rainbow: 45 }, chainDepth: 40 },
+  specials: { unlock: { firecracker: 5, bomb: 16, dynamite: 26, tnt: 36, rainbow: 46 }, chainDepth: 40 },
 
   // --- obstacles (docs/11 phase B): hit rules are data in obstacles.js; these are the tunables ---
   // unlock = first level a generated level may use the obstacle (the intro level for each is hand authored in level.js)
-  obstacles: { crateCoins: 3, lavaTar: 3, spreadEvery: 5, unlock: { tar: 11, rock: 18, sandstone: 25, fossil: 35, bone: 55, artefact: 70, vine: 101, crate: 201, lava: 301 } },
+  obstacles: { crateCoins: 3, lavaTar: 3, spreadEvery: 5, unlock: { tar: 11, rock: 21, sandstone: 31, fossil: 41, bone: 55, artefact: 70, vine: 101, crate: 201, lava: 301 } },
 
   size: { onboarding: 6, normal: 7 }
 };

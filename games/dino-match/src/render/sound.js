@@ -36,7 +36,9 @@ export const SOUND_MAP = {
   tarSpread:      { sound: 'lowTone',   haptic: null },
   lavaErupt:      { sound: 'boom',      haptic: 'medium' },
   targetPop:      { sound: 'tick',      haptic: null, ui: true },
-  targetDone:     { sound: 'star',      haptic: 'light' }
+  targetDone:     { sound: 'star',      haptic: 'light' },
+  boosterSelect:  { sound: 'chime',     haptic: 'light', ui: true },
+  boosterUse:     { sound: 'crumble',   haptic: 'medium', then: 'chime' }
 };
 
 const state = { muted: false, haptics: true, ctx: null, master: null, voices: 0, lastHaptic: -1e9 };

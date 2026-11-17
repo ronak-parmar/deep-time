@@ -1,0 +1,4 @@
+{
+  "_note": "Names in the order prep-ui-sheet.py detects them (rows by vertical centre, left to right). For the first AI sheet: close, panel (big, ribbon), panel-small, star, heart, medallion, pickaxe, btn-gold, btn-stone, currency, coin. Run with --preview to check the numbering.",
+  "names": ["close", "panel", "panel-small", "star", "heart", "medallion", "pickaxe", "btn-gold", "btn-stone", "currency", "coin"]
+}

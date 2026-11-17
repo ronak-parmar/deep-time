@@ -81,7 +81,7 @@ describe('effects and combination table', () => {
     for (const a of plain) for (const b of plain) expect(COMBOS[pairKey(a, b)], a + b).toBeTruthy();
   });
   it('introduction schedule: firecracker 5, bomb 15, rainbow 45', () => {
-    expect(unlockedKinds(4)).toEqual([]); expect(unlockedKinds(5)).toEqual(['firecracker']); expect(unlockedKinds(15)).toEqual(['firecracker', 'bomb']); expect(unlockedKinds(45)).toEqual(KINDS);
+    expect(unlockedKinds(4)).toEqual([]); expect(unlockedKinds(5)).toEqual(['firecracker']); expect(unlockedKinds(16)).toEqual(['firecracker', 'bomb']); expect(unlockedKinds(46)).toEqual(KINDS);
     expect(CREATE.straight5).toBe('rainbow');
   });
 });

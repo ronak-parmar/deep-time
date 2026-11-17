@@ -35,6 +35,7 @@ export class Renderer {
     this.sel = null; this.selT0 = 0; this.drag = null; this.h0 = -1; this.h1 = -1; this.hasHint = false;
     this.vnow = 0; this.last = 0; this.lastInput = 0; this.active = 0;
     this.onSwap = null; this.getHint = null; this.perf = null;
+    this.targeting = null; this.onTarget = null;   // booster targeting (docs/16): { id, valid:Set } while the player is choosing where to use one
     canvas.addEventListener('pointerdown', (e) => this.down(e));
     canvas.addEventListener('pointermove', (e) => this.move(e));
     canvas.addEventListener('pointerup', () => { this.drag = null; });
@@ -116,6 +117,7 @@ export class Renderer {
     if (this.celebrating) this.skip = true;
     if (this.locked || !this.state) return;
     const p = this.pt(e), i = this.cellAt(p);
+    if (this.targeting) { if (i >= 0) this.onTarget?.(i); return; }       // choosing a booster target: a tap picks it, no swapping
     if (i < 0) { this.sel = null; return; }
     if (this.obst[i]) { this.sel = null; this.doShake('tiny'); return; }   // obstacles cannot be selected or swapped
     const { w } = this.state;
@@ -137,6 +139,9 @@ export class Renderer {
     if (nx >= 0 && ny >= 0 && nx < w && ny < h) { if (this.obst[ny * w + nx]) { this.doShake('tiny'); return; } this.onSwap?.(i, ny * w + nx); }
   }
 
+  // Booster targeting: highlights the tiles the booster can be used on until setTargeting(null). valid = Set of board indexes.
+  setTargeting(id, valid) { this.targeting = id ? { id, valid: valid || new Set(), t0: this.vnow } : null; this.sel = null; this.drag = null; }
+
   // ---- replaying the core's event log (section 4 recipes) ----------------------------------------
   async play(events, hooks = {}) {
     this.active++; this.locked = true; this.sel = null;
@@ -154,6 +159,7 @@ export class Renderer {
       else if (ev.t === 'combo') this.animCombo(ev);
       else if (ev.t === 'fall') await this.animFall(ev);
       else if (ev.t === 'shuffle') await this.animShuffle(ev);
+      else if (ev.t === 'booster') await this.animBooster(ev, hooks);
       else if (ev.t === 'end') { status = ev.status; await Promise.all(pending); await this.animEnd(ev); }
     }
     await Promise.all(pending);
@@ -213,6 +219,22 @@ export class Renderer {
       }
     });
     for (const j of jobs) { j.p.y = j.ty; j.p.x = this.cx(j.to); j.p.sx = 1; j.p.sy = 1; }
+  }
+
+  // A booster is used: the effect on the board (the clear / hit / fall events that follow do the rest). Sound + haptic: boosterUse.
+  async animBooster(ev, hooks) {
+    const R = RECIPES.boosterUse; cue('boosterUse');
+    const at = (i) => [this.cx(i), this.cy(i)], sp = (i, col, n = 6) => { const [x, y] = at(i); this.sparks(x, y, col, n); };
+    if (ev.id === 'pick') { const [x, y] = at(ev.target); this.pool.emit('dust', x, y, '#B89A6A', 8, 1.8); this.pool.emit('shard', x, y, '#5A4630', 5, 3); sp(ev.target, '#FFE9A8', 8); this.doShake(R.shake); await this.wait(D.quick); }
+    else if (ev.id === 'rockslide') {
+      const w = this.state.w, y = Math.floor(ev.target / w);
+      for (let x = 0; x < w; x++) { const i = y * w + x, [px, py] = at(i); this.pool.emit('dust', px, py, '#B89A6A', 6, 2); this.pool.emit('shard', px, py, '#7A6140', 3, 3); if (x % 2 === 0) this.doShake('tiny'); await this.wait(R.stagger * 0.6); }
+      this.doShake(R.shake);
+    }
+    else if (ev.id === 'brush') { for (const i of ev.area) { sp(i, '#9BE37A', 4); await this.wait(R.stagger * 0.25); } await this.wait(D.quick); }
+    else if (ev.id === 'amber') { for (const i of ev.area) sp(i, '#FFC24B', 7); this.text('Amber Lure', W / 2, this.boardY + 16, '#FFC24B', 20, D.slow * 2); await this.wait(D.base); }
+    else if (ev.id === 'tremor') { this.doShake('medium'); this.text('Tremor', W / 2, this.boardY + 16, '#C9A8FF', 20, D.slow * 2); await this.wait(D.base); }
+    else if (ev.id === 'moves5') { this.text(`+${ev.moves} moves`, W / 2, this.boardY + (this.state.h * this.cs) / 2, '#6FD3FF', 28, D.slow * 3); hooks.onMove?.(); await this.wait(D.base); }
   }
 
   async animShuffle(ev) {
@@ -372,7 +394,6 @@ export class Renderer {
     if (this.fx.length) drawFx(c, this.fx, now);
     this.pool.draw(c);
     this.drawTexts(c);
-    if (boostersPainted()) drawBoosters(c, this.boosterCounts || CONFIG.boosters.start, CONFIG.boosters.enabled, (cc, t, x, y, sz) => this.label(cc, t, x, y, sz));
     c.restore();
     if (this.banner.on) this.drawBanner(c);
     if (this.flash > 0.01) { c.fillStyle = `rgba(255,244,214,${this.flash})`; c.fillRect(0, 0, W, H); }
@@ -453,6 +474,7 @@ export class Renderer {
       this.drawGem(c, p, (this.sel === i ? selK : 1) * (hi ? pulse : 1), hi);
     }
     for (let i = 0; i < this.obst.length; i++) { const o = this.obst[i]; if (o) drawObstacle(c, o, this.cx(i), this.cy(i), cs, i, now, reducedMotion()); }   // drawn over gems: falling gems come from behind them
+    if (this.targeting && !reducedMotion()) this.drawTargeting(c, now); else if (this.targeting) this.drawTargeting(c, 0);
     c.restore();
     if (tiles) return;   // painted tiles replace the vector frame
     const key = this.eraId + '|' + fw + '|' + fh + '|' + this.scale;
@@ -462,6 +484,18 @@ export class Renderer {
       c.save(); ringPath(c, fx, fy, fw, fh, FRAME_T); c.clip('evenodd');
       drawAmbient(c, this.theme, { x: fx, y: fy, w: fw, h: fh }, now); c.restore();
     }
+  }
+
+  // gold rings on every tile the chosen booster can be used on, breathing slowly
+  drawTargeting(c, now) {
+    const { w } = this.state, cs = this.cs, k = 0.5 + 0.5 * Math.sin(now / 260);
+    c.save(); c.lineWidth = 2.5;
+    for (const i of this.targeting.valid) {
+      const x = this.boardX + (i % w) * cs, y = this.boardY + Math.floor(i / w) * cs;
+      c.strokeStyle = `rgba(255,214,110,${0.35 + 0.45 * k})`; c.fillStyle = `rgba(255,214,110,${0.06 + 0.07 * k})`;
+      this.rr(c, x + 3, y + 3, cs - 6, cs - 6, 9); c.fill(); c.stroke();
+    }
+    c.restore();
   }
 
   drawGem(c, p, sc, hinted) {

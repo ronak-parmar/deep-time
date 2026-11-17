@@ -99,7 +99,10 @@ export const RECIPES = {
   tarSpread:     { dur: D.slow, ease: 'out', shake: 'tiny' },
   lavaErupt:     { dur: D.slow, ease: 'out', shake: 'medium', particles: 'dust' },
   targetPop:     { dur: D.base, ease: 'pop', pop: SQUASH.pop },
-  targetDone:    { dur: D.slow, ease: 'pop', pop: SQUASH.pop }
+  targetDone:    { dur: D.slow, ease: 'pop', pop: SQUASH.pop },
+  // boosters (docs/16)
+  boosterSelect: { dur: D.quick, ease: 'pop', pop: SQUASH.pop },
+  boosterUse:    { dur: D.slow, ease: 'out', particles: 'sparkle', shake: 'small', stagger: STAGGER.column }
 };
 export const EVENTS = Object.keys(RECIPES);
 

@@ -17,7 +17,7 @@ export function newProfile() {
     completedFossils: [],        // fossil ids
     stars: {},                   // level -> best stars; a level present here has been won
     winStreak: 0,
-    boosters: { ...CONFIG.boosters.start },
+    boosters: Object.fromEntries(CONFIG.boosters.kinds.map((k) => [k, CONFIG.boosters.start[k] || 0])),
     tutorial: freshTutorial(),    // levels 1-6 first-time tutorial: { seen: [levels], off }
     settings: { consent: null, reducedMotion: null, muted: false, haptics: true }
   };
@@ -48,7 +48,7 @@ export function migrateProfile(raw) {
     if (fossilById(id)) p.fossilProgress[id] = Math.max(p.fossilProgress[id] || 0, clamp(Math.floor(num(v, 0)), 0, CONFIG.fossils.parts));
   }
   p.completedFossils = [...new Set((Array.isArray(raw.completedFossils) ? raw.completedFossils : []).map(migrateFossilId).filter((id) => fossilById(id)))];
-  p.boosters = { ...base.boosters, ...(raw.boosters || {}) };
+  p.boosters = {}; for (const k of CONFIG.boosters.kinds) p.boosters[k] = Math.max(0, Math.floor(num((raw.boosters || {})[k], (base.boosters || {})[k] || 0)));
   p.settings = { ...base.settings, ...(raw.settings || {}) };
   p.tutorial = normaliseTutorial(raw.tutorial);
   return p;

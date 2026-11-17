@@ -60,10 +60,10 @@ describe('tutorial persistence (profile.tutorial)', () => {
   });
   it('survives a save round trip and old saves without the field migrate to a fresh tutorial', () => {
     const p = markTutorialSeen(newProfile(), 3);
-    expect(migrateProfile(JSON.parse(JSON.stringify(p))).tutorial).toEqual({ seen: [3], off: false });
+    expect(migrateProfile(JSON.parse(JSON.stringify(p))).tutorial).toEqual({ seen: [3], off: false, intros: [] });
     const old = { ...newProfile() }; delete old.tutorial; expect(migrateProfile(old).tutorial).toEqual(freshTutorial());
     expect(migrateProfile({ ...newProfile(), tutorial: 'garbage' }).tutorial).toEqual(freshTutorial());
-    expect(normaliseTutorial({ seen: [3, 99, 'x', 3], off: 1 })).toEqual({ seen: [3], off: true });
+    expect(normaliseTutorial({ seen: [3, 99, 'x', 3], off: 1 })).toEqual({ seen: [3], off: true, intros: [] });
   });
   it('a level that was already won never shows the tutorial again', () => {
     const p = { ...newProfile(), stars: { 2: 3 } }; expect(needsTutorial(p, 2)).toBe(false);

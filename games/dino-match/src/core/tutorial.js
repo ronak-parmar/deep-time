@@ -46,10 +46,10 @@ export function tutorialMove(state, want = { size: 3 }, colours = wantColours(st
 }
 
 // ---- persistence (profile.tutorial = { seen: [levels], off: boolean }) ------------------------------------------
-export const freshTutorial = () => ({ seen: [], off: false });
+export const freshTutorial = () => ({ seen: [], off: false, intros: [] });
 export function normaliseTutorial(raw) {
   const t = raw && typeof raw === 'object' ? raw : {};
-  return { seen: Array.isArray(t.seen) ? [...new Set(t.seen.map(Number).filter((n) => TUTORIAL[n]))].sort((a, b) => a - b) : [], off: !!t.off };
+  return { seen: Array.isArray(t.seen) ? [...new Set(t.seen.map(Number).filter((n) => TUTORIAL[n]))].sort((a, b) => a - b) : [], off: !!t.off, intros: Array.isArray(t.intros) ? [...new Set(t.intros.filter((x) => typeof x === 'string').slice(0, 200))] : [] };
 }
 // Shown once per level, only on levels 1-6, never after Skip, and never on a level the player has already won.
 export const needsTutorial = (profile, level) => !!TUTORIAL[level] && !normaliseTutorial(profile.tutorial).off && !normaliseTutorial(profile.tutorial).seen.includes(level) && !(level in (profile.stars || {}));

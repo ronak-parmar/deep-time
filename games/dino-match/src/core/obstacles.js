@@ -75,6 +75,25 @@ export function hitObstacles(state, matchCells, blastCells) {
   return out;
 }
 
+// Booster hit: every listed cell with a breakable obstacle loses one layer, whatever would normally be needed to hurt it (vine, crate...).
+// Same accounting as hitObstacles (broken counters, fossils, bones, crate coins). Returns the same event shape.
+export function strikeObstacles(state, cells) {
+  const { obst } = state, out = [];
+  for (const i of [...cells].sort((a, b) => a - b)) {
+    const o = obst[i]; if (!o || o.hp === Infinity) continue;
+    o.hp -= 1;
+    const d = OBSTACLES[o.k], e = { i, k: o.k, hp: o.hp, max: o.max, by: 'booster', broke: o.hp <= 0 };
+    if (e.broke) {
+      obst[i] = null; state.broken[o.k] = (state.broken[o.k] || 0) + 1;
+      if (d.fossil) state.found.fossil += 1;
+      if (d.bone) state.found.bone += 1;
+      if (d.drop) { state.coinsFound += CONFIG.obstacles.crateCoins; e.drop = { coins: CONFIG.obstacles.crateCoins }; }
+    }
+    out.push(e);
+  }
+  return out;
+}
+
 // After a valid move that did not end the level: lava heats (and erupts every `heat` moves), tar spreads every
 // CONFIG.obstacles.spreadEvery moves when `state.spread` is on and no tar was cleared this move.
 // Returns events [{ t:'erupt', i, items:[{ i, id }] } | { t:'spread', items:[{ i, id, from }] }].
