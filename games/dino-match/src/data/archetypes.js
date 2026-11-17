@@ -11,9 +11,9 @@ export const FEAT = {
   // triceratops: frill + three horns
   frill: (g, o = {}) => [
     [B(ell(g.hx - g.hl * 0.1, g.hy - g.hh * 0.5, g.hl * 0.55, g.hh * (o.big || 1.5), 14, -0.35)), ...[0.6, 0.35, 0.1, -0.15, -0.4].map((a) => E(g.hx - g.hl * 0.1 + Math.cos(a) * g.hl * 0.5, g.hy - g.hh * 0.5 - Math.sin(a) * g.hh * 1.3, 0.012, 0.012, 0, 1))],
-    [P([...local(0.45, -0.3, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(0.9, -1.9, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(0.65, -0.35, g.hx, g.hy, g.hl, g.hh, g.ht)]),
-     P([...local(0.15, -0.3, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(0.3, -2.0, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(0.35, -0.35, g.hx, g.hy, g.hl, g.hh, g.ht)]),
-     P([...local(0.88, -0.2, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(1.12, -0.95, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(0.98, -0.05, g.hx, g.hy, g.hl, g.hh, g.ht)])]
+    [P([...local(0.42, -0.35, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(1.05, -2.1, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(0.7, -0.3, g.hx, g.hy, g.hl, g.hh, g.ht)]),
+     P([...local(0.2, -0.35, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(0.8, -2.15, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(0.48, -0.3, g.hx, g.hy, g.hl, g.hh, g.ht)], 1),
+     P([...local(0.86, -0.25, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(1.18, -1.0, g.hx, g.hy, g.hl, g.hh, g.ht), ...local(1.0, -0.05, g.hx, g.hy, g.hl, g.hh, g.ht)])]
   ],
   plates: (g) => {
     const mk = (i) => { const t = i / 6, x = -g.bl * 0.7 + t * g.bl * 1.35, h = 0.07 + Math.sin(t * Math.PI) * 0.13, y = g.bodyY - g.bh * (0.85 - Math.abs(t - 0.5) * 0.3) - 0.01; return P([x - 0.035, y, x, y - h, x + 0.035, y]); };
@@ -209,8 +209,8 @@ export function serpent(o = {}) {   // Basilosaurus: very long whale
 export function pterosaur(o = {}) {
   const d = { crest: 0.3, beak: 0.5, span: 1, ...o }, S = d.span;
   // a wing: arm out to the wrist, long finger to the tip, scalloped membrane back to the hip. s = +1 down-left, -1 down-right
-  const wing = (dx, dy, t) => P([0.02, 0.04, 0.02 + dx * 0.4, dy * 0.45, dx * 0.55, dy * 0.55, dx, dy, dx * 0.82, dy * 0.45 + 0.1, dx * 0.55, 0.16, dx * 0.3, 0.12, 0.02, 0.2], t);
-  const bone = (dx, dy) => L([0.02, 0.04, dx * 0.55, dy * 0.55, dx, dy], 0.014, 1);
+  const wing = (dx, dy, t) => P([0.02, 0.04, ...curve(0.02, 0.04, dx * 0.5, dy * 1.0 - 0.06, dx, dy, 6), dx * 0.86, dy * 0.4 + 0.14, dx * 0.72, dy * 0.2 + 0.1, dx * 0.62, dy * 0.12 + 0.19, dx * 0.4, 0.14, dx * 0.28, 0.22, 0.02, 0.2], t);
+  const bone = (dx, dy) => L([0.02, 0.04, dx * 0.5, dy * 0.62 - 0.01, dx, dy], 0.016, 1);
   return [
     [B(ell(0.0, 0.1, 0.12, 0.07, 10, -0.2))],
     [wing(-0.95 * S, -0.35 * S, 1), bone(-0.95 * S, -0.35 * S)],
@@ -225,33 +225,43 @@ export function pterosaur(o = {}) {
   ].map((p) => p.flat());
 }
 export function bird(o = {}) {   // Archaeopteryx
+  // a wing: arm up and back (shoulder, elbow, wrist), a comb of long flight feathers trailing from forearm and hand
+  const wingB = (dx, t) => {
+    const arm = [0.1 + dx, -0.06, 0.0 + dx, -0.26, -0.22 + dx, -0.33], out = [L(arm, 0.02, t ? 1 : 0)];
+    for (let i = 0; i < 8; i++) {
+      const s = 0.25 + i * 0.1, seg = s < 0.5 ? s / 0.5 : (s - 0.5) / 0.5, k = s < 0.5 ? 0 : 2;
+      const x = arm[k] + (arm[k + 2] - arm[k]) * seg, y = arm[k + 1] + (arm[k + 3] - arm[k + 1]) * seg, a = 1.95 + i * 0.12, l = 0.3 - i * 0.012;
+      out.push(B(ell(x + Math.cos(a) * l * 0.5, y + Math.sin(a) * l * 0.5, l * 0.5, 0.028, 8, a), t));
+    }
+    return out;
+  };
   const feather = (x, y, a, l) => B(ell(x + Math.cos(a) * l * 0.5, y + Math.sin(a) * l * 0.5, l * 0.5, 0.025, 8, a), 0);
   return [
     [B(ell(0, 0.0, 0.22, 0.12, 12, -0.25))],
     [tube(curve(-0.15, 0.04, -0.5, 0.12, -0.9, 0.18, 7), 0.03, 0.012), ...Array.from({ length: 5 }, (_, i) => feather(-0.4 - i * 0.1, 0.1 + i * 0.015, 0.2 + (i - 2) * 0.05, 0.22))],
     [tube([-0.04, 0.1, -0.02, 0.26, -0.06, 0.4], 0.035, 0.014), E(-0.03, 0.4, 0.06, 0.018, 0, 1)],
     [tube([0.08, 0.1, 0.1, 0.26, 0.07, 0.4], 0.035, 0.014, 1), E(0.1, 0.4, 0.06, 0.018, 0, 1)],
-    [...Array.from({ length: 6 }, (_, i) => feather(-0.02, -0.08, -2.0 + i * 0.22, 0.34)), tube(curve(-0.0, -0.08, 0.1, -0.2, 0.2, -0.28), 0.03, 0.012, 1)],
-    [...Array.from({ length: 6 }, (_, i) => feather(0.04, -0.08, -2.4 + i * 0.22, 0.3))],
+    [...wingB(0.0, 0)],
+    [...wingB(0.07, 1)],
     [tube(curve(0.15, -0.05, 0.3, -0.12, 0.34, -0.22), 0.045, 0.035)],
     [B(ell(0.4, -0.25, 0.1, 0.06, 10, 0.2)), E(0.42, -0.27, 0.012, 0.012, 0, 2)],
     [P([0.46, -0.22, 0.54, -0.2, 0.46, -0.18]), ...[0, 1, 2, 3].map((i) => P([0.44 + i * 0.025, -0.2, 0.455 + i * 0.025, -0.17, 0.47 + i * 0.025, -0.2]))],
     [L([0.1, 0.0, 0.2, 0.0], 0.012, 1), L([0.1, -0.03, 0.18, -0.1], 0.012, 1)]
   ].map((p) => p.flat());
 }
-export function skull(o = {}) {   // hominin skull, side view
-  const d = { brow: 0.05, crest: 0, face: 0.3, jaw: 0.2, dome: 0.3, ...o };
-  const cx = -0.12;
+export function skull(o = {}) {   // hominin skull, side view, faces right
+  const d = { brow: 0.05, crest: 0, face: 0.3, jaw: 0.2, dome: 0.3, ...o }, cx = -0.12, top = -0.12 - d.dome * 0.1;
+  const fx = cx + 0.32 + d.face * 0.5;   // front of the face
   return [
-    [B(ell(cx, -0.08, 0.38, 0.3 * (0.8 + d.dome), 16))],
-    [B(ell(cx - 0.22, 0.0, 0.18, 0.22, 10), 1)],
-    [B([cx + 0.1, 0.05, cx + 0.4, 0.0, cx + 0.38 + d.face, 0.14, cx + 0.34 + d.face, 0.3, cx + 0.12, 0.28])],
-    [L([cx + 0.1, -0.12, cx + 0.3 + d.brow, -0.14, cx + 0.42 + d.brow, -0.1], 0.05 + d.brow * 0.5, 1)],
-    [E(cx + 0.3, -0.03, 0.065, 0.07, 0, 2)],
-    [P([cx + 0.4, 0.05, cx + 0.5 + d.face * 0.3, 0.14, cx + 0.4, 0.18], 1)],
-    [B([cx + 0.04, 0.22, cx + 0.3 + d.face * 0.8, 0.26, cx + 0.3 + d.face * 0.8, 0.28 + d.jaw, cx + 0.0, 0.3 + d.jaw * 1.2, cx - 0.14, 0.18], 1)],
-    [...Array.from({ length: 6 }, (_, i) => P([cx + 0.18 + i * 0.045, 0.27, cx + 0.2 + i * 0.045, 0.34, cx + 0.22 + i * 0.045, 0.27]))],
-    [E(cx - 0.12, 0.04, 0.035, 0.035, 0, 2), ...(d.crest ? [L([cx - 0.3, -0.35, cx, -0.46, cx + 0.2, -0.3], 0.03, 1)] : [])],
-    [L([cx + 0.05, -0.3, cx + 0.2, -0.2], 0.012, 1), L([cx - 0.2, -0.3, cx - 0.02, -0.24], 0.012, 1)]
+    [B(ell(cx, top + 0.06, 0.38, 0.26 + d.dome * 0.14, 20))],
+    [B(ell(cx - 0.26, 0.08, 0.11, 0.15, 10), 1)],
+    [B([cx + 0.16, -0.1, cx + 0.36, -0.06, fx, 0.05, fx - 0.01, 0.2, cx + 0.04, 0.2])],
+    [L([cx + 0.17, -0.085, cx + 0.3 + d.brow * 0.5, -0.1, cx + 0.4 + d.brow * 0.5, -0.07], 0.04 + d.brow * 0.5, 1)],
+    [E(cx + 0.27, -0.01, 0.055, 0.06, 0, 2)],
+    [P([fx - 0.05, 0.03, fx - 0.01, 0.09, fx - 0.07, 0.12], 2)],
+    [B([cx - 0.0, 0.1, cx + 0.03, 0.21, fx - 0.03, 0.22, fx - 0.05, 0.25 + d.jaw * 0.3, cx + 0.14, 0.28 + d.jaw * 0.5, cx - 0.06, 0.26 + d.jaw * 0.3, cx - 0.08, 0.12], 1)],
+    [...Array.from({ length: 6 }, (_, i) => P([cx + 0.17 + i * 0.045 * (1 + d.face * 0.6), 0.2, cx + 0.19 + i * 0.045 * (1 + d.face * 0.6), 0.25, cx + 0.21 + i * 0.045 * (1 + d.face * 0.6), 0.2]))],
+    [E(cx - 0.1, 0.07, 0.026, 0.026, 0, 2), L([cx + 0.04, 0.06, cx + 0.14, 0.14], 0.012, 1)],
+    [L([cx + 0.12, top + 0.03, cx + 0.04, -0.04, cx - 0.04, -0.01], 0.01, 1), ...(d.crest ? [L([cx - 0.3, -0.35, cx, -0.46, cx + 0.2, -0.3], 0.03, 1)] : [])]
   ].map((p) => p.flat());
 }

@@ -133,7 +133,7 @@ export const ROSTER = [
   // ---- Age of mammals (4) ----
   F('mammals-eohippus', 'age-of-mammals', 'Dawn horse', 'Eohippus angustidens', 'about 55 million years ago', [56, 48],
     ['Eohippus, the "dawn horse", was one of the earliest members of the horse family.', 'It was a small, fox-sized animal, about 30 centimetres tall at the shoulder.', 'It had four toes on each front foot and three on each back foot.'],
-    quad({ bl: 0.3, bh: 0.1, legH: 0.26, legW: 0.028, toe: 0.025, neckLen: 0.14, neckRise: 0.05, neckW: 0.04, neckW1: 0.035, head: 'long', hl: 0.2, hh: 0.06, ht: 0.35, tail: 0.18, tailW: 0.03, feat: 'ears' }), { motion: 'walk' }),
+    quad({ bl: 0.3, bh: 0.12, legH: 0.22, legW: 0.03, toe: 0.025, neckLen: 0.1, neckRise: 0.08, neckW: 0.06, neckW1: 0.05, head: 'box', hl: 0.2, hh: 0.1, ht: 0.4, tail: 0.2, tailW: 0.03, feat: 'ears' }), { motion: 'walk' }),
   F('mammals-moeritherium', 'age-of-mammals', 'Moeritherium', 'Moeritherium', 'about 35 million years ago', [37, 30],
     ['Moeritherium was an early relative of elephants, about 70 centimetres tall at the shoulder.', 'It had no real trunk, only a small flexible nose and upper lip, and short tusks.', 'It lived in the swamps and rivers of North Africa; its fossils were found in Egypt.'],
     quad({ bl: 0.34, bh: 0.15, legH: 0.12, legW: 0.045, toe: 0.035, neckLen: 0.07, neckRise: 0.0, neckW: 0.09, neckW1: 0.085, head: 'round', hl: 0.2, hh: 0.11, ht: 0.12, tail: 0.1, tailW: 0.03, feat: 'tusks', fo: { len: 0.1, trunk: 0.14, curl: 0 } }), { motion: 'walk' }),

@@ -40,7 +40,7 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
   wait.append(h('span', { class: 'dig__wait-hearts', 'aria-hidden': 'true' }, glyph('heart', 18)), waitText, playBtn);
 
   // animation state
-  let revealed = 0, animIdx = -1, animStart = 0, animMs = 0, animRes = null, completedAnim = false, glow = 0, busy = false, swing = null, shake = null, vt = 0, lastT = 0, alive = true;
+  let celebrating = null, revealed = 0, animIdx = -1, animStart = 0, animMs = 0, animRes = null, completedAnim = false, glow = 0, busy = false, swing = null, shake = null, vt = 0, lastT = 0, alive = true;
   const pool = new ParticlePool();
 
   const syncRevealed = () => { const f = fossil(); revealed = f ? partsUnearthed(current, f.id) : CONFIG.fossils.parts; };
@@ -85,8 +85,8 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
     pickChip.replaceChildren(Chip('pick', current.pickaxes, 'Pickaxes', 'chip--pick'));
     await reveal(r.part, r.completed, r.fossil);
     busy = false;
+    if (r.completed) { celebrating = r.fossil; revealed = CONFIG.fossils.parts; partsEl.textContent = `Part ${CONFIG.fossils.parts} of ${CONFIG.fossils.parts} unearthed`; barWrap.replaceChildren(Progress(1)); await sleep(RECIPES.fossilComplete.dur); onComplete(r.fossil); return; }
     syncRevealed(); label();
-    if (r.completed) { await sleep(RECIPES.fossilComplete.dur); onComplete(r.fossil); }
   });
 
   // Pickaxe swing (wind-up, strike) then the dirt over the part crumbles with dust, shards and a small shake, then the bone shines.
@@ -117,14 +117,14 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
   };
 
   function draw() {
-    const c = ctx, f = fossil() || FOSSILS[FOSSILS.length - 1];
+    const c = ctx, f = celebrating || fossil() || FOSSILS[FOSSILS.length - 1];
     c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, CW, CH);
     c.save();
     if (shake && vt - shake.t0 < shake.ms) { const k = (1 - (vt - shake.t0) / shake.ms) * shake.px; c.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k); } else shake = null;
     drawPlaque(c, themeFor(f.era), 1, 1, CW - 2, CH - 2);
     c.fillStyle = '#D9C79F'; rr(c, PAD, PAD, CW - PAD * 2, CH - PAD * 2, 8); c.fill();
-    const done = !fossil();
-    drawFossilArt(c, f.shape, ART.x, ART.y, ART.w, ART.h, { revealed: done ? 10 : revealed, look: done ? 'bone' : 'dig', anim: animIdx >= 0 ? { index: animIdx, t: Math.min(1, (vt - animStart) / animMs) } : null, glow });
+    const done = !celebrating && !fossil();
+    drawFossilArt(c, f.shape, ART.x, ART.y, ART.w, ART.h, { revealed: done ? 10 : revealed, look: done || celebrating ? 'bone' : 'dig', anim: animIdx >= 0 ? { index: animIdx, t: Math.min(1, (vt - animStart) / animMs) } : null, glow });
     if (swing) drawPick(c, swing, vt);
     pool.draw(c);
     c.restore();

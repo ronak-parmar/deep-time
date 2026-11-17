@@ -125,7 +125,7 @@ button { font-family: inherit; }
 .history__intro .history__era { color: var(--info); text-transform: uppercase; letter-spacing: .08em; }
 .history__intro .dt-btn { display: flex; align-items: center; justify-content: center; gap: 6px; }
 /* museum */
-.museum { padding: var(--space-2, 8px) var(--space-4, 16px) 0; gap: var(--space-2, 8px); background: rgba(11,18,32,.94); position: relative; }
+.museum { padding: var(--space-2, 8px) var(--space-4, 16px) 0; gap: var(--space-2, 8px); background: rgba(11,18,32,.94); }
 .museum__body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-4, 16px); padding-bottom: var(--space-5, 24px); -webkit-overflow-scrolling: touch; }
 .museum__erahead { min-height: 44px; padding: 6px 12px; display: flex; align-items: center; justify-content: space-between; background-size: 100% 100%; background-repeat: no-repeat; margin-bottom: 8px; }
 .museum__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
