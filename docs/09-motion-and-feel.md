@@ -78,7 +78,8 @@ Nine drawn pose frames (`art/mascot/dino-*.webp`) with whole-body motion ported 
 | --- | --- | --- | --- |
 | Pose change | the new frame squash-pops (`quick`, 8%) | none | none |
 | Enter / leave | waddles in from the left edge `celebrate` `out` (idle frame, rock and bob), leaves the same way `in` (flipped) | none | none |
-| Speech bubble | pops in `base` `pop` after `quick`, text types out (28 ms a character); tap = finish, tap again = continue | none | none |
+| Speech bubble | pops in `base` `pop` after `quick`, text types out (40 ms a character, M8); first tap = whole text; a bubble never moves on by itself: when it waits for a tap a "Tap to continue" cue pulses in its corner (`celebrate` x1.4 loop, none under reduced motion) | none | none |
+| Coach step (M8) | spotlight ring breathes (`celebrate` x1.4 loop), hand pointer shows a swap (same loop as the old tutorial hand); reduced motion: still ring, the hand rests on the target cell | none | none |
 | Idle / talk / wave / point / think / sad / surprised / cheer / dig | lab loops: bob + squash, talk frame at 5 Hz, sway, lean toward the target (the point drawing faces right; flipped for a target on the left), tilt, droop + desaturate, hop, hop with sparkles (3 stars: 1.6x hop + confetti burst), swing with rock chips to the right | none | none |
 | Reduced motion | pose swaps only: no bob, hop, walk, pop or particles; the text appears at once | none | none |
 

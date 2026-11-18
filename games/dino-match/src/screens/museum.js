@@ -6,12 +6,14 @@ import { CONFIG } from '../core/config.js';
 import { ERAS } from '../core/eras.js';
 import { museumEntries } from '../core/fossils.js';
 import { drawFossilArt } from '../render/fossilArt.js';
-import { loadSlab } from '../render/slabart.js';
+import { loadSlab, hasSlab } from '../render/slabart.js';
+import { hasThumb, loadThumb, drawThumb } from '../render/fossilThumbs.js';
 
 const TW = 150, TH = 84;
 
-// Museum: every fossil of the roster by era. Done = bone drawing, name, tap for the detail sheet (facts and "Watch history");
-// the one being dug = partly unearthed, tap goes to the Dig site; the rest = dark stone silhouettes with the name hidden.
+// Museum: every fossil of the roster by era. Done = the carving (thumbnail cut from the art sheet), name, tap for the detail sheet (the
+// full slab, facts and "Watch history"); the one being dug = partly unearthed, tap goes to the Dig site; the rest = dark stone
+// silhouettes with the name hidden. Fossils without a thumbnail fall back to the slab picture, then to the code-drawn fossil.
 export function mountMuseum(root, { profile, onBack, onDig, onWatch }) {
   const entries = museumEntries(profile), done = entries.filter((e) => e.status === 'done').length;
   const body = h('div', { class: 'museum__body' });
@@ -25,16 +27,22 @@ export function mountMuseum(root, { profile, onBack, onDig, onWatch }) {
       grid));
   }
   function card(e) {
-    // the slab picture when the fossil has one (buried under dirt while locked or partly dug), else the code-drawn fossil
+    // the carving thumbnail when the fossil has one; else the slab picture (buried under dirt while locked or partly dug); else vector
     const c = h('canvas', { width: TW * 2, height: TH * 2, class: 'museum__thumb', 'aria-hidden': 'true' }), g = c.getContext('2d');
     g.setTransform(2, 0, 0, 2, 0, 0);
-    const vector = () => { const bg = g.createRadialGradient(TW / 2, TH * 0.45, 4, TW / 2, TH * 0.45, TW * 0.7); bg.addColorStop(0, e.status === 'locked' ? '#3A2D20' : '#7A5630'); bg.addColorStop(1, e.status === 'locked' ? '#1C140C' : '#2E1D0E'); g.fillStyle = bg; g.fillRect(0, 0, TW, TH); drawFossilArt(g, e.fossil.shape, 4, 4, TW - 8, TH - 8, { look: e.status === 'done' ? 'bone' : e.status === 'locked' ? 'stone' : 'dig', revealed: e.parts, margin: 0.04 }); };
-    loadSlab(e.fossil.id).then((sl) => {
-      if (!sl) return vector();
-      const H = Math.round(Math.max(96, Math.min(176, TW * sl.AR))); c.height = H * 2; c.style.aspectRatio = `${TW} / ${H}`; g.setTransform(2, 0, 0, 2, 0, 0);
-      sl.draw(g, 0, 0, TW, H, { fit: 'contain', revealed: e.status === 'done' ? CONFIG.fossils.parts : e.status === 'digging' ? e.parts : 0, dim: e.status === 'locked' ? 0.35 : 0 });
-    });
-    vector();
+    const look = e.status === 'done' ? 'bone' : e.status === 'locked' ? 'stone' : 'dig';
+    const bg = () => { const b = g.createRadialGradient(TW / 2, TH * 0.45, 4, TW / 2, TH * 0.45, TW * 0.7); b.addColorStop(0, e.status === 'locked' ? '#3A2D20' : '#7A5630'); b.addColorStop(1, e.status === 'locked' ? '#1C140C' : '#2E1D0E'); g.fillStyle = b; g.fillRect(0, 0, TW, TH); };
+    const vector = () => { bg(); drawFossilArt(g, e.fossil.shape, 4, 4, TW - 8, TH - 8, { look, revealed: e.parts, margin: 0.04 }); };
+    if (hasThumb(e.fossil.id)) {
+      bg(); loadThumb(e.fossil.id).then((im) => { if (!im) return vector(); bg(); drawThumb(g, e.fossil.id, 3, 3, TW - 6, TH - 6, { look, revealed: e.parts, margin: 0.03 }); });
+    } else {
+      loadSlab(e.fossil.id).then((sl) => {
+        if (!sl) return vector();
+        const H = Math.round(Math.max(96, Math.min(176, TW * sl.AR))); c.height = H * 2; c.style.aspectRatio = `${TW} / ${H}`; g.setTransform(2, 0, 0, 2, 0, 0);
+        sl.draw(g, 0, 0, TW, H, { fit: 'contain', revealed: e.status === 'done' ? CONFIG.fossils.parts : e.status === 'digging' ? e.parts : 0, dim: e.status === 'locked' ? 0.35 : 0 });
+      });
+      vector();
+    }
     const label = e.status === 'locked' ? 'Locked' : e.status === 'digging' ? `${e.parts} of ${CONFIG.fossils.parts} parts` : e.fossil.when;
     const btn = h('button', { type: 'button', class: `museum__card museum__card--${e.status}`, 'data-id': e.fossil.id, disabled: e.status === 'locked', 'aria-label': e.status === 'locked' ? 'Locked fossil' : `${e.fossil.name}, ${label}`,
       onClick: () => (e.status === 'done' ? detail(e) : onDig()) },
@@ -47,7 +55,7 @@ export function mountMuseum(root, { profile, onBack, onDig, onWatch }) {
   function detail(e) {
     const f = e.fossil, c = h('canvas', { width: 304 * 2, height: 150 * 2, class: 'museum__big', 'aria-hidden': 'true' }), g = c.getContext('2d');
     g.setTransform(2, 0, 0, 2, 0, 0); { const bg = g.createRadialGradient(152, 70, 6, 152, 70, 200); bg.addColorStop(0, '#8A6234'); bg.addColorStop(1, '#2E1D0E'); g.fillStyle = bg; g.fillRect(0, 0, 304, 150); }
-    drawFossilArt(g, f.shape, 4, 4, 296, 142, { look: 'bone', glow: 0.25, margin: 0.04 });
+    if (!hasSlab(f.id)) drawFossilArt(g, f.shape, 4, 4, 296, 142, { look: 'bone', glow: 0.25, margin: 0.04 });   // the slab picture replaces it once loaded
     loadSlab(f.id).then((sl) => { if (!sl) return; const H = Math.round(Math.max(120, Math.min(290, 304 * sl.AR))); c.height = H * 2; c.style.aspectRatio = `304 / ${H}`; c.classList.add('museum__big--slab'); g.setTransform(2, 0, 0, 2, 0, 0); g.clearRect(0, 0, 304, H); sl.draw(g, 0, 0, 304, H, { fit: 'contain', glow: 0.35 }); });
     const close = () => { sheet?.remove(); sheet = null; };
     sheet = h('div', { class: 'museum__sheet scrim', role: 'dialog', 'aria-modal': 'true', 'aria-label': f.name, onClick: (ev) => { if (ev.target === sheet) close(); } },

@@ -1,6 +1,6 @@
 import { injectDesignSystem, loadFonts } from './ui/tokens.js';
 import { reducedMotion } from './ui/motion.js';
-import { D, dur, RECIPES } from './render/motion.js';
+import { D, dur, RECIPES, YUVI as YUVI_T } from './render/motion.js';
 import { cue, unlock, setMuted, setHaptics } from './render/sound.js';
 import { Renderer } from './render/renderer.js';
 import { createState, swap, hintMove, addMoves, useBooster } from './core/game.js';
@@ -22,8 +22,11 @@ import { loadIslandArt } from './render/islandart.js';
 import { mountPlay } from './screens/play.js';
 import { mountPrelevel } from './screens/prelevel.js';
 import { bestStars } from './core/journey.js';
-import { mountTutorial } from './screens/tutorial.js';
-import { needsTutorial, markTutorialSeen, skipTutorial } from './core/tutorial.js';
+import { skipTutorial, tutorialMove } from './core/tutorial.js';
+import { coachNeeded, markCoach, skipCoach, firstMade, cellOf, swapsWith, adjacentSpecials, swapAllowed } from './core/coach.js';
+import { coachStep, activeCoach } from './screens/coach.js';
+import { HELLO, COACH } from './data/yuvi.js';
+import { SPECIALS } from './core/specials.js';
 import './ui/kit.js';
 import { mountIntro } from './screens/intro.js';
 import { mountHowTo } from './screens/howto.js';
@@ -75,6 +78,7 @@ const swapScreen = (next) => {
   game?.tut?.destroy();                       // a tutorial overlay never outlives its play screen
   const old = screen; screen = next;
   welcome?.destroy(); welcome = null;         // a welcome never outlives the screen it was shown on
+  activeCoach()?.destroy();                   // nor does a coaching step
   yuvi.leave();                               // Yuvi waddles out on every screen change (the next screen may call him back)
   if (!old) return;
   old.el?.classList.add('leaving');
@@ -97,19 +101,20 @@ async function showHome() {
   await renderer.setEra(eraOf(profile.level).id);
   await loadIslandArt(ERAS.map((e) => e.id));
   swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onMeetYuvi: () => showWelcome(),  onPlay: () => startLevel(profile.level), onPlayLevel: (n) => startLevel(n), onHowTo: () => showHowTo(showHome), onDig: () => showDig(showHome), onMuseum: () => showMuseum(showHome), onShop: () => openShop({ onClose: showHome }), onCredits: () => mountCredits(ui, {}), onIsland: (id, origin) => showIsland(id, origin) }));
-  // first launch: Yuvi's welcome, then straight into level 1. Later: a newly opened island gets a surprised + wave.
-  if (!profile.yuvi.welcomeSeen && yuvi.helperOn()) return showWelcome({ first: true });
+  // a newly opened island gets a surprised + wave (the first launch goes to the first island instead: see boot / showIsland)
   const open = islandsOpen(profile);
   if (open > profile.yuvi.islands) { await setYuvi({ islands: open }); yuvi.island(ERAS[open - 1].name); }
 }
 
-// Yuvi's welcome (screens/welcome.js). first = the very first launch: it ends in level 1.
+// Settings > Meet Yuvi again / How to play: his hello plus a mini how-to (screens/welcome.js, data/yuvi.js MEET). Tap to advance.
 let welcome = null;
-function showWelcome({ first = false } = {}) {
+function showWelcome() {
   welcome?.destroy();
-  welcome = mountWelcome({ onDone: async () => { welcome = null; await setYuvi({ welcomeSeen: true, met: true }); if (first && profile.level === 1 && !Object.keys(profile.stars).length) startLevel(1); } });
+  welcome = mountWelcome({ onDone: async () => { welcome = null; await setYuvi({ welcomeSeen: true, met: true }); } });
   return welcome;
 }
+// The very first launch (M8): straight to the first island, two bubbles, then the player taps level 1 themselves.
+const firstLaunch = () => coachNeeded(profile, 'hello') && profile.level === 1 && !Object.keys(profile.stars).length;
 
 // Shop (docs/16): over whatever is on screen. Buying persists the profile; onClose runs when the player leaves it.
 function openShop({ onClose, focus = null, level = profile.level } = {}) {
@@ -123,12 +128,22 @@ function showHowTo(back, all = false) {
   swapScreen(mountHowTo(ui, { profile, onBack: back, all, onMeetYuvi: () => showWelcome() }));
 }
 
-async function showIsland(eraId, origin) {
+async function showIsland(eraId, origin, { hello = false } = {}) {
   setTall(true);
   game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   lastIsland = eraId;
-  swapScreen(mountIsland(ui, { profile, eraId, origin, onBack: () => { lastIsland = null; showHome(); }, onPlayLevel: (n) => startLevel(n) }));
+  let helloStep = null;
+  swapScreen(mountIsland(ui, { profile, eraId, origin, onBack: () => { lastIsland = null; showHome(); },
+    onPlayLevel: async (n) => { if (helloStep) { helloStep = null; await persist(markCoach({ ...profile, yuvi: { ...profile.yuvi, welcomeSeen: true, met: true } }, 'hello')); return startLevel(n, { skipPre: n === 1 }); } startLevel(n); } }));
+  if (!hello) return;
+  // first launch: wave hello (tap; no Skip on the very first bubble), then point at level 1 and wait for the player to tap it
+  const node = () => document.querySelector('.inode[data-level="1"]');
+  node()?.scrollIntoView({ block: 'center' });
+  await new Promise((r) => requestAnimationFrame(r));
+  const r1 = await coachStep({ say: HELLO[0].say, action: 'wave', wait: 'tap' }).promise;
+  if (r1 !== 'tap') return;
+  helloStep = coachStep({ say: HELLO[1].say, action: 'point', wait: 'action', spot: node(), onSkip: async () => { helloStep = null; await persist(skipCoach(markCoach(profile, 'hello'))); yuvi.leave(); } });
 }
 let lastIsland = null;
 const backToMap = () => (lastIsland ? showIsland(lastIsland) : showHome());
@@ -137,17 +152,19 @@ async function showDig(back) {
   game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
   await renderer.setEra(eraOf(profile.level).id);
-  swapScreen(mountDig(ui, {
+  const view = mountDig(ui, {
     profile, now, level: profile.level, onBack: back,
     onPlay: () => startLevel(profile.level),
     onMuseum: () => showMuseum(() => showDig(back)),
-    dig: () => { const r = digPart(profile); if (r.ok) persist(r.profile); return r; },
-    yuvi: { enter: (dock) => yuvi.digEnter(dock), strike: () => yuvi.digStart(), part: () => yuvi.digPart(), fossil: (f) => yuvi.digFossil(f.name) },
+    dig: () => { const r = digPart(profile); if (r.ok) { persist(markCoach(r.profile, 'dig')); activeCoach()?.done(); } return r; },
+    yuvi: { enter: (dock) => yuvi.digEnter(dock), strike: () => yuvi.digStart(), part: () => (coachNeeded(profile, 'museum') ? coachMuseum() : yuvi.digPart()), fossil: (f) => yuvi.digFossil(f.name) },
     onComplete: (fossil) => {
       ads.report(AD_EVENTS.fossilComplete, { fossil: fossil.id });
       showHistory(fossil, () => showDig(back));
     }
-  }));
+  });
+  swapScreen(view);
+  if (coachNeeded(profile, 'dig') && profile.pickaxes >= 1) coachDig(view);   // first visit with a pickaxe: slab, top-up, Dig
 }
 
 // History cutscene (never an ad): after a fossil is completed, or replayed from the museum.
@@ -210,13 +227,13 @@ async function startLevel(n, opts = {}) {
     const view = mountPlay(ui, { level, state, tip: null, onHome: () => { cancelBooster(); renderer.locked = true; backToMap(); }, boosters: opts.test ? null : { counts: { ...profile.boosters }, onTap: (id) => boosterTap(id), onCancel: () => cancelBooster() } });
     swapScreen(view);
     game = { level, state, view, tut: null };
-    if (!opts.test && needsTutorial(profile, n)) {    // first-time tutorial, levels 1-6: shown once, skippable, kept in the profile
-      game.tut = mountTutorial({ level, state, renderer, onDone: () => persist(markTutorialSeen(profile, n)), onSkip: () => persist(skipTutorial(profile)) });
+    if (!opts.test && n === 1 && !(1 in profile.stars) && coachNeeded(profile, 'swap')) {   // level 1 (M8): goal, then one guided swap
+      coachLevel1(game);
     } else if (!opts.test) {                          // new element on this level (data/intros.js): a card per element, once
       const list = introsFor(profile, level).filter((e) => !isPreIntro(e));
       if (list.length) game.tut = mountIntro({ entries: list, renderer, state, yuvi: yuviIntro(), onDone: () => introDone(list), onSkip: () => persist(skipTutorial(profile)) });
     }
-    renderer.getHint = () => { const m = hintMove(state); if (m && !opts.test && introNeeded(profile, 'hint')) softIntro(INTROS.hint); return m; };
+    renderer.getHint = () => { const m = hintMove(state); if (m && !opts.test && !activeCoach() && introNeeded(profile, 'hint')) softIntro(INTROS.hint); return m; };
     renderer.onSwap = (a, b) => onSwap(a, b);
     renderer.onTarget = (i) => runBooster(i);
     renderer.locked = false;
@@ -233,6 +250,91 @@ async function startLevel(n, opts = {}) {
 
 // Intro cards with Yuvi (when Yuvi tips are on): he says the card text; a player who has not met him yet gets his hello first.
 const yuviIntro = () => (yuvi.helperOn() ? { greet: !profile.yuvi.met, onGreet: () => setYuvi({ met: true }) } : null);
+
+// ---- in-context coaching (M8, core/coach.js + screens/coach.js) -------------------------------------------------------------
+// screen rect of the board / of some cells, and the centre of a cell (for the hand pointer)
+const boardRect = () => { const r = renderer.canvas.getBoundingClientRect(), k = r.width / 360, st = renderer.state, pad = 6; return { x: r.left + renderer.boardX * k - pad, y: r.top + renderer.boardY * (r.height / 640) - pad, w: st.w * renderer.cs * k + 2 * pad, h: st.h * renderer.cs * k + 2 * pad }; };
+const cellXY = (i) => { const r = renderer.canvas.getBoundingClientRect(), k = r.width / 360; return [r.left + renderer.cx(i) * k, r.top + renderer.cy(i) * (r.height / 640)]; };
+function cellsRect(ids) {
+  const r = renderer.canvas.getBoundingClientRect(), k = r.width / 360, cs = renderer.cs, pad = 6;
+  const xs = ids.map((i) => renderer.cx(i)), ys = ids.map((i) => renderer.cy(i));
+  const x0 = r.left + (Math.min(...xs) - cs / 2) * k, y0 = r.top + (Math.min(...ys) - cs / 2) * k, x1 = r.left + (Math.max(...xs) + cs / 2) * k, y1 = r.top + (Math.max(...ys) + cs / 2) * k;
+  return { x: x0 - pad, y: y0 - pad, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad };
+}
+const coachSkip = async () => { if (game) game.guard = null; await persist(skipCoach(profile)); yuvi.leave(); };
+const coachEnd = () => yuvi.leave();
+
+// Level 1: (a) the goal plate, tap; (b) a hand shows one real swap, the board takes only that swap; then "Nice!" and free play.
+async function coachLevel1(g) {
+  const t = g.state.targets.find((q) => q.type === 'collect');
+  if (t && coachNeeded(profile, 'goal')) {
+    const r = await coachStep({ say: COACH.goal(t.n, CONFIG.gemKinds[t.c] || 'target'), action: 'point', wait: 'tap', spot: document.querySelector('.stat--target'), onSkip: coachSkip }).promise;
+    await persist(markIntroSeen(markCoach(profile, 'goal'), 'obj-collect'));
+    if (r !== 'tap' || game !== g) return;
+  }
+  const mv = tutorialMove(g.state, { size: 3 }); if (!mv) return coachEnd();
+  g.guard = { pair: mv, step: 'swap' };
+  g.coach = coachStep({ say: COACH.swap, action: 'point', wait: 'action', spot: boardRect(), hand: { a: cellXY(mv[0]), b: cellXY(mv[1]) }, place: 'soft', onSkip: coachSkip });
+}
+// after a move resolves (the level is still on): the first special made, 5 moves left, the first two specials side by side.
+// Returns true when a step was shown (soft tips wait for the next move).
+async function coachAfterMove(g, r) {
+  if (g.level.test && !window.__coachTest) return false;
+  const made = firstMade(profile, r.events);
+  if (made) { const i = cellOf(g.state, made.id); if (i >= 0) { await coachSpecial(g, made, i); return true; } }
+  if (g.state.moves <= 5 && coachNeeded(profile, 'moves')) {
+    await persist(markCoach(profile, 'moves'));
+    await coachStep({ say: COACH.moves, action: 'surprised', wait: 'tap', spot: document.querySelector('.stat--moves') }).promise; coachEnd(); return true;
+  }
+  const adj = coachNeeded(profile, 'combo') ? adjacentSpecials(g.state) : null;
+  if (adj) {
+    await persist(markCoach(profile, 'combo'));
+    await coachStep({ say: COACH.combo, action: 'point', wait: 'tap', spot: cellsRect(adj), place: 'soft' }).promise; coachEnd(); return true;
+  }
+  return false;
+}
+// the first time a special is made: light it, Yuvi explains it, then the player must use it (Not now = later). No legal swap with it:
+// just the explanation (tap).
+async function coachSpecial(g, made, i) {
+  await persist(markIntroSeen(profile, made.kind));
+  const line = COACH.special[made.kind](made.o), opts = swapsWith(g.state, i), name = SPECIALS[made.kind]?.name || made.kind;
+  if (!opts.length) { await coachStep({ say: line, action: 'point', wait: 'tap', spot: cellsRect([i]), place: 'soft' }).promise; return coachEnd(); }
+  const [a, b] = opts[0], other = a === i ? b : a;
+  const r1 = await coachStep({ say: line, action: 'point', wait: 'tap', spot: cellsRect([i]), place: 'soft' }).promise;
+  if (r1 !== 'tap' || game !== g) return coachEnd();
+  g.guard = { cell: i, step: 'special' };
+  g.coach = coachStep({ say: COACH.useIt(name), action: 'point', wait: 'action', spot: cellsRect([i, ...opts.map(([x, y]) => (x === i ? y : x))]), hand: { a: cellXY(i), b: cellXY(other) }, place: 'soft', alt: { label: 'Not now', fn: () => { g.guard = null; g.coach = null; coachEnd(); } } });
+}
+// first win: cheer and point at the pickaxe reward (tap), then light the Dig site button and wait for it
+async function coachPickaxe() {
+  await new Promise((r) => setTimeout(r, dur(D.dramatic)));   // the panel has slid up
+  const line = document.getElementById('pick-line'); if (!line) return;
+  const r = await coachStep({ say: COACH.pickaxe, action: 'cheer', then: 'point', wait: 'tap', spot: line }).promise;
+  await persist(markCoach(profile, 'pickaxe'));
+  if (r !== 'tap') return;
+  const btn = document.querySelector('.dt-result #dig'); if (!btn) return coachEnd();
+  coachStep({ say: COACH.toDig, action: 'point', wait: 'action', spot: btn });
+}
+// the dig site, the first time with a pickaxe: the slab (tap), a top-up gift so the first part is affordable (tap), then Dig (action)
+async function coachDig(view) {
+  await new Promise((r) => setTimeout(r, dur(D.celebrate)));   // Yuvi has walked onto the table
+  const stage = document.querySelector('.dig__stage'); if (!stage || !coachNeeded(profile, 'dig')) return;
+  let r = await coachStep({ say: COACH.slab, action: 'point', wait: 'tap', spot: stage, place: 'dig', lift: false }).promise;
+  if (r !== 'tap') return;
+  const cost = CONFIG.fossils.pickaxesPerPart;
+  if (profile.pickaxes < cost) {
+    r = await coachStep({ say: COACH.gift(profile.pickaxes, cost), action: 'cheer', wait: 'tap', place: 'dig' }).promise;
+    await persist({ ...profile, pickaxes: cost }); view.update(profile);
+    if (r !== 'tap') return;
+  }
+  coachStep({ say: COACH.digTap, action: 'point', wait: 'action', spot: document.getElementById('dig-btn'), place: 'dig' });
+}
+// after the first part comes out: the museum button, once
+async function coachMuseum() {
+  await persist(markCoach(profile, 'museum'));
+  await coachStep({ say: COACH.museum, action: 'point', wait: 'tap', spot: document.getElementById('museum-btn'), place: 'dig', lift: false }).promise;
+  yuvi.digPart();
+}
 
 // ---- boosters (docs/16) ----------------------------------------------------------------------
 // tap a booster -> (targeted ones) choose a tile -> useBooster() in core -> the same event replay as a move. An empty one opens the shop.
@@ -300,10 +402,13 @@ async function onSwap(a, b) {
   const g = game;
   if (!g || renderer.locked) return;
   if (g.force || g.pending) { renderer.doShake('tiny'); return; }   // a booster is being chosen (or its first use is required): no swaps
+  if (!swapAllowed(g.guard, a, b)) { renderer.doShake('tiny'); return; }   // a coaching step wants one particular swap
   if (g.tut?.el?.classList.contains('intro--soft')) { g.tut.destroy(); g.tut = null; }
   const sa = g.state.cells[a]?.s, sb = g.state.cells[b]?.s, combo = sa && sb ? comboIntroFor(sa, sb) : null;
   const r = swap(g.state, a, b);
   if (!r.events.length) return;
+  const coached = r.valid && g.guard ? g.guard.step : null;   // the guided swap (level 1) or the first use of a new special
+  if (coached) { g.guard = null; g.coach?.done(); g.coach = null; }
   await renderer.play(r.events, {
     onMove: () => g.view.update({ moves: g.state.moves }),
     onDig: (dug, total) => g.view.update({ dug, total })
@@ -311,8 +416,12 @@ async function onSwap(a, b) {
   if (game !== g) return; // left the level while animating
   g.view.update({ moves: g.state.moves, state: g.state });
   if (r.valid) g.tut?.moved();
+  if (coached === 'swap') { persist(markCoach(profile, 'swap')); yuvi.scene('soft', async ({ y, wait: w }) => { y.play('cheer'); y.say(COACH.nice); if (await w(YUVI_T.longBeat)) yuvi.leave(); }); }
+  else if (coached) coachEnd();
   if (g.state.status === 'playing') {
     renderer.locked = false;
+    if (!coached && await coachAfterMove(g, r)) return;
+    if (game !== g) return;
     if (!g.level.test) {
       if (combo && introNeeded(profile, combo.id)) softIntro({ title: combo.ids.map((k) => INTROS[k].title).join(' + '), text: combo.text, art: INTROS[combo.ids[0]].art, spot: 'board' }, combo.id, 'point');
       else if (r.events.some((e) => e.t === 'shuffle') && introNeeded(profile, 'shuffle')) softIntro(INTROS.shuffle);
@@ -353,6 +462,7 @@ function showNearMiss(g, offer) {
 }
 
 async function settle(g, won) {
+  activeCoach()?.destroy(); g.guard = null;
   const n = g.level.level;
   const stars = won ? starsFor(g.state) : 0;
   let { profile: p, rewards } = settleLevel(profile, n, { won, stars }, now());
@@ -369,7 +479,8 @@ async function settle(g, won) {
     onDouble: async () => { ads.report(AD_EVENTS.rewardedCompleted, { kind: 'double_coins' }); current = doubleCoins(profile, rewards.coins); await persist(current); }
   }));
   if (won) ads.report(AD_EVENTS.rewardedOffer, { kind: 'double_coins' });
-  if (won) yuvi.win({ stars, part: !!g.state.hasDig }); else yuvi.lose('lose');   // every time (unless Yuvi tips are off)
+  if (won && rewards.pickaxes > 0 && coachNeeded(profile, 'pickaxe')) coachPickaxe();   // first win: guide to the dig site
+  else if (won) yuvi.win({ stars, part: !!g.state.hasDig }); else yuvi.lose('lose');   // every time (unless Yuvi tips are off)
 }
 
 async function boot() {
@@ -385,7 +496,7 @@ async function boot() {
   yuvi.initHelper({ stage, isOn: () => profile?.settings?.yuvi !== false, isReduced: reducedMotion });
   await new Promise((r) => setTimeout(r, dur(D.base)));
   screen = view;
-  await showHome();
+  await (firstLaunch() ? showIsland(ERAS[0].id, null, { hello: true }) : showHome());   // first launch: the first island, Yuvi says hello
 }
 boot().then(() => { if (location.search.includes('motion')) import('./render/motionlab.js').then((l) => l.mountLab({ renderer, ui, stage, fit, getProfile: () => profile })); });
 
@@ -411,7 +522,13 @@ async function showYuviDebug() {
   const setP = (patch) => persist({ ...profile, lives: CONFIG.lives.max, ...patch, settings: { ...profile.settings, yuvi: true } });
   const inLevel = async (n, fn) => { await setP({ level: n, tutorial: { ...fresh, off: true } }); await startLevel(n, { skipPre: true }); setTimeout(fn, dur(D.celebrate)); };
   const places = [
-    ['Welcome', () => showWelcome()],
+    ['Meet Yuvi again', () => showWelcome()],
+    ['First launch (hello)', async () => { await setP({ level: 1, stars: {}, coach: { off: false, done: [] }, yuvi: { ...profile.yuvi, met: false } }); showIsland(ERAS[0].id, null, { hello: true }); }],
+    ['Level 1: goal + swap', async () => { await setP({ level: 1, stars: {}, coach: { off: false, done: ['hello'] } }); startLevel(1, { skipPre: true }); }],
+    ['First special', async () => { window.__coachTest = true; await setP({ tutorial: { seen: [], off: true, intros: [] }, coach: { off: false, done: ['hello', 'goal', 'swap', 'moves', 'combo'] } }); startLevel(9, { test: 'firecracker' }); }],
+    ['5 moves left', () => inLevel(30, () => { if (game) { game.state.moves = 6; game.view.update({ moves: 6 }); persist(markCoach({ ...profile, coach: { off: false, done: [] } }, 'goal', 'swap', 'combo')); } })],
+    ['First win: pickaxe', async () => { await setP({ coach: { off: false, done: ['hello', 'goal', 'swap', 'moves'] }, stars: {} }); inLevel(44, () => { if (game) { game.state.moves = 2; window.__dino.result(true); } }); }],
+    ['Dig site: first dig', async () => { await setP({ pickaxes: 1, coach: { off: false, done: ['hello', 'goal', 'swap', 'moves', 'pickaxe'] }, fossilProgress: {}, completedFossils: [] }); showDig(showHome); }],
     ['First intro (hello)', async () => { await setP({ level: 8, tutorial: fresh, yuvi: { ...profile.yuvi, met: false } }); startLevel(8, { skipPre: true }); }],
     ['Booster intro', async () => { await setP({ level: 60, tutorial: { ...fresh, intros: Object.keys(INTROS).filter((k) => k !== 'bst-pick') }, yuvi: { ...profile.yuvi, met: true } }); startLevel(60, { skipPre: true }); }],
     ['Hard level intro', async () => { await setP({ level: 16, tutorial: { ...fresh, intros: Object.keys(INTROS).filter((k) => k !== 'tier-hard') }, yuvi: { ...profile.yuvi, met: true } }); startLevel(16, { skipPre: true }); }],

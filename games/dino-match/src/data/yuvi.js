@@ -5,15 +5,46 @@ import { INTROS, COMBO_INTROS } from './intros.js';
 export const NAME = 'Yuvi';
 export const GREETING = "Hi! I'm Yuvi, your dig buddy!";
 
-// First launch (and Settings > Meet Yuvi again, How to play): tap to advance, Skip always there. show = an extra picture.
-export const WELCOME = [
+// First launch: only two bubbles, on the first island (M8). The rest is taught in context, one thing at a time (COACH below).
+export const HELLO = [
   { action: 'wave', say: GREETING },
-  { action: 'talk', say: 'We travel back through deep time, island by island, from the Cambrian to the Ice Age.' },
-  { action: 'point', say: "Match 3 or more gems to clear them and complete each level's goals.", show: 'gems' },
-  { action: 'dig', say: 'Every level you win earns pickaxes. Use them at the dig site to uncover real fossils!' },
+  { action: 'point', say: "Let's start with your first dig. Tap level 1!", spot: 'node1', wait: 'action' }
+];
+// Settings > Meet Yuvi again / How to play: the hello plus a mini how-to. Tap to advance; Skip from bubble 2.
+export const MEET = [
+  { action: 'wave', say: GREETING },
+  { action: 'talk', say: 'Swap two gems to make a row of 3 or more. Clear the goal before the moves run out.' },
+  { action: 'point', say: 'Match 4 or more and you make a special piece. Match it to blast!', show: 'gems' },
+  { action: 'dig', say: 'Every new level you win earns a pickaxe. Spend them at the dig site to uncover real fossils.' },
   { action: 'point', say: 'Finished fossils go to your museum, with their story.', show: 'museum' },
   { action: 'cheer', say: "Let's dig in!" }
 ];
+export const WELCOME = MEET;   // (old name)
+
+// In-context steps (screens/coach.js, main.js). Each runs once (profile.coach.done), only when it becomes relevant, and waits for
+// the player: a tap where it just explains, the real action where one is expected.
+export const COACH_STEPS = ['hello', 'goal', 'swap', 'moves', 'combo', 'pickaxe', 'dig', 'museum'];
+export const COACH = {
+  goal: (n, colour) => `Clear ${n} ${colour} gems to win.`,
+  swap: 'Swap two gems to make a row of 3.',
+  nice: 'Nice!',
+  moves: 'Only 5 moves left! Make them count.',
+  special: {
+    firecracker: (o) => `You made a Firecracker! Match it to blast a whole ${o === 'v' ? 'column' : 'row'}.`,
+    bomb: () => 'You made a Bomb! Match it to blast everything around it.',
+    dynamite: () => 'You made Dynamite! Match it for a wide diamond blast.',
+    tnt: () => 'You made TNT! Match it to blast a huge area.',
+    rainbow: () => 'You made a Rainbow gem! Swap it with any gem to clear that whole colour.'
+  },
+  useIt: (name) => `Your turn: use the ${name}`,
+  combo: 'Two specials side by side! Swap them with each other for a giant combo blast.',
+  pickaxe: "You earned a pickaxe! Let's use it at the dig site.",
+  toDig: 'Tap Dig site.',
+  slab: 'This slab hides a fossil. Every dig uncovers one part of it.',
+  gift: (have, cost) => `A part takes ${cost} pickaxes. You have ${have}, so here ${cost - have === 1 ? 'is 1 more' : `are ${cost - have} more`} from me!`,
+  digTap: 'Tap Dig to swing your pickaxe!',
+  museum: 'Finished fossils go to your museum, with their story. Visit it any time.'
+};
 
 export const LINES = {
   win: ['Great dig!', 'Roarsome!', 'Fossil-tastic!', 'You rock!'],

@@ -18,6 +18,12 @@ Combos are in the same file: `COMBO_INTROS = [{ ids:[a,b], text }]`, keyed by th
 With Settings > "Yuvi tips" on (default, `profile.settings.yuvi`), Yuvi stands bottom-left during a level-start card and says the card's `text` in his speech bubble (point toward the lit element, talk while it types, idle after; event cards think). The card keeps its title, picture and hint and is placed above him. A player who has not met him (`profile.yuvi.met`) gets "Hi! I'm Yuvi, your dig buddy!" (wave) first. Soft cards (hint, shuffle, first combo) become a Yuvi line instead of the small card. Tips off: cards exactly as before. `tests/yuvi.test.js` checks every entry has a line of 130 characters or less.
 First launch: a 6-bubble welcome (`screens/welcome.js`, `profile.yuvi.welcomeSeen`), replayable from Settings and How to play.
 
+## M8: specials and the in-context coach
+- Match-made specials are not board elements any more for pacing: `CONFIG.specials.unlock` is 1 for every kind, their INTROS entries are `event: true, first: null`, and they never get a level-start card. The first time the player makes one, the coach pauses the board, lights the new piece, Yuvi explains it and asks the player to use it (only that piece can be swapped; "Not now" lets go). No legal swap with it: the explanation only. The kind is then marked seen in `profile.tutorial.intros`.
+- The 5-level pacing rule below applies to obstacles, objectives and boosters only.
+- The old scripted tutorial for levels 1-6 is replaced by the coach (`core/coach.js`, `screens/coach.js`, steps in `data/yuvi.js` COACH, flags in `profile.coach`): first launch = 2 bubbles on the first island (hello, then tap level 1); level 1 = goal plate (tap) and one guided swap (hand pointer, only that swap allowed) then "Nice!"; 5 moves left (first time); first special made; first two specials side by side (combos); first win = the pickaxe reward then the Dig site button; first dig site visit with a pickaxe = slab, a one-time top-up to the 5 pickaxes a part costs, then Dig; first part dug = the museum button. Every bubble waits for a tap ("Tap to continue"), or for the action it asks for. Skip tutorial appears from the second bubble.
+- Saves that saw the old scripted levels keep those elements seen (`LEGACY_TUTORIAL` in data/intros.js).
+
 ## Pacing rules (enforced by `tests/intros.test.js`)
 1. Teach level: the new element appears alone on a hand-made, safe level (an obstacle layout holds only that obstacle).
 2. Use level: it comes back within 15 levels.
@@ -27,18 +33,14 @@ First launch: a 6-bubble welcome (`screens/welcome.js`, `profile.yuvi.welcomeSee
 ## Schedule (first level)
 | Level | Element |
 |---|---|
-| 1 | break gems (scripted) |
-| 5 | Firecracker (scripted) |
-| 6 | plaque and dig blocks (scripted) |
+| 1 | break gems (Yuvi coach: goal plate, one guided swap) |
+| any | Firecracker, Bomb, Dynamite, TNT, Rainbow: all work from level 1; each is explained the first time the player MAKES one (M8) |
+| 6 | plaque and dig blocks (intro cards) |
 | 8 / 10 | sand block / stone block (onboarding, exempt from rule 4) |
 | 11 | tar |
-| 16 | Bomb |
 | 21 | rock |
-| 26 | Dynamite |
 | 31 | sandstone (+ break stones goal) |
-| 36 | TNT |
 | 41 | fossil tile (+ collect fossils goal) |
-| 46 | Rainbow gem |
 | 55 | skeleton tile (+ uncover skeleton goal) |
 | 70 | artefact (+ drop goal) |
 | 101 | vine stone |

@@ -8,6 +8,7 @@ import { CONFIG } from '../core/config.js';
 import { themeFor } from './eraTheme.js';
 import { rng01, mix, shade, rgba, clamp } from './util.js';
 import { drawFossilArt } from './fossilArt.js';
+import { drawThumb, thumbsReady } from './fossilThumbs.js';
 import { peek, loadEra } from './art.js';
 import { nodesFor, GROUND } from '../data/islandNodes.js';
 import { artOf } from './islandart.js';
@@ -258,7 +259,8 @@ export function renderIsland(layout, isl, state, dpr, textureImg) {
     const fo = FOSSILS.find((q) => q.id === f.id), done = state.completed.has(f.id), prog = state.progress[f.id] || 0;
     shadowAt(c, f.x, f.y + f.h * 0.45, f.w * 0.46, 0.3);
     c.save(); c.globalAlpha = done ? 1 : 0.96;
-    drawFossilArt(c, fo.shape, f.x - f.w / 2, f.y - f.h / 2, f.w, f.h, done ? { revealed: 10, look: 'bone', margin: 0.04 } : prog > 0 ? { revealed: prog, look: 'dig', margin: 0.04 } : { revealed: 0, look: 'stone', margin: 0.04 });
+    const o = done ? { revealed: 10, look: 'bone', margin: 0.04 } : prog > 0 ? { revealed: prog, look: 'dig', margin: 0.04 } : { revealed: 0, look: 'stone', margin: 0.04 };
+    if (!drawThumb(c, f.id, f.x - f.w / 2, f.y - f.h / 2, f.w, f.h, o)) drawFossilArt(c, fo.shape, f.x - f.w / 2, f.y - f.h / 2, f.w, f.h, o);   // thumbnail, else vector
     c.restore();
   });
   return { canvas: cv, ox, oy };
@@ -321,7 +323,7 @@ export function createMap(layout, { state, dpr = 1, reduced = () => false, world
       distant.push({ x, y, w, h, cv, k });
     });
   };
-  const ensure = async () => { bitmaps.clear(); greyArt.clear(); buildDistant(); };
+  const ensure = async () => { await thumbsReady(); bitmaps.clear(); greyArt.clear(); buildDistant(); };   // fossil thumbnails first: bitmaps are painted once
   const bitmapOf = (isl) => {
     if (!bitmaps.has(isl.index)) {
       const b = renderIsland(layout, isl, state, dpr, null);

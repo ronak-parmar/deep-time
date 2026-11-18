@@ -8,39 +8,26 @@
 //   reveal : the 10 dig strokes in order. Each stroke = list of [x, y, radius] points the brush passes along.
 //            Missing = a default serpentine sweep over the cover area.
 import { ROSTER } from './roster.js';
-
-const A = (w, h) => (x, y, r) => [x / w, y / h, r / w];
-const T = A(540, 870);   // helper for the Tyrannosaurus slab (pixels of a 540 x 870 view of art/fossils/cretaceous-tyrannosaurus.webp)
+import { SLABS, SLAB_COVER } from './fossilSlabs.js';
 
 export const CREDIT_DEFAULT = { author: 'Game author', source: 'AI-generated art (image generator), prompted and chosen by the game author', licence: 'Owned by the game author' };
 
-export const IMAGES = {
-  'cretaceous-tyrannosaurus': {
-    file: 'cretaceous-tyrannosaurus',
-    credit: { ...CREDIT_DEFAULT, title: 'Tyrannosaurus rex slab' },
-    cover: [[40, 150], [200, 95], [380, 95], [480, 140], [525, 260], [530, 450], [515, 600], [420, 640], [120, 640], [25, 600], [15, 400], [20, 250]].map(([x, y]) => [x / 540, y / 870]),
-    reveal: [
-      [T(75, 220, 55), T(130, 200, 60), T(180, 215, 45)],                       // 1 skull and jaw
-      [T(200, 200, 40), T(205, 265, 40)],                                       // 2 neck
-      [T(110, 385, 45), T(160, 370, 40), T(80, 410, 38)],                       // 3 small arm and claws
-      [T(240, 320, 55), T(290, 320, 55), T(330, 330, 45)],                      // 4 ribcage
-      [T(190, 330, 45), T(170, 420, 45), T(135, 460, 45)],                      // 5 shoulder and front leg
-      [T(360, 320, 50), T(410, 355, 45)],                                       // 6 hips and back
-      [T(300, 430, 45), T(310, 490, 40), T(280, 520, 40)],                      // 7 thigh and shin
-      [T(230, 555, 50), T(290, 545, 40), T(390, 520, 45)],                      // 8 feet and claws
-      [T(440, 380, 42), T(470, 430, 42), T(480, 480, 40)],                      // 9 upper tail
-      [T(470, 530, 40), T(420, 585, 42), T(360, 610, 38)]                       // 10 tail tip
-    ]
-  }
-};
+// Hand-tuned entries (cover / reveal by hand) go here; every fossil now comes from the art sheet with generated strokes (below). The
+// original T. rex slab and its hand strokes were replaced by the sheet version so all 47 slabs match (original kept in
+// art/reference/slab-frame-trex.webp: the frame every slab is built on).
+export const IMAGES = {};
 
-// Any roster fossil whose picture file exists (art/fossils/<id>.webp from tools/prep-sheet.py, or a stand-in) gets a default entry: the
-// whole slab face is covered, the 10 strokes are a serpentine sweep (see slabart.js). Give a fossil its own entry above to tune cover/strokes.
+// Any roster fossil whose picture file exists (art/fossils/<id>.webp from tools/fossil-sheet.py, or a stand-in) gets an entry. Slabs made
+// by tools/fossil-sheet.py share the T. rex frame, so they share its slab face as the cover (SLAB_COVER) and get their own 10 strokes that
+// follow the carving head to tail (data/fossilSlabs.js, generated). Anything else: the whole face is covered, the strokes are a
+// serpentine sweep (see slabart.js). Give a fossil its own entry above to tune cover/strokes by hand.
 const present = import.meta.glob(['../../art-standins/fossils/*.{webp,jpg,png}', '../../../../art/fossils/*.{webp,jpg,png}'], { eager: false });
 const nameOf = Object.fromEntries(ROSTER.map((f) => [f.id, f.name]));
 for (const p of Object.keys(present)) {
   const id = p.split('/').pop().replace(/\.(webp|jpg|png)$/, '');
-  if (nameOf[id] && !IMAGES[id]) IMAGES[id] = { file: id, credit: { ...CREDIT_DEFAULT, title: `${nameOf[id]} slab` } };
+  if (!nameOf[id] || IMAGES[id]) continue;
+  const gen = SLABS[id]?.reveal;
+  IMAGES[id] = { file: id, credit: { ...CREDIT_DEFAULT, title: `${nameOf[id]} slab` }, ...(gen ? { cover: SLAB_COVER, reveal: gen } : {}) };
 }
 
 // Every roster fossil that still uses the vector drawing. Remove an id from here when its image is added to IMAGES.

@@ -78,21 +78,24 @@ describe('gimmick pacing (docs/14)', () => {
 describe('showing intros', () => {
   const lvl = (n) => generateLevel(n);
   it('a fresh player gets the intro of a new element once, then never again', () => {
-    let p = newProfile(); const n = INTROS.bomb.first;
-    const first = introsFor(p, lvl(n)); expect(first.map((e) => e.id)).toContain('bomb');
+    let p = newProfile(); const n = INTROS.tar.first;
+    const first = introsFor(p, lvl(n)); expect(first.map((e) => e.id)).toContain('tar');
     p = markIntroSeen(p, ...first.map((e) => e.id));
-    expect(introsFor(p, lvl(n)).map((e) => e.id)).not.toContain('bomb');
+    expect(introsFor(p, lvl(n)).map((e) => e.id)).not.toContain('tar');
   });
   it('shows at most MAX_PER_LEVEL cards, newest element first', () => {
     const got = introsFor(newProfile(), lvl(300)); expect(got.length).toBeLessThanOrEqual(MAX_PER_LEVEL);
     expect(got[0].first).toBeGreaterThanOrEqual(got.at(-1).first);
   });
-  it('the scripted tutorial covers levels 1 to 6: no popup there, and the element counts as seen afterwards', () => {
-    expect(introsFor(newProfile(), lvl(5))).toEqual([]);
+  it('specials never get a level-start card (they are explained when first made); the old scripted tutorial still counts as seen', () => {
+    for (const n of [1, 5, 9, 16, 46]) expect(introsFor(newProfile(), lvl(n)).filter((e) => e.group === 'special'), 'level ' + n).toEqual([]);
+    for (const k of KINDS) { expect(INTROS[k].event, k).toBe(true); expect(INTROS[k].first, k).toBe(null); }
     expect(seenIntros(markTutorialSeen(newProfile(), 5).tutorial).has('firecracker')).toBe(true);
+    expect(seenIntros(markTutorialSeen(newProfile(), 6).tutorial).has('plaque')).toBe(true);
+    expect(introsFor(newProfile(), lvl(6)).map((e) => e.id)).toEqual(expect.arrayContaining(['plaque']));   // the dig plaque is now a normal card
   });
   it('Skip tutorial turns every intro off, and the seen list survives the save migration', () => {
-    const p = { ...newProfile(), tutorial: { seen: [], off: true, intros: [] } }; expect(introsFor(p, lvl(INTROS.bomb.first))).toEqual([]);
+    const p = { ...newProfile(), tutorial: { seen: [], off: true, intros: [] } }; expect(introsFor(p, lvl(INTROS.tar.first))).toEqual([]);
     const q = migrateProfile(JSON.parse(JSON.stringify(markIntroSeen(newProfile(), 'bomb', 'nonsense')))); expect(q.tutorial.intros).toContain('bomb');
   });
   it('all ids are unique', () => { expect(new Set(ALL_INTRO_IDS).size).toBe(ALL_INTRO_IDS.length); });

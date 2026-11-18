@@ -44,7 +44,8 @@ export const CONFIG = {
   },
 
   // --- specials (docs/11 phase A): unlock level per kind, chain cap. Shapes/combos are data in specials.js ---
-  specials: { unlock: { firecracker: 5, bomb: 16, dynamite: 26, tnt: 36, rainbow: 46 }, chainDepth: 40 },
+  // M8: every match-made special works from level 1; each is explained the first time the player makes it (docs/14, coach step 'special').
+  specials: { unlock: { firecracker: 1, bomb: 1, dynamite: 1, tnt: 1, rainbow: 1 }, chainDepth: 40 },
 
   // --- obstacles (docs/11 phase B): hit rules are data in obstacles.js; these are the tunables ---
   // unlock = first level a generated level may use the obstacle (the intro level for each is hand authored in level.js)

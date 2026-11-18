@@ -80,8 +80,8 @@ describe('effects and combination table', () => {
     const plain = KINDS.filter((k) => k !== 'rainbow');
     for (const a of plain) for (const b of plain) expect(COMBOS[pairKey(a, b)], a + b).toBeTruthy();
   });
-  it('introduction schedule: firecracker 5, bomb 15, rainbow 45', () => {
-    expect(unlockedKinds(4)).toEqual([]); expect(unlockedKinds(5)).toEqual(['firecracker']); expect(unlockedKinds(16)).toEqual(['firecracker', 'bomb']); expect(unlockedKinds(46)).toEqual(KINDS);
+  it('M8: every special can be made from level 1 (taught the first time the player makes it, not at a fixed level)', () => {
+    for (const n of [1, 2, 5, 10, 16, 46, 300]) expect(unlockedKinds(n), 'level ' + n).toEqual(KINDS);
     expect(CREATE.straight5).toBe('rainbow');
   });
 });

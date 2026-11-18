@@ -5,6 +5,7 @@ import { drawGemShape, GEM_COLORS } from './gems.js';
 import { drawSpecial } from './specials.js';
 import { drawObstacle, drawArtefact, drawCracks } from './obstacles.js';
 import { drawFossilArt } from './fossilArt.js';
+import { drawThumb } from './fossilThumbs.js';
 import { fossilIdForLevel } from '../core/eras.js';
 import { tierOf } from '../core/difficulty.js';
 import { HUD_LAYOUT } from './artManifest.js';
@@ -443,7 +444,7 @@ export class Renderer {
     c.save(); c.beginPath(); for (const p of this.blockPos) c.rect(p.x, p.y, this.bs, this.bs); c.clip();
     c.fillStyle = '#D9C79F'; c.fillRect(P.x, P.y, P.w, P.h);
     if (this.glow) { c.shadowColor = '#FFE9A8'; c.shadowBlur = 30 * this.glow; }
-    drawFossilArt(c, fos.shape, P.x + 6, P.y + 4, P.w - 12, P.h - 8, { look: 'bone' });
+    if (!drawThumb(c, fos.id, P.x + 4, P.y + 3, P.w - 8, P.h - 6, { look: 'bone', margin: 0.02 })) drawFossilArt(c, fos.shape, P.x + 6, P.y + 4, P.w - 12, P.h - 8, { look: 'bone' });   // carving thumbnail, else vector
     c.restore();
     for (let i = 0; i < this.blocks.length; i++) { const b = this.blocks[i]; if (b.alive && b.s > 0) this.drawDirt(c, this.blockPos[i], b, i); }
   }

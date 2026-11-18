@@ -26,7 +26,7 @@ export function mountPrelevel(root, { level, state, onPlay, onBack, pre, best = 
   const tier = level.tier || tierOf(level.level), T = TIERS[tier];
   const colours = [...new Set(state.blocks.map((b) => b.c))].sort((a, b) => a - b);   // plaque colours (none on collect-only levels: the goals show the gems)
   const tip = level.tip || TARGET_TYPES[prog[0].type].tip;
-  const newSpecial = KINDS.find((k) => CONFIG.specials.unlock[k] === level.level);
+  const newSpecial = null;   // M8: specials have no teach level any more (explained the first time the player makes one)
   const newObstacle = Object.keys(CONFIG.obstacles.unlock).map((k) => (k === 'artefact' ? null : k)).find((k) => k && CONFIG.obstacles.unlock[k] === level.level) || null;   // first level of an obstacle
   const news = [newSpecial ? SPECIALS[newSpecial].name : null, newObstacle ? OBSTACLES[newObstacle].name : null].filter(Boolean);
 

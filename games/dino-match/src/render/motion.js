@@ -113,7 +113,7 @@ export const YUVI = {
   swapPop: D.quick,             // squash-pop when the pose frame changes (lab: 140)
   bubbleIn: D.base,             // speech bubble pops in (pop ease)
   bubbleDelay: D.quick,         // bubble appears this long after the pose starts (lab: 150)
-  typeChar: 28,                 // per character while the text types out
+  typeChar: 40,                 // per character while the text types out (M8: slower, the player reads along)
   walk: D.celebrate,            // waddle in from / out to the left edge
   pointHold: D.dramatic,        // intro: point at the lit element before the text starts
   beat: D.celebrate,            // one short pose beat (surprised before cheer, sad before the encouraging line)

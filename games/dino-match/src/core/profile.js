@@ -5,8 +5,9 @@ import { freshTutorial, normaliseTutorial } from './tutorial.js';
 import { migrateFossilId, fossilById } from './fossils.js';
 import { ERAS } from './eras.js';
 import { eraUnlocked } from './journey.js';
+import { freshCoach, migrateCoach } from './coach.js';
 
-export const PROFILE_VERSION = 3;
+export const PROFILE_VERSION = 4;   // v4 (M8): profile.coach, the in-context onboarding steps
 
 // Yuvi, the helper dino (v3): welcomeSeen = the first-launch welcome ran (or was skipped), met = he has said hello,
 // islands = how many islands the player has seen open (a new one gets a surprised + wave on the world map).
@@ -28,7 +29,8 @@ export function newProfile() {
     boosters: Object.fromEntries(CONFIG.boosters.kinds.map((k) => [k, CONFIG.boosters.start[k] || 0])),
     tutorial: freshTutorial(),    // levels 1-6 first-time tutorial: { seen: [levels], off }
     settings: { consent: null, reducedMotion: null, muted: false, haptics: true, yuvi: true },   // yuvi = Settings > Yuvi tips
-    yuvi: freshYuvi()
+    yuvi: freshYuvi(),
+    coach: freshCoach()           // in-context onboarding steps done (core/coach.js)
   };
 }
 
@@ -73,6 +75,7 @@ export function migrateProfile(raw) {
     met: y ? !!y.met : false,
     islands: Math.max(1, Math.min(ERAS.length, Math.floor(num(y && y.islands, islandsOpen(p)))))
   };
+  p.coach = migrateCoach(raw, p);   // v4: a save that saw the old welcome still gets every in-context step it has not done
   return p;
 }
 

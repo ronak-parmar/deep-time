@@ -48,3 +48,27 @@ body.is-reduced .yuvi__bubble.on { animation: none; }
 .ydbg__panel { --w: 340px; max-width: 344px; margin-top: 36px; }
 .ydbg__grid { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
 .ydbg__b { min-height: 34px; min-width: 0; padding: 0 8px; font-size: 12px; }
+
+/* M8: every bubble that waits for a tap says so (it never moves on by itself) */
+.yuvi__cue { display: block; margin-top: 4px; text-align: right; font: 800 11px/14px Nunito, system-ui, sans-serif; color: #9A5A1C; letter-spacing: .02em; animation: yuvicue calc(var(--m-celebrate) * 1.4) var(--m-ease-out) infinite alternate; }
+.yuvi__cue[hidden] { display: none; }
+@keyframes yuvicue { from { opacity: .45; transform: translateX(0); } to { opacity: 1; transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { .yuvi__cue { animation: none; } }
+body.is-reduced .yuvi__cue { animation: none; }
+
+/* coach steps (screens/coach.js): spotlight, click blockers around it while an action is expected, Skip / Not now */
+.coach { position: fixed; inset: 0; z-index: 42; }
+.coach--tap { cursor: pointer; }
+.coach--clear { background: transparent; }
+.coach__spot { position: fixed; border-radius: 14px; box-shadow: 0 0 0 200vmax rgba(8,12,22,.62); outline: 3px solid var(--action, #FFC24B); pointer-events: none; animation: coachring calc(var(--m-celebrate) * 1.4) var(--m-ease-out) infinite alternate; }
+.coach__spot[hidden] { display: none; }
+@keyframes coachring { from { outline-offset: 0; } to { outline-offset: 3px; } }
+@media (prefers-reduced-motion: reduce) { .coach__spot { animation: none; } }
+.coach__block { position: fixed; background: transparent; }
+.coach__dim { position: fixed; inset: 0; background: rgba(8,12,22,.62); pointer-events: none; }
+.coach__btns { position: fixed; right: 10px; top: 10px; display: flex; gap: 6px; z-index: 46; }
+.coach__btn { min-height: 40px; min-width: 0; padding: 0 12px; font-size: 14px; }
+.coach__card { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(300px, 88vw); box-sizing: border-box; padding: 12px 14px; border-radius: 14px; background: linear-gradient(180deg, #FFF6DF, #F3DFB2); border: 3px solid #6B4423; color: #4A2C10; font: 700 15px/20px Nunito, system-ui, sans-serif; text-align: center; }
+.coach__card small { display: block; margin-top: 4px; color: #9A5A1C; font-weight: 800; font-size: 11px; }
+.coach .tut__hand, .coach .tut__trail { z-index: 1; }
+.welcome__skip[hidden] { display: none; }

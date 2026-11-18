@@ -74,7 +74,8 @@ export function createYuvi(container, { size = 118, reduced = false } = {}) {
   const shadow = h('div', { class: 'yuvi__shadow' });
   const head = h('b', { class: 'yuvi__name' }, 'Yuvi'), shown = h('span', {}), rest = h('span', { class: 'yuvi__rest', 'aria-hidden': 'true' });
   const text = h('span', { class: 'yuvi__text' }, shown, rest);
-  const bubble = h('div', { class: 'yuvi__bubble', role: 'status', 'aria-live': 'polite', hidden: true, onClick: (e) => { e.stopPropagation(); tapBubble(); } }, head, text);
+  const cue = h('span', { class: 'yuvi__cue', hidden: true }, 'Tap to continue \u25B8');   // shown once the line is typed, when it waits for a tap
+  const bubble = h('div', { class: 'yuvi__bubble', role: 'status', 'aria-live': 'polite', hidden: true, onClick: (e) => { e.stopPropagation(); tapBubble(); } }, head, text, cue);
   const fxLayer = h('div', { class: 'yuvi__fx', 'aria-hidden': 'true' });
   const el = h('div', { class: 'yuvi', hidden: true, 'aria-label': 'Yuvi, your helper dino', style: { width: boxW + 'px', height: boxH + 'px', '--yuvi-w': boxW + 'px', '--yuvi-h': boxH + 'px' } }, shadow, body, fxLayer, bubble);
   container.append(el);
@@ -152,24 +153,25 @@ export function createYuvi(container, { size = 118, reduced = false } = {}) {
   }
   // Show a line in the bubble; it types out (tap: finish typing, then tap again = onTap). talk: true = talk pose while it types, then
   // back to `after` (default idle). Resolves when the whole line is shown.
-  function say(line, { talk = false, after = 'idle', tap = null, delay = 0 } = {}) {
-    onTap = tap;
+  // cue: show "Tap to continue" when the line is typed (the bubble waits for a tap; it never moves on by itself).
+  function say(line, { talk = false, after = 'idle', tap = null, delay = 0, cue: withCue = false } = {}) {
+    onTap = tap; cue.hidden = true;
     if (typing) { const ty = typing; typing = null; ty.done(); }
     if (!line) { bubble.hidden = true; bubble.classList.remove('on'); return Promise.resolve(); }
     shown.textContent = ''; rest.textContent = line; bubble.hidden = false;
     bubble.classList.remove('on'); void bubble.offsetWidth; bubble.classList.add('on');
     return new Promise((res) => {
       typing = { text: line, n: -1, t0: now() + YUVI.bubbleDelay + delay, talk, talked: false,
-        done: () => { shown.textContent = line; rest.textContent = ''; if (talk && action === 'talk') play(after, { dir: opts.dir }); res(); } };
+        done: () => { shown.textContent = line; rest.textContent = ''; cue.hidden = !withCue; if (talk && action === 'talk') play(after, { dir: opts.dir }); res(); } };
       run(); if (!visible) { const ty = typing; typing = null; ty.done(); }
     });
   }
   // the bubble's height (game px) for a line, without showing it (cards are placed above Yuvi before he speaks)
-  function measure(line) {
-    const wasHidden = el.hidden, bh = bubble.hidden, a = shown.textContent, b = rest.textContent;
-    el.style.visibility = 'hidden'; el.hidden = false; bubble.hidden = false; shown.textContent = ''; rest.textContent = line;
+  function measure(line, withCue = true) {
+    const wasHidden = el.hidden, bh = bubble.hidden, a = shown.textContent, b = rest.textContent, ch = cue.hidden;
+    el.style.visibility = 'hidden'; el.hidden = false; bubble.hidden = false; shown.textContent = ''; rest.textContent = line; cue.hidden = !withCue;
     const hgt = bubble.offsetHeight;
-    shown.textContent = a; rest.textContent = b; bubble.hidden = bh; el.hidden = wasHidden; el.style.visibility = '';
+    shown.textContent = a; rest.textContent = b; bubble.hidden = bh; el.hidden = wasHidden; el.style.visibility = ''; cue.hidden = ch;
     return hgt;
   }
   function skip() { if (typing) { const ty = typing; typing = null; ty.done(); return true; } return false; }

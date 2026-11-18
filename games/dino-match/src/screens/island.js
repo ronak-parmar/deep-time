@@ -10,6 +10,7 @@ import { levelState, bestStars, eraStats } from '../core/journey.js';
 import { islandPath, visibleRange, PW } from '../render/islandpath.js';
 import { PROPS, LOOK } from '../render/islandmap.js';
 import { drawFossilArt } from '../render/fossilArt.js';
+import { hasThumb, loadThumb, drawThumb } from '../render/fossilThumbs.js';
 import { loadEra } from '../render/art.js';
 import { reducedMotion } from '../ui/motion.js';
 import { rng01 } from '../render/util.js';
@@ -35,7 +36,10 @@ export function mountIsland(root, { profile, eraId, onBack, onPlayLevel, origin 
   const ms = path.milestones.map((m) => {
     const f = FOSSILS.find((q) => q.id === m.fossil), state = done.has(m.fossil) ? 'done' : digging.includes(m.fossil) ? 'digging' : 'locked';
     const c = h('canvas', { width: 120, height: 68, class: 'isle__mfossil', 'aria-hidden': 'true' }), g = c.getContext('2d');
-    g.scale(2, 2); drawFossilArt(g, f.shape, 2, 2, 56, 30, state === 'done' ? { look: 'bone', revealed: 10, margin: 0.04 } : state === 'digging' ? { look: 'dig', revealed: (profile.fossilProgress || {})[m.fossil] || 0, margin: 0.04 } : { look: 'stone', revealed: 0, margin: 0.04 });
+    const o = state === 'done' ? { look: 'bone', revealed: 10, margin: 0.04 } : state === 'digging' ? { look: 'dig', revealed: (profile.fossilProgress || {})[m.fossil] || 0, margin: 0.04 } : { look: 'stone', revealed: 0, margin: 0.04 };
+    g.scale(2, 2);   // the carving thumbnail (art sheet) when there is one, else the code-drawn fossil
+    if (hasThumb(f.id)) loadThumb(f.id).then((im) => { if (!im || !drawThumb(g, f.id, 1, 1, 58, 32, { ...o, margin: 0.02 })) drawFossilArt(g, f.shape, 2, 2, 56, 30, o); });
+    else drawFossilArt(g, f.shape, 2, 2, 56, 30, o);
     return { m, el: h('div', { class: `isle__mile isle__mile--${state}`, 'aria-label': `Fossil after level ${m.after}: ${f.name}` }, c,
       h('span', { class: 'isle__mtext' }, h('b', {}, state === 'locked' ? 'Fossil dig' : f.name), h('small', {}, `Levels ${m.after - 49}-${m.after}`))) };
   });

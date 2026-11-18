@@ -12,28 +12,29 @@ import { KINDS, COMBOS } from '../core/specials.js';
 import { BOOSTERS, boosterIntroId } from './boosters.js';
 import { firstLevelOfTier } from '../core/difficulty.js';
 
-const U = CONFIG.specials.unlock, O = CONFIG.obstacles.unlock;
+const O = CONFIG.obstacles.unlock;
 const E = (id, group, title, text, first, extra) => ({ id, group, title, text, first, slot: id, ...extra });
 
 export const INTROS = Object.fromEntries([
   // ---- objectives: what a level asks you to do
   E('obj-collect', 'objective', 'Break gems', 'Match gems of the target colour to break them. Other colours still use a move.', 1, { hook: { kind: 'target', key: 'collect' }, art: { kind: 'gem', key: 0 }, spot: 'target', tutorial: 1 }),
-  E('obj-dig', 'objective', 'Dig blocks', 'Match the colour shown on a block to hit it. Dig every block to uncover a fossil part.', 6, { hook: { kind: 'target', key: 'dig' }, art: { kind: 'block', key: 'tar', badge: 0, pick: true }, spot: 'plaque', tutorial: 6 }),   // same picture as the HUD dig goal
+  E('obj-dig', 'objective', 'Dig blocks', 'Match the colour shown on a block to hit it. Dig every block to uncover a fossil part.', 6, { hook: { kind: 'target', key: 'dig' }, art: { kind: 'block', key: 'tar', badge: 0, pick: true }, spot: 'plaque' }),   // same picture as the HUD dig goal
   E('obj-clearAll', 'objective', 'Clear them all', 'Clear every obstacle of the kind shown before the moves run out.', O.tar, { slot: 'tar', hook: { kind: 'target', key: 'clearAll' }, art: { kind: 'obstacle', key: 'tar' }, spot: 'target' }),
   E('obj-stones', 'objective', 'Break stones', 'Break the stone tiles. Sandstone and vine stone both count.', O.sandstone, { slot: 'sandstone', hook: { kind: 'target', key: 'stones' }, art: { kind: 'obstacle', key: 'sandstone' }, spot: 'target' }),
   E('obj-fossils', 'objective', 'Collect fossils', 'Break the fossil tiles to collect the fossil buried under each one.', O.fossil, { slot: 'fossil', hook: { kind: 'target', key: 'fossils' }, art: { kind: 'obstacle', key: 'fossil' }, spot: 'target' }),
   E('obj-skeleton', 'objective', 'Uncover the skeleton', 'Break every tile of the buried skeleton to uncover it.', O.bone, { slot: 'bone', hook: { kind: 'target', key: 'skeleton' }, art: { kind: 'obstacle', key: 'bone' }, spot: 'target' }),
   E('obj-drop', 'objective', 'Drop the artefact', 'Match gems under an artefact so it falls to the bottom row.', O.artefact, { slot: 'artefact', hook: { kind: 'target', key: 'drop' }, art: { kind: 'artefact' }, spot: 'target' }),
   // ---- dig blocks on the plaque
-  E('plaque', 'block', 'The plaque', 'The plaque shows the blocks to dig. A 3-match hits once, 4 hits twice, 5 or more hits three times.', 6, { hook: { kind: 'block', key: 'tar' }, art: { kind: 'block', key: 'tar' }, spot: 'plaque', tutorial: 6 }),
+  E('plaque', 'block', 'The plaque', 'The plaque shows the blocks to dig. A 3-match hits once, 4 hits twice, 5 or more hits three times.', 6, { hook: { kind: 'block', key: 'tar' }, art: { kind: 'block', key: 'tar' }, spot: 'plaque' }),
   E('sand', 'block', 'Sand block', 'Sand takes two hits. Bigger matches hit harder.', 8, { hook: { kind: 'block', key: 'sand' }, art: { kind: 'block', key: 'sand' }, spot: 'plaque' }),
   E('stone', 'block', 'Stone block', 'Stone takes three hits. A match of 5 breaks it in one go.', 10, { hook: { kind: 'block', key: 'stone' }, art: { kind: 'block', key: 'stone' }, spot: 'plaque' }),
-  // ---- special pieces
-  E('firecracker', 'special', 'Firecracker', 'Match 4 in a line to make one. Match it later to blast a whole row or column.', U.firecracker, { hook: { kind: 'special', key: 'firecracker' }, art: { kind: 'special', key: 'firecracker' }, spot: 'board', tutorial: 5 }),
-  E('bomb', 'special', 'Bomb', 'Match 5 in an L or T shape to make one. It blasts a 3 by 3 square.', U.bomb, { hook: { kind: 'special', key: 'bomb' }, art: { kind: 'special', key: 'bomb' }, spot: 'board' }),
-  E('dynamite', 'special', 'Dynamite', 'Match 6 gems in one group to make one. It blasts a wide diamond.', U.dynamite, { hook: { kind: 'special', key: 'dynamite' }, art: { kind: 'special', key: 'dynamite' }, spot: 'board' }),
-  E('tnt', 'special', 'TNT', 'Match 5 in a cross, or 7 in a group. It blasts a 7 by 7 area.', U.tnt, { hook: { kind: 'special', key: 'tnt' }, art: { kind: 'special', key: 'tnt' }, spot: 'board' }),
-  E('rainbow', 'special', 'Rainbow gem', 'Match 5 in a straight line to make one. Swap it with a gem to clear every gem of that colour.', U.rainbow, { hook: { kind: 'special', key: 'rainbow' }, art: { kind: 'special', key: 'rainbow' }, spot: 'board' }),
+  // ---- special pieces: all work from level 1 and are explained the first time the player makes one (event: no level-start card,
+  //      the coach pauses the board, lights the new piece and asks the player to use it; see screens/coach.js)
+  E('firecracker', 'special', 'Firecracker', 'Match 4 in a line to make one. Match it later to blast a whole row or column.', null, { event: true, made: true, hook: { kind: 'special', key: 'firecracker' }, art: { kind: 'special', key: 'firecracker' }, spot: 'board' }),
+  E('bomb', 'special', 'Bomb', 'Match 5 in an L or T shape to make one. It blasts a 3 by 3 square.', null, { event: true, made: true, hook: { kind: 'special', key: 'bomb' }, art: { kind: 'special', key: 'bomb' }, spot: 'board' }),
+  E('dynamite', 'special', 'Dynamite', 'Match 6 gems in one group to make one. It blasts a wide diamond.', null, { event: true, made: true, hook: { kind: 'special', key: 'dynamite' }, art: { kind: 'special', key: 'dynamite' }, spot: 'board' }),
+  E('tnt', 'special', 'TNT', 'Match 5 in a cross, or 7 in a group. It blasts a 7 by 7 area.', null, { event: true, made: true, hook: { kind: 'special', key: 'tnt' }, art: { kind: 'special', key: 'tnt' }, spot: 'board' }),
+  E('rainbow', 'special', 'Rainbow gem', 'Match 5 in a straight line to make one. Swap it with a gem to clear every gem of that colour.', null, { event: true, made: true, hook: { kind: 'special', key: 'rainbow' }, art: { kind: 'special', key: 'rainbow' }, spot: 'board' }),
   // ---- obstacles (each one is taught first on a safe, hand-made level)
   ...Object.keys(OBSTACLES).map((k) => E(k, 'obstacle', OBSTACLES[k].name, ({
     tar: 'Tar clears when you match next to it, or blast it. Watch out: in hard levels it spreads.',
@@ -96,9 +97,12 @@ export function elementsOfLevel(cfg) {
 // tutorial was seen. At most MAX_PER_LEVEL cards per level start: the newest elements first (so a player who jumps ahead is not
 // buried; older elements stay in How to play and show up when they are met again).
 export const MAX_PER_LEVEL = 2;
+// The old scripted tutorial (levels 1-6, before M8) taught these on its levels: a save that saw them keeps them as seen.
+const LEGACY_TUTORIAL = { 1: ['obj-collect'], 5: ['firecracker'], 6: ['obj-dig', 'plaque'] };
 export function seenIntros(tut) {
   const t = tut || {}, seen = new Set(Array.isArray(t.intros) ? t.intros : []);
   for (const e of Object.values(INTROS)) if (e.tutorial && (t.seen || []).includes(e.tutorial)) seen.add(e.id);
+  for (const [lv, ids] of Object.entries(LEGACY_TUTORIAL)) if ((t.seen || []).includes(+lv)) ids.forEach((id) => seen.add(id));
   return seen;
 }
 export function introsFor(profile, cfg) {

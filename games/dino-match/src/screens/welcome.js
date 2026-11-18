@@ -1,13 +1,15 @@
-// First-launch welcome (also Settings > Meet Yuvi again, and How to play): Yuvi waddles in over a soft dim and explains the game in
-// six short bubbles (data/yuvi.js WELCOME). Tap anywhere (or the bubble) to finish the typing, tap again for the next one. Skip ends it.
+// Settings > Meet Yuvi again (and How to play): Yuvi waddles in over a soft dim, says hello and gives a mini how-to (data/yuvi.js MEET).
+// Bubbles never move on by themselves: tap anywhere (or the bubble) to finish the typing, tap again for the next one ("Tap to
+// continue" shows when it waits). No Skip on the first bubble; Skip from the second on. (The first launch uses only the two HELLO
+// bubbles on the first island, main.js showIsland; everything else is taught in context.)
 // Two steps show something: a mini gem row he points at, and a ring on the museum button of the world map.
 import { h } from '../ui/dom.js';
 import { KButton } from '../ui/kit.js';
 import { artBox } from './intro.js';
-import { WELCOME } from '../data/yuvi.js';
+import { MEET } from '../data/yuvi.js';
 import { scene, leave, getYuvi, bandTop, toScreen, ARM, PLACES } from '../ui/helper.js';
 
-export function mountWelcome({ steps = WELCOME, onDone } = {}) {
+export function mountWelcome({ steps = MEET, onDone } = {}) {
   let i = -1, dead = false, stops = [];
   const count = h('p', { class: 'welcome__step', 'aria-hidden': 'true' });
   const show = h('div', { class: 'welcome__show', hidden: true, 'aria-hidden': 'true' });
@@ -19,7 +21,8 @@ export function mountWelcome({ steps = WELCOME, onDone } = {}) {
   function stopArt() { stops.forEach((f) => f()); stops = []; }
   function step() {
     const s = steps[i];
-    count.textContent = `${i + 1} of ${steps.length}  ·  tap to continue`;
+    count.textContent = `${i + 1} of ${steps.length}`;
+    skip.hidden = i === 0;   // no Skip on the very first bubble
     count.style.top = '72px';
     bandTop(s.say, 'welcome');   // places Yuvi and his bubble for this line
     // the picture for this step: gems in a row to Yuvi's right (he points at it), or a ring on the museum button
@@ -37,7 +40,7 @@ export function mountWelcome({ steps = WELCOME, onDone } = {}) {
     }
     scene('welcome', async ({ y }) => {
       y.play(s.action, { dir: 'right' });
-      await y.say(s.say, { talk: s.action === 'talk', after: 'idle', tap: () => next() });
+      await y.say(s.say, { talk: s.action === 'talk', after: 'idle', tap: () => next(), cue: true });
     }, { force: true });
   }
   function next() {

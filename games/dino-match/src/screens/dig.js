@@ -14,7 +14,7 @@ import { plaqueUrl, drawPlaque } from '../render/frame.js';
 import { themeFor } from '../render/eraTheme.js';
 import { reducedMotion } from '../ui/motion.js';
 import { Panel, KButton, Ribbon } from '../ui/kit.js';
-import { loadSlab } from '../render/slabart.js';
+import { loadSlab, hasSlab } from '../render/slabart.js';
 
 const CW = 328, CH = 170, PAD = 12;
 const ART = { x: PAD + 6, y: PAD + 4, w: CW - PAD * 2 - 12, h: CH - PAD * 2 - 8 };
@@ -106,7 +106,7 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
       celebrating = r.fossil; revealed = CONFIG.fossils.parts; partsEl.textContent = `Part ${CONFIG.fossils.parts} of ${CONFIG.fossils.parts} unearthed`; barWrap.replaceChildren(Progress(1));
       const said = yuvi?.fossil(r.fossil);
       await sleep(RECIPES.fossilComplete.dur); if (said) await said;
-      onComplete(r.fossil);
+      if (alive) onComplete(r.fossil);   // (left the dig site meanwhile: the cutscene is in the museum)
       return;
     }
     yuvi?.part();
@@ -173,6 +173,7 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
   function draw() {
     const c = ctx, f = celebrating || fossil() || FOSSILS[FOSSILS.length - 1];
     if (slab) return drawSlab(f);
+    if (hasSlab(f.id)) { c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, W, Hh); return; }   // its picture is still loading: no vector flash
     c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, CW, CH);
     c.save();
     if (shake && vt - shake.t0 < shake.ms) { const k = (1 - (vt - shake.t0) / shake.ms) * shake.px; c.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k); } else shake = null;
