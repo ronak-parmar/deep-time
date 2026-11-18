@@ -106,6 +106,23 @@ export const RECIPES = {
 };
 export const EVENTS = Object.keys(RECIPES);
 
+// ---- Yuvi, the helper dino (docs/09 section 4b). Pose frames + whole-body motion ported from preview/yuvi-lab.html (approved).
+// The pose math itself (bob, sway, hop periods in seconds) lives with the frames in ui/yuvi.js, exactly as in the lab; every
+// duration a screen waits on is here.
+export const YUVI = {
+  swapPop: D.quick,             // squash-pop when the pose frame changes (lab: 140)
+  bubbleIn: D.base,             // speech bubble pops in (pop ease)
+  bubbleDelay: D.quick,         // bubble appears this long after the pose starts (lab: 150)
+  typeChar: 28,                 // per character while the text types out
+  walk: D.celebrate,            // waddle in from / out to the left edge
+  pointHold: D.dramatic,        // intro: point at the lit element before the text starts
+  beat: D.celebrate,            // one short pose beat (surprised before cheer, sad before the encouraging line)
+  longBeat: D.celebrate * 2,    // a pose that reads as a moment (cheer after a fossil part, island wave)
+  sparkleEvery: 3,              // cheer: a sparkle on about 1 frame in 3 (lab: random < .3)
+  fxLife: D.celebrate - D.instant,   // sparkle / chip / confetti life (lab: 0.8 s)
+  confetti: 36                  // 3-star win burst
+};
+
 // ---- helpers used by DOM screens --------------------------------------------------------------------------
 export const sleep = (ms) => new Promise((res) => setTimeout(res, dur(ms)));
 export function cssVars() {

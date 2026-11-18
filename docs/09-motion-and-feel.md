@@ -71,6 +71,18 @@ Particles: `sparkle` 6 to 10 per gem, life 450 ms, gem colour. `dust` 8 to 12 pe
 
 New events must be added to this table before they are built.
 
+### 4b. Yuvi, the helper dino (M7)
+Nine drawn pose frames (`art/mascot/dino-*.webp`) with whole-body motion ported 1:1 from `preview/yuvi-lab.html` (approved). Code: `src/ui/yuvi.js` (component, pose math), `src/ui/helper.js` (where and when), lines in `src/data/yuvi.js`, timings in `motion.js` `YUVI`.
+
+| Event | Motion | Sound | Haptic |
+| --- | --- | --- | --- |
+| Pose change | the new frame squash-pops (`quick`, 8%) | none | none |
+| Enter / leave | waddles in from the left edge `celebrate` `out` (idle frame, rock and bob), leaves the same way `in` (flipped) | none | none |
+| Speech bubble | pops in `base` `pop` after `quick`, text types out (28 ms a character); tap = finish, tap again = continue | none | none |
+| Idle / talk / wave / point / think / sad / surprised / cheer / dig | lab loops: bob + squash, talk frame at 5 Hz, sway, lean toward the target (the point drawing faces right; flipped for a target on the left), tilt, droop + desaturate, hop, hop with sparkles (3 stars: 1.6x hop + confetti burst), swing with rock chips to the right | none | none |
+| Reduced motion | pose swaps only: no bob, hop, walk, pop or particles; the text appears at once | none | none |
+
+
 ## 5. Reward ladder
 
 Small (match, coin): <= 300 ms, no shake. Medium (dirt dug, star): <= 600 ms, small shake. Large (win, part unearthed): <= 1.2 s, medium shake plus confetti allowed. Huge (fossil complete): <= 2.5 s, skippable after 600 ms.

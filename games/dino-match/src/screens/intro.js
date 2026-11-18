@@ -8,6 +8,8 @@ import { paintIntroArt } from '../render/introart.js';
 import { reducedMotion } from '../ui/motion.js';
 import { D } from '../render/motion.js';
 import { BOOSTERS } from '../data/boosters.js';
+import { introLine, bandTop, leave as yuviLeave, getYuvi } from '../ui/helper.js';
+import { lineFor, poseFor } from '../data/yuvi.js';
 
 const LW = 360, LH = 640, ART = 72;
 
@@ -41,8 +43,11 @@ function spotRect(spot, renderer, state) {
 }
 
 // entries: [{ title, text, art, spot }]. soft = small card, no dimming, no tap needed. onDone(ids) when the last card is dismissed.
-export function mountIntro({ entries, renderer, state, soft = false, onDone, onSkip }) {
-  let i = 0, dead = false, art = null;
+// yuvi = { greet, onGreet } when Yuvi tips are on: Yuvi stands bottom-left and says the card text in his bubble (the card keeps its
+// title, picture and hint, and sits above him). greet: the player has not met him yet, so the first card starts with his hello.
+export function mountIntro({ entries, renderer, state, soft = false, onDone, onSkip, yuvi = null }) {
+  let i = 0, dead = false, art = null, greet = !!(yuvi && yuvi.greet);
+  if (soft) yuvi = null;
   const spot = h('div', { class: 'tut__spot intro__spot' });
   const artHost = h('div', { class: 'intro__arthost' });
   const text = h('p', { class: 'body intro__text' });
@@ -61,20 +66,32 @@ export function mountIntro({ entries, renderer, state, soft = false, onDone, onS
     medal.hidden = !!bst; bhost.hidden = !bst; how.hidden = !bst || soft;
     if (bst) how.textContent = bst.kind === 'pre' ? 'Pick it on the start screen, before you play.' : bst.target === 'none' ? 'Tap the booster to use it.' : 'Tap the booster, then tap where to use it.';
     title.textContent = e.title; text.textContent = e.text;
+    let band = innerHeight;
+    el.classList.toggle('intro--yuvi', !!yuvi);
+    if (yuvi) { band = bandTop(lineFor(e)); introLine(lineFor(e), { pose: poseFor(e), greet, onTap: () => next() }); }
     hint.textContent = soft ? '' : i < entries.length - 1 ? 'Tap for the next one' : bst && bst.kind === 'level' ? 'Tap to try it now' : 'Tap to continue'; hint.hidden = soft;
     if (soft) { card.style.top = 'auto'; card.style.bottom = '18px'; return; }
     card.style.top = card.style.bottom = '';
     const r = spotRect(e.spot, renderer, state), big = r.h > 300;   // the whole board: no outline, just dim it and centre the card
     el.classList.toggle('intro--dim', big); spot.hidden = big;
     el.classList.toggle('intro--center', big);
+    el.style.paddingBottom = big && yuvi ? Math.max(0, innerHeight - band) + 'px' : '';   // centred in the space above Yuvi
     if (big) return;
     Object.assign(spot.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
     const below = r.y + r.h / 2 < innerHeight / 2;
     card.style.top = below ? Math.min(innerHeight - 230, r.y + r.h + 16) + 'px' : 'auto'; card.style.bottom = below ? 'auto' : Math.max(16, innerHeight - r.y + 16) + 'px';
-    requestAnimationFrame(() => { const q = card.getBoundingClientRect(); if (q.top < 8) { card.style.top = '8px'; card.style.bottom = 'auto'; } });   // a tall card never runs off the top
+    requestAnimationFrame(() => {
+      const q = card.getBoundingClientRect();
+      if (q.bottom > band - 8) { card.style.top = Math.max(8, band - 8 - q.height) + 'px'; card.style.bottom = 'auto'; }   // never over Yuvi and his bubble
+      else if (q.top < 8) { card.style.top = '8px'; card.style.bottom = 'auto'; }   // a tall card never runs off the top
+    });
   }
-  function next() { i += 1; if (i >= entries.length) { destroy(); onDone?.(); } else show(); }
-  function destroy() { dead = true; art?.stop(); removeEventListener('resize', show); el.remove(); }
+  function next() {
+    if (dead) return;
+    if (yuvi && getYuvi()?.skip()) return;                          // first tap finishes the typing
+    if (greet) { greet = false; yuvi.onGreet?.(); show(); return; }  // hello done: now the card's own line
+    i += 1; if (i >= entries.length) { destroy(); onDone?.(); } else show(); }
+  function destroy() { if (yuvi && !dead) yuviLeave(); dead = true; art?.stop(); removeEventListener('resize', show); el.remove(); }
   addEventListener('resize', show); show();
   return { el, destroy, moved() { if (soft) destroy(); }, get step() { return i; } };
 }

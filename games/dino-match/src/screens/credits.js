@@ -8,6 +8,7 @@ export const CREDITS = {
   lines: [
     'Dino Match is a personal project by its author.',
     'The artwork is AI-generated: the fossil slabs, the island map, the dialog and button kit and the backgrounds were made with an AI image generator, prompted and chosen by the game author.',
+    'Yuvi (helper dino) artwork: nine pose drawings, AI-generated, prompted and chosen by the game author; his motion is code.',
     'The gems, effects, animations and sounds are drawn and synthesised in code.',
     'Fossil facts are checked against museum and university sources (see docs/13).',
     'Font: Nunito, SIL Open Font Licence.'

@@ -1,0 +1,50 @@
+/* Yuvi, the helper dino (ui/yuvi.js, ui/helper.js). Timing only through the docs/09 tokens. */
+.yuvi-layer { position: fixed; left: 0; top: 0; width: 360px; height: 640px; transform-origin: 0 0; pointer-events: none; z-index: 45; overflow: visible; }
+.yuvi-layer[hidden] { display: none; }
+.yuvi { position: absolute; pointer-events: none; }
+.yuvi[hidden] { display: none; }
+.yuvi__body { position: absolute; inset: 0; transform-origin: 50% 97%; will-change: transform; }
+.yuvi--sad .yuvi__body { filter: saturate(.7) brightness(.95); }
+.yuvi__f { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; user-select: none; -webkit-user-drag: none; }
+.yuvi__f.on { opacity: 1; }
+.yuvi__shadow { position: absolute; left: 50%; bottom: 1.5%; width: 40%; height: 6%; margin-left: -20%; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.32), rgba(0,0,0,0)); will-change: transform; }
+.yuvi__fx { position: absolute; inset: 0; overflow: visible; }
+.yuvi__p { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+.yuvi__sp { width: 10px; height: 10px; margin: -5px; background: #FFD84A; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.yuvi__chip { width: 7px; height: 5px; border-radius: 2px; background: #8D8A86; box-shadow: inset 0 -1px 0 rgba(0,0,0,.3); }
+.yuvi__conf { width: 6px; height: 9px; border-radius: 1px; }
+
+/* speech bubble: parchment, brown outline, the "Yuvi" tag on its top edge, a small tail toward Yuvi (bottom left) */
+.yuvi__bubble { position: absolute; left: 100%; bottom: 60%; box-sizing: border-box; min-width: 96px; width: max-content; padding: 11px 12px 8px; border: 3px solid #6B4423; border-radius: 16px;
+  background: linear-gradient(180deg, #FFF6DF, #F3DFB2); color: #4A2C10; font: 700 14px/19px Nunito, system-ui, sans-serif; text-align: left; text-shadow: none;
+  box-shadow: 0 4px 0 rgba(74,42,10,.35), 0 6px 12px rgba(0,0,0,.35); pointer-events: auto; cursor: pointer; transform-origin: 0 100%; }
+.yuvi__bubble[hidden] { display: none; }
+.yuvi__bubble.on { animation: yuvibub var(--m-base) var(--m-ease-pop) backwards; }
+.yuvi__bubble::before, .yuvi__bubble::after { content: ''; position: absolute; left: -14px; bottom: 10px; border-style: solid; border-color: transparent; }
+.yuvi__bubble::before { border-width: 9px 14px 9px 0; border-right-color: #6B4423; }
+.yuvi__bubble::after { left: -9px; bottom: 13px; border-width: 6px 10px 6px 0; border-right-color: #F5E3BA; }
+.yuvi__name { position: absolute; left: 10px; top: -12px; padding: 1px 9px 2px; border: 2px solid #6B4423; border-radius: 9px; background: linear-gradient(180deg, #FFD978, #E2A23A); color: #4A2A0A; font: 800 11px/14px Nunito, system-ui, sans-serif; letter-spacing: .04em; }
+.yuvi__text { display: block; }
+.yuvi__rest { visibility: hidden; }
+@keyframes yuvibub { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .yuvi__bubble.on { animation: none; } }
+body.is-reduced .yuvi__bubble.on { animation: none; }
+
+/* first-launch welcome (screens/welcome.js): soft dim, a picture slot, Skip */
+.welcome { position: fixed; inset: 0; z-index: 44; background: rgba(14,8,3,.62); cursor: pointer; animation: yuvifade var(--m-base) var(--m-ease-out) backwards; }
+.welcome__skip { position: fixed; right: 12px; top: 12px; min-height: 44px; min-width: 88px; font-size: 15px; z-index: 46; }
+.welcome__show { position: fixed; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 10px 12px; border-radius: 18px; background: radial-gradient(circle at 50% 40%, #6B5238, #2B1D10); box-shadow: inset 0 0 0 3px #E9B24A, inset 0 0 0 5px #7A4A16, 0 6px 12px rgba(0,0,0,.5); }
+.welcome__show[hidden] { display: none; }
+.welcome__step { position: fixed; left: 50%; white-space: nowrap; transform: translateX(-50%); color: #FFE9B8; font: 800 13px Nunito, system-ui, sans-serif; text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+.welcome__ring { position: fixed; border-radius: 16px; outline: 3px solid var(--action, #FFC24B); box-shadow: 0 0 0 4px rgba(255,194,75,.35), 0 0 18px rgba(255,194,75,.6); pointer-events: none; }
+.welcome__ring[hidden] { display: none; }
+
+/* intro cards with Yuvi: the text is in Yuvi's bubble, the card keeps its title, picture and hint */
+.intro--yuvi .intro__text { display: none; }
+@keyframes yuvifade { from { opacity: 0; } }
+
+/* ?debug > Yuvi */
+.ydbg { z-index: 41; align-items: flex-start; }
+.ydbg__panel { --w: 340px; max-width: 344px; margin-top: 36px; }
+.ydbg__grid { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.ydbg__b { min-height: 34px; min-width: 0; padding: 0 8px; font-size: 12px; }

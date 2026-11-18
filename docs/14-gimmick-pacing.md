@@ -14,6 +14,10 @@ Combos are in the same file: `COMBO_INTROS = [{ ids:[a,b], text }]`, keyed by th
 - Settings > How to play lists every element and combo; unseen ones show as locked with the level that teaches them.
 - `?debug` > "All intros" opens the same page with everything unlocked (every element and combo, animated).
 
+## Yuvi (M7)
+With Settings > "Yuvi tips" on (default, `profile.settings.yuvi`), Yuvi stands bottom-left during a level-start card and says the card's `text` in his speech bubble (point toward the lit element, talk while it types, idle after; event cards think). The card keeps its title, picture and hint and is placed above him. A player who has not met him (`profile.yuvi.met`) gets "Hi! I'm Yuvi, your dig buddy!" (wave) first. Soft cards (hint, shuffle, first combo) become a Yuvi line instead of the small card. Tips off: cards exactly as before. `tests/yuvi.test.js` checks every entry has a line of 130 characters or less.
+First launch: a 6-bubble welcome (`screens/welcome.js`, `profile.yuvi.welcomeSeen`), replayable from Settings and How to play.
+
 ## Pacing rules (enforced by `tests/intros.test.js`)
 1. Teach level: the new element appears alone on a hand-made, safe level (an obstacle layout holds only that obstacle).
 2. Use level: it comes back within 15 levels.

@@ -23,7 +23,9 @@ const ART = { x: PAD + 6, y: PAD + 4, w: CW - PAD * 2 - 12, h: CH - PAD * 2 - 8 
 // result; this screen only animates it: a pickaxe swing onto the part, the dirt crumbles away with dust, shards and a small shake
 // (docs/09 pickaxeSpend), and the bone underneath lights up. While lives are low or empty a banner shows the countdown, so
 // the wait is spent digging; Play appears as soon as a life is back.
-export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onPlay, now = () => Date.now(), level = 1 }) {
+// yuvi = { enter(dock), strike(), part(), fossil(f) -> promise } (main.js -> ui/helper.js): dig pose while the strikes run, cheer when a part is out,
+// cheer then surprised when the fossil is complete (the cutscene waits for him).
+export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onPlay, now = () => Date.now(), level = 1, yuvi = null }) {
   let current = profile;
   const fossil = () => currentFossil(current);
   const canvas = h('canvas', { width: CW * 2, height: CH * 2, class: 'dig__canvas', role: 'img' });
@@ -97,9 +99,17 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
     busy = true; digBtn.disabled = true;
     current = r.profile;
     pickChip.replaceChildren(Chip('pick', current.pickaxes, 'Pickaxes', 'chip--pick'));
+    yuvi?.strike();
     await reveal(r.part, r.completed, r.fossil);
     busy = false;
-    if (r.completed) { celebrating = r.fossil; revealed = CONFIG.fossils.parts; partsEl.textContent = `Part ${CONFIG.fossils.parts} of ${CONFIG.fossils.parts} unearthed`; barWrap.replaceChildren(Progress(1)); await sleep(RECIPES.fossilComplete.dur); onComplete(r.fossil); return; }
+    if (r.completed) {
+      celebrating = r.fossil; revealed = CONFIG.fossils.parts; partsEl.textContent = `Part ${CONFIG.fossils.parts} of ${CONFIG.fossils.parts} unearthed`; barWrap.replaceChildren(Progress(1));
+      const said = yuvi?.fossil(r.fossil);
+      await sleep(RECIPES.fossilComplete.dur); if (said) await said;
+      onComplete(r.fossil);
+      return;
+    }
+    yuvi?.part();
     syncRevealed(); label();
   });
 
@@ -205,6 +215,7 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
   loadFor(); resize();
   addEventListener('resize', resize);
   raf = requestAnimationFrame(frame);
+  requestAnimationFrame(() => { if (alive) yuvi?.enter(dock); });   // Yuvi waits on the work table, above the dock
   return { el, update(p) { current = p; syncRevealed(); label(); refreshWait(); loadFor(); }, destroy() { alive = false; removeEventListener('resize', resize); clearInterval(iv); cancelAnimationFrame(raf); el.remove(); } };
 }
 

@@ -14,7 +14,7 @@ import { artSizes } from '../render/islandart.js';
 // Home = the journey map. A vertical world of ten floating islands (Cambrian at the bottom), a winding trail of level
 // nodes, a slim top bar, a Play pill and an icon dock. The picture is a canvas painted by render/islandmap.js; the
 // nodes and plaques are real buttons/labels in a native scroller (touch drag with inertia comes from the browser).
-export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMuseum, onSetting, onHowTo, onCredits, onShop, onIsland }) {
+export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMuseum, onSetting, onHowTo, onCredits, onShop, onIsland, onMeetYuvi }) {
   const layout = buildLayout(artSizes());
   const lvlC = ((profile.level - 1) % TOTAL_LEVELS) + 1;
   const state = { level: profile.level, completed: new Set(profile.completedFossils), progress: profile.fossilProgress || {} };
@@ -66,9 +66,12 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
   };
   const sound = toggle('set-sound', 'Sound', !profile.settings.muted, (on) => onSetting?.('muted', !on));
   const hap = toggle('set-haptics', 'Haptics', !!profile.settings.haptics, (on) => onSetting?.('haptics', on));
+  // Yuvi, the helper dino: off = intro cards keep their text without him, no win / lose lines (profile.settings.yuvi)
+  const yuviT = toggle('set-yuvi', 'Yuvi tips', profile.settings.yuvi !== false, (on) => onSetting?.('yuvi', on));
   const close = () => { sheet.hidden = true; };
   const sheet = h('div', { class: 'map__sheet kit-scrim scrim', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Settings', onClick: (e) => { if (e.target === sheet) close(); } },
-    Panel({ title: 'Settings', class: 'map__panel', onClose: close }, logoUrl ? h('div', { class: 'lockup' }, Logo({ size: 72 }), h('span', { class: 'lockup__t' }, h('b', {}, 'Dino Match'), h('small', {}, 'A fossil puzzle adventure'))) : null, sound, hap,
+    Panel({ title: 'Settings', class: 'map__panel', onClose: close }, logoUrl ? h('div', { class: 'lockup' }, Logo({ size: 72 }), h('span', { class: 'lockup__t' }, h('b', {}, 'Dino Match'), h('small', {}, 'A fossil puzzle adventure'))) : null, sound, hap, yuviT,
+      onMeetYuvi ? KButton({ full: true, variant: 'stone', icon: 'info', onClick: () => { close(); onMeetYuvi(); }, id: 'meet-yuvi' }, 'Meet Yuvi again') : null,
       onHowTo ? KButton({ full: true, variant: 'stone', icon: 'book', onClick: () => { close(); onHowTo(); }, id: 'howto' }, 'How to play') : null,
       onCredits ? KButton({ full: true, variant: 'stone', icon: 'info', onClick: () => { close(); onCredits(); }, id: 'credits' }, 'Credits') : null,
       KButton({ full: true, variant: 'gold', onClick: close, id: 'settings-close' }, 'Close')));

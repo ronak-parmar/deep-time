@@ -3,8 +3,15 @@ import { CONFIG } from './config.js';
 import { syncLives, loseLife } from './lives.js';
 import { freshTutorial, normaliseTutorial } from './tutorial.js';
 import { migrateFossilId, fossilById } from './fossils.js';
+import { ERAS } from './eras.js';
+import { eraUnlocked } from './journey.js';
 
-export const PROFILE_VERSION = 2;
+export const PROFILE_VERSION = 3;
+
+// Yuvi, the helper dino (v3): welcomeSeen = the first-launch welcome ran (or was skipped), met = he has said hello,
+// islands = how many islands the player has seen open (a new one gets a surprised + wave on the world map).
+export const islandsOpen = (p) => ERAS.filter((e) => eraUnlocked(p, e)).length;
+export const freshYuvi = () => ({ welcomeSeen: false, met: false, islands: 1 });
 
 export function newProfile() {
   return {
@@ -20,7 +27,8 @@ export function newProfile() {
     winStreak: 0,
     boosters: Object.fromEntries(CONFIG.boosters.kinds.map((k) => [k, CONFIG.boosters.start[k] || 0])),
     tutorial: freshTutorial(),    // levels 1-6 first-time tutorial: { seen: [levels], off }
-    settings: { consent: null, reducedMotion: null, muted: false, haptics: true }
+    settings: { consent: null, reducedMotion: null, muted: false, haptics: true, yuvi: true },   // yuvi = Settings > Yuvi tips
+    yuvi: freshYuvi()
   };
 }
 
@@ -56,6 +64,15 @@ export function migrateProfile(raw) {
   p.boosters = {}; for (const k of CONFIG.boosters.kinds) p.boosters[k] = Math.max(0, Math.floor(num((raw.boosters || {})[k], (base.boosters || {})[k] || 0)));
   p.settings = { ...base.settings, ...(raw.settings || {}) };
   p.tutorial = normaliseTutorial(raw.tutorial);
+  // v3: Yuvi. "Yuvi tips" defaults on; a save that already has progress has had its first launch (no welcome, it is in Settings),
+  // and the islands it already has open are not new.
+  p.settings.yuvi = typeof p.settings.yuvi === 'boolean' ? p.settings.yuvi : true;
+  const y = raw.yuvi && typeof raw.yuvi === 'object' ? raw.yuvi : null, played = p.level > 1 || Object.keys(p.stars).length > 0;
+  p.yuvi = {
+    welcomeSeen: y ? !!y.welcomeSeen : played,
+    met: y ? !!y.met : false,
+    islands: Math.max(1, Math.min(ERAS.length, Math.floor(num(y && y.islands, islandsOpen(p)))))
+  };
   return p;
 }
 
