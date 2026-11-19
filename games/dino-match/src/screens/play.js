@@ -36,9 +36,10 @@ export function mountPlay(root, { level, state, onHome, tip, boosters: bp }) {
   root.append(el);
   return {
     el,
-    update({ moves: m, dug: d, total, state: st }) {
+    update({ moves: m, dug: d, total, state: st, got }) {
       if (m != null) { moves.v.textContent = String(m); moves.el.classList.toggle('stat--low', m <= 5 && m > 3); moves.el.classList.toggle('stat--crit', m <= 3); }
-      if (st || d != null) targets.update({ state: st, dug: d, total });
+      if (got) targets.update({ got });
+      else if (st || d != null) targets.update({ state: st, dug: d, total });
     },
     boosters: bar,
     // the targeting prompt: text + a clear Cancel; null hides it

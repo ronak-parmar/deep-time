@@ -56,11 +56,14 @@ Particles: `sparkle` 6 to 10 per gem, life 450 ms, gem colour. `dust` 8 to 12 pe
 | Screen change | outgoing fades `quick`, incoming slides 16 px and fades `base` `out` | none | none |
 | Counter change | number rolls `slow`, small scale pulse | tick | none |
 | Life regained | heart pops `pop` | chime | light |
+| Loading screen (M10) | painted background (art/boot/loading-bg.webp, or the final painting, docs/19; bundled, shown from the first frame) with slow light rays and dust motes, logo bounces in (`slow` `pop`) with a breathing glow; the stone bar's amber fill eases to its target (never ahead of real progress, never ahead of `BOOT.minShow` 2.5 s; `linear`-style follow), the kit pickaxe taps along the fill edge; "Did you know?" facts swap every `BOOT.tip`; after the load (or `BOOT.maxWait` 10 s) the logo scales up and the screen fades over `dramatic` into the map. Reduced motion: no motes, no pickaxe tapping, the bar jumps, plain fade | none | none |
+| Special at rest (painted art, M10) | slow scale pulse (`SPECIAL_IDLE.pulse`, 4.5%) and a glint band sweeping across the piece (`SPECIAL_IDLE.glint`), each piece out of phase. Reduced motion: still | none | none |
+| Goal reaches 0 (HUD, M10) | the left count rolls down (counterChange), clamped at 0, the row pops and the tick + burst show (targetDone); a winning move then holds `HOLD.goalTick` (700 ms) after the cascade settled before the win celebration | tick, star | light |
 | Hit block (plaque, block survives) | block jolts `quick` `out`, 2 shards, a little dust, `tiny` shake, crack stage shows | chip | light |
 | Create special | piece pops in `base` `pop` (1.15 overshoot), sparkles | chime | light |
 | Fire special | blast flash and beams `slow` `out`, chained fires start `list` (80 ms) after each other (capped so a chain never exceeds 2 s), `medium` shake, sparkles | boom | medium |
 | Obstacle hit (board, survives) | tile jolts `quick` `out`, 2 shards, a little dust, `tiny` shake, crack stage shows | chip | light |
-| Obstacle breaks (board) | tile crumbles `base` `in` (3 shards, dust), `small` shake; a crate shows its coin drop | crumble | medium |
+| Obstacle breaks (board) | tile crumbles `base` `in` (3 shards, dust), `small` shake; a crate shows its coin drop. Painted obstacle (art/obstacles, M11): the picture shakes (`base` x0.35, 2 wobbles), then splits into 4 wedge chunks that fly out, spin, fall and fade (`base` x1.2); dig plaque blocks with a picture break the same way. Reduced motion: the old shrink-fade | crumble | medium |
 | Collect item (artefact reaches the bottom row) | piece pops `slow` `pop` and fades with sparkles, a label floats up | chime | light |
 | Tar spreads | a new tar pit grows in `slow` `out` from its neighbour, the gem under it shrinks away, `tiny` shake | lowTone | none |
 | Lava erupts | lava flares and shakes `medium`, tar pits grow in over `slow` `out` with dust, gems under them shrink away | boom | medium |

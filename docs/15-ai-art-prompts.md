@@ -10,6 +10,12 @@ Check each result before the next: the pose, the anatomy line, and a plain white
 
 ## A. Island sheets (2 images, 5 islands each)
 
+**Done (M11):** the owner made all ten islands on one sheet instead, `art/sheets/islands-final.png` (5 x 2 grid, reading order =
+the era order). `python3 tools/prep-islands.py` cuts it: Real-ESRGAN x4 (cached), connectivity-based white cut that keeps
+waterfalls, snow and icicles, root/canopy sky pockets cut, pale rim shaved, 900 px webp with alpha in `art/islands/<era>.webp`.
+Contact sheet and the traced ground paths: `games/dino-match/docs/screens/m11/islands-contact.png`, `islands-grid-a/b.png`.
+If one island is regenerated, keep the same grid and re-run; re-trace its ground path in `src/data/islandNodes.js`.
+
 Paste this and fill in the five lines.
 
 ```

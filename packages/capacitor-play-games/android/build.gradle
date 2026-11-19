@@ -1,0 +1,43 @@
+// Android library module for the local Capacitor plugin "capacitor-play-games".
+// `npx cap sync android` adds it to the generated android/ project (capacitor.settings.gradle).
+// Versions follow the Capacitor 6 app's variables.gradle when present (rootProject.ext), with Capacitor 6 defaults.
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.1'
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace "com.ronki.playgames"
+    compileSdk project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 34
+    defaultConfig {
+        minSdkVersion project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion : 22
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':capacitor-android')
+    // Pinned on purpose: 20.1.2 (July 2024) works with Capacitor 6 (minSdk 22, compileSdk 34).
+    // 21.x / 22.x pull Play services base/basement releases that need minSdk 23-24, which a Capacitor 6 app does not have.
+    implementation 'com.google.android.gms:play-services-games-v2:20.1.2'
+}

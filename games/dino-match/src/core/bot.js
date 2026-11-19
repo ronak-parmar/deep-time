@@ -13,6 +13,7 @@ function score(state, a, b) {
   const { cells, w, h } = state, pa = cells[a], pb = cells[b];
   if (pa.s === 'rainbow' || pb.s === 'rainbow') return 7;
   if (pa.s && pb.s) return 8;
+  if (pa.s || pb.s) return 6;                        // M10: a special fires on any swap
   [cells[a], cells[b]] = [pb, pa];
   let v = 0;
   const art = [];                                   // artefacts still to bring down: (column, row)

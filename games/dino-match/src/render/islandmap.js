@@ -10,7 +10,7 @@ import { rng01, mix, shade, rgba, clamp } from './util.js';
 import { drawFossilArt } from './fossilArt.js';
 import { drawThumb, thumbsReady } from './fossilThumbs.js';
 import { peek, loadEra } from './art.js';
-import { nodesFor, GROUND } from '../data/islandNodes.js';
+import { nodesFor, GROUND, groundOf } from '../data/islandNodes.js';
 import { artOf } from './islandart.js';
 
 export const W = 360;
@@ -26,9 +26,12 @@ const catmull = (p0, p1, p2, p3, t) => {
 };
 
 // ---- layout (pure) -----------------------------------------------------------------------------
-export const ISLAND_W = 346, STEP_K = 0.78, ART_TOP_PAD = 300;
+export const ISLAND_W = 300, STEP_K = 0.8, ART_TOP_PAD = 250, ZIG = 26, CARD_V = 0.72, PIN_V = 0.44;
 // art = Map(eraId -> { w, h }) of the island pictures that exist (render/islandart.js). An era with a picture is laid out from
 // the picture (its nodes come from data/islandNodes.js); the others keep the code-drawn island.
+// Picture islands: ISLAND_W units wide (300 of the 360-unit world), zig-zagging ZIG units left / right, each one STEP_K of its
+// height above the one below (the nearer, lower island overlaps the foot of the one behind it). The era card sits on the front
+// edge (CARD_V of the picture height, under the fossil prop), the "you are here" pin on the fossil (PIN_V).
 export function buildLayout(art = new Map()) {
   const info = ERAS.map((e) => {
     const a = art.get(e.id), hI = islandHeight(e.fossils.length);
@@ -47,12 +50,16 @@ export function buildLayout(art = new Map()) {
       nodes.push(node); return node;
     };
     if (inf.art) {
-      const cx = 180 + (i % 2 ? 8 : -8), ax = cx - ISLAND_W / 2;
+      const cx = 180 + (i % 2 ? ZIG : -ZIG), ax = cx - ISLAND_W / 2, P = (u, v) => [ax + u * ISLAND_W, top + v * hI];
       const isl = { index: i, era: era.id, cx, cy: top + GROUND.cy * hI, rx: GROUND.rx * ISLAND_W, ry: GROUND.ry * hI, top, bottom, h: hI, lobes: [], nodes: [], fossils: [],
         art: { x: ax, y: top, w: ISLAND_W, h: hI }, plaque: { x: cx, y: top + 0.05 * hI } };
-      nodesFor(era.id, N, hI / ISLAND_W).forEach(([u, v], k) => isl.nodes.push(addNode(k, ax + u * ISLAND_W, top + v * hI)));
+      [isl.card, isl.pin] = [{ x: cx, y: top + CARD_V * hI }, { x: cx, y: top + PIN_V * hI }];
+      nodesFor(era.id, N, hI / ISLAND_W).forEach(([u, v], k) => { const [x, y] = P(u, v); isl.nodes.push(addNode(k, x, y)); });
+      // the ground: the ground ellipse (fog, box) plus a disc round every point of the traced path
       isl.lobes.push({ x: ax + GROUND.cx * ISLAND_W, y: top + GROUND.cy * hI, rx: GROUND.rx * ISLAND_W * 1.08, ry: GROUND.ry * hI * 1.1 });
-      isl.box = { x0: isl.lobes[0].x - isl.lobes[0].rx, x1: isl.lobes[0].x + isl.lobes[0].rx, y0: isl.lobes[0].y - isl.lobes[0].ry, y1: isl.lobes[0].y + isl.lobes[0].ry };
+      const gp = groundOf(era.id) || [];
+      gp.forEach(([u, v], k) => { for (const f of k ? [0.5, 1] : [1]) { const [pu, pv] = k ? gp[k - 1] : [u, v], [x, y] = P(pu + (u - pu) * f, pv + (v - pv) * f); isl.lobes.push({ x, y, rx: 0.08 * ISLAND_W, ry: 0.07 * hI }); } });
+      const l0 = isl.lobes[0]; isl.box = { x0: l0.x - l0.rx, x1: l0.x + l0.rx, y0: l0.y - l0.ry, y1: l0.y + l0.ry };
       islands.push(isl);
     } else {
       const rx = 146, ry = hI / 2, cx = 180 + (i % 2 ? 10 : -10), cy = top + ry, rnd = rng01(1000 + i * 77);
@@ -73,7 +80,7 @@ export function buildLayout(art = new Map()) {
       isl.lobes.push({ x: last.x, y: last.y - 24, rx: 84, ry: 48 });
       for (let k = 0, nl = isl.lobes.length - 1; k < nl; k++) { const p = isl.lobes[k], q = isl.lobes[k + 1]; isl.lobes.push({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2, rx: 76, ry: 44 }); }
       isl.box = { x0: Math.min(...isl.lobes.map((l) => l.x - l.rx)), x1: Math.max(...isl.lobes.map((l) => l.x + l.rx)), y0: Math.min(...isl.lobes.map((l) => l.y - l.ry)), y1: Math.max(...isl.lobes.map((l) => l.y + l.ry)) };
-      isl.plaque = { x: cx, y: isl.box.y0 - 16 };
+      isl.plaque = { x: cx, y: isl.box.y0 - 16 }; isl.card = { x: cx, y: cy }; isl.pin = { x: cx, y: cy - 34 };
       islands.push(isl);
     }
     const il = islands.at(-1); il.minGap = 1e9;
@@ -290,12 +297,16 @@ export function createMap(layout, { state, dpr = 1, reduced = () => false, world
   });
   // trail: glowing dots at an even spacing along the spline (island index pair + blend so they follow the island bob)
   // world map: the trail joins the island centres (no level nodes); the current island's index plays the role of the current node
-  let trail = layout.trail, curIdx2 = curIdx;
+  let trail = layout.trail, curIdx2 = curIdx, groundTrail = false;
   if (world) {
-    const cen = layout.islands.map((q) => (q.art ? [q.art.x + q.art.w / 2, q.art.y + q.art.h * 0.5] : [q.cx, q.cy]));
-    trail = [];
-    for (let i = 1; i < cen.length; i++) for (let u = 0; u < 12; u++) { const f = u / 12, a = cen[i - 1], b = cen[i], bend = Math.sin(f * Math.PI) * (i % 2 ? 60 : -60); trail.push({ p: [a[0] + (b[0] - a[0]) * f + bend, a[1] + (b[1] - a[1]) * f], a: i - 1, b: i, u: f, seg: i - 1 }); }
-    trail.push({ p: cen.at(-1), a: cen.length - 1, b: cen.length - 1, u: 0, seg: cen.length - 1 });
+    // picture islands: the trail runs along each island's traced ground path (the level-node spline, no node buttons drawn) and
+    // bridges to the next island; code-drawn islands: centre to centre with a bend
+    if (!layout.islands.every((q) => q.art)) {
+      const cen = layout.islands.map((q) => [q.cx, q.cy]);
+      trail = [];
+      for (let i = 1; i < cen.length; i++) for (let u = 0; u < 12; u++) { const f = u / 12, a = cen[i - 1], b = cen[i], bend = Math.sin(f * Math.PI) * (i % 2 ? 60 : -60); trail.push({ p: [a[0] + (b[0] - a[0]) * f + bend, a[1] + (b[1] - a[1]) * f], a: i - 1, b: i, u: f, seg: i - 1 }); }
+      trail.push({ p: cen.at(-1), a: cen.length - 1, b: cen.length - 1, u: 0, seg: cen.length - 1 });
+    } else { trail = layout.trail.map((t) => ({ ...t, seg: t.a + (t.a === t.b ? 0 : 0.5) })); groundTrail = true; }
     curIdx2 = layout.islands.findIndex((q) => islandState(q, state.level) === 'current');
   }
   const dots = []; { let carry = 0; for (let i = 1; i < trail.length; i++) { const p = trail[i - 1], q = trail[i], d = Math.hypot(q.p[0] - p.p[0], q.p[1] - p.p[1]); let pos = 12 - carry;
@@ -378,7 +389,7 @@ export function createMap(layout, { state, dpr = 1, reduced = () => false, world
     // the trail: glowing dots, brighter along the road already travelled and the next step, dim beyond
     for (const d of dots) {
       if (d.y < y0 - 20 || d.y > y1 + 20) continue;
-      const locked = curIdx2 >= 0 && d.seg >= curIdx2 + (world ? 0 : 1), wave = motion ? 0.8 + 0.2 * Math.sin(t * 2.4 - d.at * 0.35) : 1;
+      const locked = curIdx2 >= 0 && (groundTrail ? d.seg > curIdx2 : d.seg >= curIdx2 + (world ? 0 : 1)), wave = motion ? 0.8 + 0.2 * Math.sin(t * 2.4 - d.at * 0.35) : 1;
       c.globalAlpha = (locked ? 0.4 : 1) * wave;
       c.drawImage(sprite.cv, d.x - sprite.R, d.y + bobOf(d.a, t) * (1 - d.u) + bobOf(d.b, t) * d.u - sprite.R, sprite.R * 2, sprite.R * 2);
     }

@@ -1,9 +1,13 @@
 // Draws the little animated picture on an intro card from an entry's `art` slot, using the same painters as the board.
 import { drawObstacle, drawArtefact } from './obstacles.js';
-import { drawSpecial } from './specials.js';
+import { drawSpecialPiece } from './specials.js';
+import { spriteFor } from './atlas.js';
 import { drawGemShape } from './gems.js';
 import { reducedMotion } from '../ui/motion.js';
-import { paintObjective } from '../ui/objectives.js';
+import { paintObjective, objectiveEra } from '../ui/objectives.js';
+
+// the plain gem the board would show: the era's painted sprite, else the code shape
+const boardGem = (c, p, r) => { const sp = p.c >= 0 ? spriteFor(objectiveEra(), p.c) : null; if (sp) { const d = r * 2.3; c.drawImage(sp, -d / 2, -d / 2, d, d); } else drawGemShape(c, p.c, r); };
 
 const HITS = { tar: 1, sand: 2, stone: 3 };
 
@@ -54,7 +58,7 @@ function boosterBoard(c, id, size, t) {
     c.globalAlpha = p * (1 - seg(u, 2.4, 3.2)); c.fillStyle = '#6FD3FF'; c.font = '900 26px Nunito, system-ui, sans-serif'; c.fillText(`+${add}`, size / 2, size * 0.28 - 8 * p); c.globalAlpha = 1;
   } else if (id === 'lucky') {
     const pop = ease(seg(u, 0.8, 1.4));
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (x === 2 && y === 1) { gem(x, y, 0); if (pop > 0) { c.save(); c.translate(cx(x), cy(y)); c.scale(0.6 + 0.5 * pop, 0.6 + 0.5 * pop); drawSpecial(c, { k: 'firecracker', o: 'h', c: COLOR(x, y) }, r, u * 1000, red); c.restore(); } } else gem(x, y, 0); }
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (x === 2 && y === 1) { gem(x, y, 0); if (pop > 0) { c.save(); c.translate(cx(x), cy(y)); c.scale(0.6 + 0.5 * pop, 0.6 + 0.5 * pop); drawSpecialPiece(c, { k: 'firecracker', o: 'h', c: COLOR(x, y) }, r, u * 1000, red, null); c.restore(); } } else gem(x, y, 0); }
     spark(cx(2), cy(1), seg(u, 0.8, 1.6));
   }
   c.restore();
@@ -70,8 +74,7 @@ export function paintIntroArt(c, art, size, t) {
     case 'gem': { const b = size * 0.8; c.translate(-b / 2, -b / 2); paintObjective(c, { kind: 'gem', key: art.key }, b, undefined, false); break; }   // the painted gem the board uses
     case 'special': {
       const k = art.key;
-      if (k !== 'rainbow') drawGemShape(c, 0, r * 1.2);
-      drawSpecial(c, { k, o: 'h', c: k === 'rainbow' ? -1 : 0 }, r * 1.2, t * 1000, red);
+      drawSpecialPiece(c, { k, o: 'h', c: k === 'rainbow' ? -1 : 0 }, r * 1.2, t * 1000, red, boardGem);
       break;
     }
     case 'block': {   // the painted plaque tile the board uses, with its hit points as pips

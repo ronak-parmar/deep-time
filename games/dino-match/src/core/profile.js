@@ -7,7 +7,7 @@ import { ERAS } from './eras.js';
 import { eraUnlocked } from './journey.js';
 import { freshCoach, migrateCoach } from './coach.js';
 
-export const PROFILE_VERSION = 4;   // v4 (M8): profile.coach, the in-context onboarding steps
+export const PROFILE_VERSION = 5;   // v4 (M8): profile.coach, the in-context onboarding steps; v5: savedAt (cloud save merge)
 
 // Yuvi, the helper dino (v3): welcomeSeen = the first-launch welcome ran (or was skipped), met = he has said hello,
 // islands = how many islands the player has seen open (a new one gets a surprised + wave on the world map).
@@ -30,7 +30,8 @@ export function newProfile() {
     tutorial: freshTutorial(),    // levels 1-6 first-time tutorial: { seen: [levels], off }
     settings: { consent: null, reducedMotion: null, muted: false, haptics: true, yuvi: true },   // yuvi = Settings > Yuvi tips
     yuvi: freshYuvi(),
-    coach: freshCoach()           // in-context onboarding steps done (core/coach.js)
+    coach: freshCoach(),          // in-context onboarding steps done (core/coach.js)
+    savedAt: 0                    // ms when this copy was last written (ports/save.js stamps it); 0 = unknown
   };
 }
 
@@ -76,6 +77,7 @@ export function migrateProfile(raw) {
     islands: Math.max(1, Math.min(ERAS.length, Math.floor(num(y && y.islands, islandsOpen(p)))))
   };
   p.coach = migrateCoach(raw, p);   // v4: a save that saw the old welcome still gets every in-context step it has not done
+  p.savedAt = Number.isFinite(raw.savedAt) && raw.savedAt > 0 ? Math.floor(raw.savedAt) : 0;   // v5
   return p;
 }
 
@@ -116,19 +118,41 @@ export const canAfford = (profile, cost) => profile.coins >= cost;
 // Returns the new profile, or null when the player cannot afford it.
 export const spendCoins = (profile, cost) => (canAfford(profile, cost) ? { ...profile, coins: profile.coins - cost } : null);
 
-// Merge two saves (local and cloud): higher level, larger coins and pickaxes, best stars,
-// furthest fossil progress, union of completed fossils.
+// Merge two saves (local and cloud, both already migrated). Pure; never loses progress:
+// - progress only grows: furthest level, best stars per level, furthest fossil parts, union of completed fossils,
+//   union of tutorial / intro / coach steps seen, Yuvi met/welcome if either copy has it, most islands seen;
+// - things that are spent (coins, pickaxes, boosters, lives) and settings come from the copy saved last (savedAt), so
+//   spending on one phone is not undone by an older copy. When neither copy says when it was saved (or both say the same
+//   moment), the larger of each is kept.
 export function mergeProfiles(a, b) {
-  const stars = { ...a.stars };
-  for (const k of Object.keys(b.stars)) stars[k] = Math.max(stars[k] || 0, b.stars[k]);
-  const fossilProgress = { ...a.fossilProgress };
-  for (const k of Object.keys(b.fossilProgress || {})) fossilProgress[k] = Math.max(fossilProgress[k] || 0, b.fossilProgress[k]);
-  const base = a.level >= b.level ? a : b;
+  const sa = num(a.savedAt, 0), sb = num(b.savedAt, 0), known = sa !== sb;
+  const newer = sb > sa ? b : a;
+  const pick = (k, d = 0) => (known ? num(newer[k], d) : Math.max(num(a[k], d), num(b[k], d)));
+  const maxMap = (x = {}, y = {}) => { const o = { ...x }; for (const k of Object.keys(y)) o[k] = Math.max(num(o[k], 0), num(y[k], 0)); return o; };
+  const union = (x, y) => [...new Set([...(Array.isArray(x) ? x : []), ...(Array.isArray(y) ? y : [])])];
+  const ta = a.tutorial || {}, tb = b.tutorial || {}, tn = newer.tutorial || {};
+  const ca = a.coach || {}, cb = b.coach || {}, cn = newer.coach || {};
+  const ya = a.yuvi || {}, yb = b.yuvi || {};
+  const boosters = known ? { ...(newer.boosters || {}) } : maxMap(a.boosters, b.boosters);
   return {
-    ...base, stars, fossilProgress,
-    level: Math.max(a.level, b.level),
-    coins: Math.max(a.coins, b.coins),
-    pickaxes: Math.max(a.pickaxes || 0, b.pickaxes || 0),
-    completedFossils: [...new Set([...(a.completedFossils || []), ...(b.completedFossils || [])])]
+    ...newer,
+    level: Math.max(num(a.level, 1), num(b.level, 1)),
+    stars: maxMap(a.stars, b.stars),
+    fossilProgress: maxMap(a.fossilProgress, b.fossilProgress),
+    completedFossils: union(a.completedFossils, b.completedFossils),
+    coins: pick('coins'),
+    pickaxes: pick('pickaxes'),
+    boosters,
+    lives: pick('lives', CONFIG.lives.max),
+    tutorial: { ...tn, seen: union(ta.seen, tb.seen).sort((x, y) => x - y), intros: union(ta.intros, tb.intros), off: !!tn.off },
+    coach: { ...cn, done: union(ca.done, cb.done), off: !!cn.off },
+    yuvi: { ...(newer.yuvi || {}), welcomeSeen: !!(ya.welcomeSeen || yb.welcomeSeen), met: !!(ya.met || yb.met), islands: Math.max(num(ya.islands, 1), num(yb.islands, 1)) },
+    savedAt: Math.max(sa, sb)
   };
+}
+
+// True when two profiles hold the same game state (savedAt ignored, key order ignored).
+export function sameProfile(a, b) {
+  const norm = (v) => (Array.isArray(v) ? v.map(norm) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).filter((k) => k !== 'savedAt').sort().map((k) => [k, norm(v[k])])) : v);
+  return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
 }

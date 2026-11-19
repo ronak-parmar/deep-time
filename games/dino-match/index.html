@@ -1,9 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="booting">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#0B1220">
+  <meta name="theme-color" content="#2A1A0C">
+  <!-- no white or navy flash before the loading screen mounts: the warm splash colour and the small copy of the default loading painting
+       (art/boot/loading-bg.webp, made by tools/make-loading-bg.py --first-paint) under the same warm vignette the boot screen uses, from
+       the first paint (bundled by Vite; removed after boot). screens/boot.js then shows the full-size default and may crossfade to
+       this launch's pick (docs/19-loading-art.md). -->
+  <style>
+    html.booting, html.booting body { background: radial-gradient(ellipse 75% 62% at 50% 45%, rgba(42,26,12,0) 45%, rgba(42,26,12,.62) 100%), linear-gradient(180deg, rgba(42,26,12,0) 62%, rgba(42,26,12,.35) 100%), radial-gradient(ellipse 62% 34% at 50% 36%, rgba(255,200,110,.28), rgba(255,200,110,0) 70%), url('../../art/boot/loading-bg.webp') center / cover no-repeat, #2A1A0C; }
+    html.booting #stage { background: transparent; }
+  </style>
   <title>Dino Match</title>
   <link rel="stylesheet" href="/src/ui/game.css">
 </head>

@@ -30,10 +30,10 @@ export const INTROS = Object.fromEntries([
   E('stone', 'block', 'Stone block', 'Stone takes three hits. A match of 5 breaks it in one go.', 10, { hook: { kind: 'block', key: 'stone' }, art: { kind: 'block', key: 'stone' }, spot: 'plaque' }),
   // ---- special pieces: all work from level 1 and are explained the first time the player makes one (event: no level-start card,
   //      the coach pauses the board, lights the new piece and asks the player to use it; see screens/coach.js)
-  E('firecracker', 'special', 'Firecracker', 'Match 4 in a line to make one. Match it later to blast a whole row or column.', null, { event: true, made: true, hook: { kind: 'special', key: 'firecracker' }, art: { kind: 'special', key: 'firecracker' }, spot: 'board' }),
-  E('bomb', 'special', 'Bomb', 'Match 5 in an L or T shape to make one. It blasts a 3 by 3 square.', null, { event: true, made: true, hook: { kind: 'special', key: 'bomb' }, art: { kind: 'special', key: 'bomb' }, spot: 'board' }),
-  E('dynamite', 'special', 'Dynamite', 'Match 6 gems in one group to make one. It blasts a wide diamond.', null, { event: true, made: true, hook: { kind: 'special', key: 'dynamite' }, art: { kind: 'special', key: 'dynamite' }, spot: 'board' }),
-  E('tnt', 'special', 'TNT', 'Match 5 in a cross, or 7 in a group. It blasts a 7 by 7 area.', null, { event: true, made: true, hook: { kind: 'special', key: 'tnt' }, art: { kind: 'special', key: 'tnt' }, spot: 'board' }),
+  E('firecracker', 'special', 'Firecracker', 'Match 4 in a line to make one. Swap it with any tile to blast a whole row or column.', null, { event: true, made: true, hook: { kind: 'special', key: 'firecracker' }, art: { kind: 'special', key: 'firecracker' }, spot: 'board' }),
+  E('bomb', 'special', 'Bomb', 'Match 5 in an L or T shape to make one. Swap it with any tile to blast a 3 by 3 square.', null, { event: true, made: true, hook: { kind: 'special', key: 'bomb' }, art: { kind: 'special', key: 'bomb' }, spot: 'board' }),
+  E('dynamite', 'special', 'Dynamite', 'Match 6 gems in one group to make one. Swap it with any tile to blast a wide diamond.', null, { event: true, made: true, hook: { kind: 'special', key: 'dynamite' }, art: { kind: 'special', key: 'dynamite' }, spot: 'board' }),
+  E('tnt', 'special', 'TNT', 'Match 5 in a cross, or 7 in a group. Swap it with any tile to blast a 7 by 7 area.', null, { event: true, made: true, hook: { kind: 'special', key: 'tnt' }, art: { kind: 'special', key: 'tnt' }, spot: 'board' }),
   E('rainbow', 'special', 'Rainbow gem', 'Match 5 in a straight line to make one. Swap it with a gem to clear every gem of that colour.', null, { event: true, made: true, hook: { kind: 'special', key: 'rainbow' }, art: { kind: 'special', key: 'rainbow' }, spot: 'board' }),
   // ---- obstacles (each one is taught first on a safe, hand-made level)
   ...Object.keys(OBSTACLES).map((k) => E(k, 'obstacle', OBSTACLES[k].name, ({

@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^6.2.3",
-    "@capacitor/core": "^6.2.3"
+    "@capacitor/core": "^6.2.3",
+    "capacitor-play-games": "0.1.0"
   }
 }

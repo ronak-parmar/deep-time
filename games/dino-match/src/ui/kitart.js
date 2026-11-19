@@ -6,6 +6,7 @@ const urls = {};
 for (const [p, u] of Object.entries(files)) urls[p.split('/').pop().replace('.webp', '')] = u;
 
 export const aiUrl = (name) => urls[name] || null;
+export const aiNames = () => Object.keys(urls);
 export const aiHas = (...names) => names.every((n) => !!urls[n]);
 // the plate-and-button restyle needs these four; icons are picked up one by one
 export const aiKitOn = () => aiHas('panel', 'panel-small', 'btn-gold', 'btn-stone') && !(typeof window !== 'undefined' && (window.__noArt || /[?&]vector\b/.test(window.location?.search || '')));

@@ -162,7 +162,7 @@ Levels 1 to 5 are collect-only (no plaque; "Break 10 red" and similar); the dig 
 
 ## Android debug APK (GitHub Actions)
 
-The app is wrapped with Capacitor (`com.deeptime.dinomatch`, name "Dino Match", web files from `dist`).
+The app is wrapped with Capacitor (`com.ronki.dinomatch`, name "Dino Match", web files from `dist`).
 
 Build the APK on GitHub (no Android Studio needed):
 1. Push to `main`, or open the repo on GitHub > Actions > "apk" > Run workflow.
@@ -175,6 +175,10 @@ This is a DEBUG APK: good for testing on your own phone, not for the Play Store 
 Smaller APK: `DM_NO_VIDEOS=1 npm run build` leaves the history videos (`art/videos/*.mp4`) out; the cutscenes then play with the canvas renderer.
 
 Not tested yet: the Gradle build and a real CI run (they cannot run in the author's sandbox). If the first run fails, read the failing step in the Actions log.
+
+### Google Play Games (sign-in, cloud save) and signed builds
+
+Settings > Google Play Games signs in and keeps the profile in a Play Games saved game, merged with the local save (never loses progress). Native code is the local plugin `packages/capacitor-play-games`. With the secrets from `tools/make-keystore.md`, CI signs the APK with your upload key and also builds a signed release AAB (`dino-match-release-aab`, also attached to the GitHub release). Set `PLAY_GAMES_APP_ID` to switch cloud save on. Checklist: `docs/17-play-games.md`. Without these settings the build is the same as before and saves stay local.
 
 ## Roster, dig site and museum (data-driven)
 

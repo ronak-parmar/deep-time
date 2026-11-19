@@ -1,7 +1,9 @@
 import { aiUrl } from '../ui/kitart.js';
 // Special pieces drawn as simple code overlays, plus their blast effects. Presentation only: the rules live in core/specials.js.
 // No durations here: effect life and timing come from motion.js recipes (passed in as fx.life).
-import { LOOP, EASE } from './motion.js';
+import { LOOP, EASE, SPECIAL_IDLE } from './motion.js';
+import { specialArt } from './specialArt.js';
+import { GEM_COLORS } from './gems.js';
 
 const TAU = Math.PI * 2;
 const OUT = '#1A100A';
@@ -55,6 +57,56 @@ export function drawSpecial(c, p, r, now, reduced) {
     }
   }
   c.restore();
+}
+
+// ---- painted specials (M10, render/specialArt.js) -------------------------------------------------------------------
+// drawSpecialPiece: THE way a piece with a special is drawn (board, intro cards, How to play). drawGem(c, p, r) paints the plain gem at 0,0.
+//   painted special (all six, neutral art): the picture instead of the gem, over a faint under-glow in the gem colour
+//   ('overlay' slots, none today: gem first, the picture on top)
+//   no picture: the code-drawn look (gem + overlay, rainbow alone)
+// Idle: a slow pulse and a glint sweep (SPECIAL_IDLE), none under reduced motion.
+let glintCv = null;
+function glintCanvas() {
+  if (glintCv !== null) return glintCv;
+  if (typeof OffscreenCanvas === 'function') glintCv = new OffscreenCanvas(128, 128);
+  else if (typeof document !== 'undefined') glintCv = Object.assign(document.createElement('canvas'), { width: 128, height: 128 });
+  else glintCv = false;
+  return glintCv;
+}
+function drawArt(c, a, r, now, reduced, phase) {
+  const d = r * (a.mode === 'overlay' ? 2.2 : 2.7);
+  const k = reduced ? 1 : 1 + SPECIAL_IDLE.pulseAmp * Math.sin(((now + phase) / SPECIAL_IDLE.pulse) * TAU);
+  c.save(); c.rotate(a.rot); c.scale(k, k);
+  c.drawImage(a.img, -d / 2, -d / 2, d, d);
+  const u = reduced ? 1 : ((now + phase) % SPECIAL_IDLE.glint) / SPECIAL_IDLE.glint, g = u < SPECIAL_IDLE.glintFrac && glintCanvas();
+  if (g) {   // a light band sweeps across the picture, clipped to its own pixels
+    const S = g.width, x = g.getContext('2d'), t = u / SPECIAL_IDLE.glintFrac, bx = -S * 0.6 + t * S * 2.2;
+    x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, S, S); x.drawImage(a.img, 0, 0, S, S);
+    x.globalCompositeOperation = 'source-atop';
+    const gr = x.createLinearGradient(bx - S * 0.25, bx * 0.3, bx + S * 0.25, bx * 0.3 + S * 0.15);
+    gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,250,225,.85)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = gr; x.fillRect(0, 0, S, S); x.globalCompositeOperation = 'source-over';
+    c.globalAlpha *= 0.55 * Math.sin(Math.PI * t); c.globalCompositeOperation = 'lighter';
+    c.drawImage(g, -d / 2, -d / 2, d, d);
+  }
+  c.restore();
+}
+function halo(c, col, r) {   // faint under-glow in the gem colour: the neutral painted piece still reads as 'the red one'
+  const g = c.createRadialGradient(0, 0, r * 0.15, 0, 0, r * 1.15);
+  g.addColorStop(0, col); g.addColorStop(0.5, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.save(); c.globalAlpha *= 0.42; c.fillStyle = g; c.beginPath(); c.arc(0, 0, r * 1.15, 0, TAU); c.fill(); c.restore();
+}
+export function drawSpecialPiece(c, p, r, now, reduced, drawGem) {
+  if (!p.k) { drawGem?.(c, p, r); return 'gem'; }
+  const a = specialArt(p.k, p.o);
+  if (a) {
+    if (a.mode === 'overlay') drawGem?.(c, p, r); else if (p.c >= 0 && GEM_COLORS[p.c]) halo(c, GEM_COLORS[p.c], r);
+    drawArt(c, a, r, now, reduced, ((p.id || 0) * 337) % SPECIAL_IDLE.glint);
+    return 'art';
+  }
+  if (p.k !== 'rainbow') drawGem?.(c, p, r);
+  drawSpecial(c, p, r, now, reduced);
+  return 'code';
 }
 
 // Blast effects: fx = { kind, o, x, y, cells:[{x,y}], t0, life, big, cs }. Drawn while `now` is inside [t0, t0 + life].

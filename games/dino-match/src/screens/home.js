@@ -10,11 +10,12 @@ import { reducedMotion } from '../ui/motion.js';
 import { buildLayout, nodeStates, islandState, createMap, W } from '../render/islandmap.js';
 import { Logo, logoUrl } from '../ui/logo.js';
 import { artSizes } from '../render/islandart.js';
+import { PlayGamesRow } from '../ui/playgames.js';
 
 // Home = the journey map. A vertical world of ten floating islands (Cambrian at the bottom), a winding trail of level
 // nodes, a slim top bar, a Play pill and an icon dock. The picture is a canvas painted by render/islandmap.js; the
 // nodes and plaques are real buttons/labels in a native scroller (touch drag with inertia comes from the browser).
-export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMuseum, onSetting, onHowTo, onCredits, onShop, onIsland, onMeetYuvi }) {
+export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMuseum, onSetting, onHowTo, onCredits, onShop, onIsland, onMeetYuvi, cloud }) {
   const layout = buildLayout(artSizes());
   const lvlC = ((profile.level - 1) % TOTAL_LEVELS) + 1;
   const state = { level: profile.level, completed: new Set(profile.completedFossils), progress: profile.fossilProgress || {} };
@@ -40,7 +41,7 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
   // Tap an open island to go into it (screens/island.js). No level nodes here.
   const stats = journeyStats(profile);
   const curI = Math.max(0, stats.findIndex((q) => q.state === 'current'));
-  const centreOf = (isl) => (isl.art ? { x: isl.art.x + isl.art.w / 2, y: isl.art.y + isl.art.h * 0.5 } : { x: isl.cx, y: isl.cy });
+  const centreOf = (isl) => isl.card;   // the era card: on the island's front edge (render/islandmap.js CARD_V), the pin on its fossil
   const cards = layout.islands.map((isl, i) => {
     const e = ERAS[i], q = stats[i], locked = q.state === 'locked';
     return h('button', { type: 'button', class: `wcard wcard--${q.state}`, 'data-era': e.id, disabled: locked,
@@ -68,12 +69,14 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
   const hap = toggle('set-haptics', 'Haptics', !!profile.settings.haptics, (on) => onSetting?.('haptics', on));
   // Yuvi, the helper dino: off = intro cards keep their text without him, no win / lose lines (profile.settings.yuvi)
   const yuviT = toggle('set-yuvi', 'Yuvi tips', profile.settings.yuvi !== false, (on) => onSetting?.('yuvi', on));
+  // Google Play Games (Android): sign in / cloud save status / Sync now. Hidden when Play Games is not available.
+  const pgRow = cloud ? PlayGamesRow(cloud) : null;
   const close = () => { sheet.hidden = true; };
   const sheet = h('div', { class: 'map__sheet kit-scrim scrim', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Settings', onClick: (e) => { if (e.target === sheet) close(); } },
-    Panel({ title: 'Settings', class: 'map__panel', onClose: close }, logoUrl ? h('div', { class: 'lockup' }, Logo({ size: 72 }), h('span', { class: 'lockup__t' }, h('b', {}, 'Dino Match'), h('small', {}, 'A fossil puzzle adventure'))) : null, sound, hap, yuviT,
+    Panel({ title: 'Settings', class: 'map__panel', onClose: close }, logoUrl ? h('div', { class: 'lockup' }, Logo({ size: 72 }), h('span', { class: 'lockup__t' }, h('b', {}, 'Dino Match'), h('small', {}, 'A fossil puzzle adventure'))) : null, sound, hap, yuviT, pgRow?.el,
       onMeetYuvi ? KButton({ full: true, variant: 'stone', icon: 'info', onClick: () => { close(); onMeetYuvi(); }, id: 'meet-yuvi' }, 'Meet Yuvi again') : null,
       onHowTo ? KButton({ full: true, variant: 'stone', icon: 'book', onClick: () => { close(); onHowTo(); }, id: 'howto' }, 'How to play') : null,
-      onCredits ? KButton({ full: true, variant: 'stone', icon: 'info', onClick: () => { close(); onCredits(); }, id: 'credits' }, 'Credits') : null,
+      onCredits ? KButton({ full: true, variant: 'stone', icon: 'info', onClick: () => { close(); onCredits(); }, id: 'credits' }, 'About') : null,
       KButton({ full: true, variant: 'gold', onClick: close, id: 'settings-close' }, 'Close')));
 
   const dockBtn = (id, name, label, onClick) => h('button', { type: 'button', class: 'map__dockbtn', id, 'aria-label': label, onClick }, glyph(name, 24), h('span', { class: 'map__docklabel' }, label));
@@ -99,8 +102,8 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
     canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr); canvas.style.width = vw + 'px'; canvas.style.height = vh + 'px';
     world.style.height = layout.H * s + 'px';
     layout.islands.forEach((isl, i) => { const c = centreOf(isl); cards[i].style.left = c.x * s + 'px'; cards[i].style.top = c.y * s + 'px'; });
-    const cc = centreOf(layout.islands[curI]);
-    marker.style.left = cc.x * s + 'px'; marker.style.top = (cc.y - 34) * s + 'px';
+    const cc = layout.islands[curI].pin;
+    marker.style.left = cc.x * s + 'px'; marker.style.top = cc.y * s + 'px';
     dirty = true;
   };
   place();
@@ -114,8 +117,8 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
   scroller.addEventListener('scroll', () => { dirty = true; if (ready && reducedMotion()) { ctx.clearRect(0, 0, canvas.width, canvas.height); map.draw(ctx, scroller.scrollTop / s, vw, vh / s, 0); dirty = false; } }, { passive: true });
   addEventListener('resize', place);
   // start at the current island: the player's node sits about 60% down the screen
-  scroller.scrollTop = Math.max(0, centreOf(layout.islands[curI]).y * s - vh * 0.55);
+  scroller.scrollTop = Math.max(0, layout.islands[curI].pin.y * s - vh * 0.5);
   map.ensure().then(() => { ready = true; dirty = true; });
   raf = requestAnimationFrame(frame);
-  return { el, destroy() { alive = false; cancelAnimationFrame(raf); clearInterval(timer); removeEventListener('resize', place); el.remove(); } };
+  return { el, destroy() { pgRow?.destroy(); alive = false; cancelAnimationFrame(raf); clearInterval(timer); removeEventListener('resize', place); el.remove(); } };
 }

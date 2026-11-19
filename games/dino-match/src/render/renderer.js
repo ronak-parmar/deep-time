@@ -2,8 +2,9 @@ import { ERAS } from '../core/eras.js';
 import { buildScenery, drawSceneryLive } from './scenery.js';
 import { loadEraSprites, spriteFor } from './atlas.js';
 import { drawGemShape, GEM_COLORS } from './gems.js';
-import { drawSpecial } from './specials.js';
+import { drawSpecialPiece } from './specials.js';
 import { drawObstacle, drawArtefact, drawCracks } from './obstacles.js';
+import { loadObstacleArt, obstacleImage, digImage, drawChunks } from './obstacleArt.js';
 import { drawFossilArt } from './fossilArt.js';
 import { drawThumb } from './fossilThumbs.js';
 import { fossilIdForLevel } from '../core/eras.js';
@@ -60,7 +61,7 @@ export class Renderer {
   async setEra(eraId) {
     this.eraId = eraId; this.scenery = buildScenery(eraId); this.palette = eraPalette(eraId);
     this.theme = themeFor(eraId); this.frameKey = null;
-    await preloadUi(); this.art = await loadEra(eraId);    // painted layers, or null = vector fallback
+    await Promise.all([preloadUi(), loadObstacleArt()]); this.art = await loadEra(eraId);    // painted layers, or null = vector fallback
     await loadEraSprites(eraId);
   }
   startLevel(state) {
@@ -170,7 +171,13 @@ export class Renderer {
       else if (ev.t === 'fall') await this.animFall(ev);
       else if (ev.t === 'shuffle') await this.animShuffle(ev);
       else if (ev.t === 'booster') await this.animBooster(ev, hooks);
-      else if (ev.t === 'end') { status = ev.status; await Promise.all(pending); await this.animEnd(ev); }
+      else if (ev.t === 'targets') hooks.onTargets?.(ev);
+      else if (ev.t === 'end') {
+        status = ev.status; await Promise.all(pending);
+        // a won level: the HUD goal count has just rolled to 0 with its tick + burst; let that play before the celebration (M10)
+        if (ev.status === 'won') await this.wait(HOLD.goalTick);
+        await this.animEnd(ev);
+      }
     }
     await Promise.all(pending);
     this.active--; if (!this.active) this.sync();
@@ -270,7 +277,10 @@ export class Renderer {
       cue('digBlock');
       this.pool.emit('dust', x, y, '#9A7A55', 10, 1.8); this.pool.emit('shard', x, y, '#4A3526', R.shards, 3.2); this.pool.emit('shard', x, y, '#6B4A2F', 2, 2.6);
       this.doShake(R.shake);
-      await this.tween(R.dur, (t) => { b.s = 1 - EASE[R.ease](t); b.rot = t * 0.7; });
+      if (digImage(b.t, 1, b.max) && !reducedMotion()) {   // painted block: a quick shake, then it flies apart in chunks
+        await this.tween(R.dur * 0.35, (t) => { b.jolt = Math.sin(t * Math.PI * 4) * (1 - t); }); b.jolt = 0;
+        await this.tween(R.dur * 1.2, (t) => { b.brk = Math.max(0.001, t); });
+      } else await this.tween(R.dur, (t) => { b.s = 1 - EASE[R.ease](t); b.rot = t * 0.7; });
       b.alive = false; b.s = 0;
       hooks.onDig?.(this.blocks.filter((q) => !q.alive).length, ev.total);
     }
@@ -289,7 +299,10 @@ export class Renderer {
       }
       cue('obstacleBreak'); this.pool.emit('dust', x, y, '#B89A6A', 10, 1.8); this.pool.emit('shard', x, y, '#5A4630', R.shards, 3.2); this.doShake(R.shake);
       if (h.drop) this.text('+' + h.drop.coins + ' coins', x, y - this.cs * 0.4, '#FFD86A', 16);
-      await this.tween(R.dur, (t) => { const e = EASE[R.ease](t); o.s = 1 - e; o.a = 1 - e; });
+      if (obstacleImage(o.k, 1, o.max) && !reducedMotion()) {   // painted: a quick shake, then the picture flies apart in chunks
+        await this.tween(R.dur * 0.35, (t) => { o.jolt = Math.sin(t * Math.PI * 4) * (1 - t); }); o.jolt = 0;
+        await this.tween(R.dur * 1.2, (t) => { o.brk = Math.max(0.001, t); });
+      } else await this.tween(R.dur, (t) => { const e = EASE[R.ease](t); o.s = 1 - e; o.a = 1 - e; });
       this.obst[h.i] = null;
     }));
     hooks.onObstacle?.(ev);
@@ -452,14 +465,17 @@ export class Renderer {
   drawDirt(c, pos, b, i = 0) {
     const h = (this.bs / 2 - 1) * b.s, slotName = BLOCK_SLOT[b.t] || 'tile-dirt';
     c.save(); c.translate(pos.x + this.bs / 2 + b.jolt * 3 * (i % 2 ? 1 : -1), pos.y + this.bs / 2); c.rotate(b.rot);
-    if (slot(slotName)) drawSlot(c, slotName, -h, -h, h * 2, h * 2, i);
+    const dim = digImage(b.t, b.hp, b.max);   // painted dig block (art/obstacles/dig-<type>[-<hp>].webp), cracks are in the picture
+    if (dim && b.brk > 0) { drawChunks(c, dim, h * 1.06, b.brk, i); c.restore(); return; }
+    if (dim) c.drawImage(dim, -h * 1.06, -h * 1.06, h * 2.12, h * 2.12);
+    else if (slot(slotName)) drawSlot(c, slotName, -h, -h, h * 2, h * 2, i);
     else {
       const g = c.createLinearGradient(0, -h, 0, h), col = BLOCK_FALLBACK[b.t] || BLOCK_FALLBACK.tar; g.addColorStop(0, col[0]); g.addColorStop(1, col[1]);
       this.rr(c, -h, -h, h * 2, h * 2, 6); c.fillStyle = g; c.fill(); c.lineWidth = 2; c.strokeStyle = '#1E140D'; c.stroke();
       c.fillStyle = 'rgba(0,0,0,.35)';
       for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(DIRT_DOTS[k][0] * h * 2, DIRT_DOTS[k][1] * h * 2, DIRT_DOTS[k][2] * h * 2, 0, 6.283); c.fill(); }
     }
-    if (b.hp < b.max) drawCracks(c, h, b.max - b.hp, i);
+    if (b.hp < b.max && !dim) drawCracks(c, h, b.max - b.hp, i);
     // gem badge: the colour that digs this block (shape and colour, so it never relies on colour alone)
     const gr = h * 0.5;
     c.fillStyle = 'rgba(12,9,6,.6)'; c.beginPath(); c.arc(0, 0, gr * 1.25, 0, 6.283); c.fill();
@@ -520,18 +536,15 @@ export class Renderer {
     c.restore();
   }
 
+  // the plain gem at 0,0 (painted sprite of the era, or the code shape); drawSpecialPiece calls it when the gem shows
+  baseGem = (c, p, r) => { const sp = p.c >= 0 ? spriteFor(this.eraId, p.c) : null; if (sp) { const d = r * 2.3; c.drawImage(sp, -d / 2, -d / 2, d, d); } else drawGemShape(c, p.c, r); };
   drawGem(c, p, sc, hinted) {
     const r = this.cs * 0.42 * p.s * sc;
     if (r <= 0) return;
     c.save(); c.globalAlpha = Math.max(0, p.a); c.translate(p.x, p.y); c.scale(p.sx, p.sy);
     c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(0, r * 0.85, r * 0.8, r * 0.22, 0, 0, 6.283); c.fill();
-    const sp = p.c >= 0 ? spriteFor(this.eraId, p.c) : null;
     if (p.art) drawArtefact(c, r, this.vnow, reducedMotion());
-    else if (p.k === 'rainbow') drawSpecial(c, p, r, this.vnow, reducedMotion());
-    else {
-      if (sp) { const d = r * 2.3; c.drawImage(sp, -d / 2, -d / 2, d, d); } else drawGemShape(c, p.c, r);
-      if (p.k) drawSpecial(c, p, r, this.vnow, reducedMotion());
-    }
+    else drawSpecialPiece(c, p, r, this.vnow, reducedMotion(), this.baseGem);
     if (hinted) { c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, r * 1.15, 0, 6.283); c.stroke(); }
     c.restore();
   }

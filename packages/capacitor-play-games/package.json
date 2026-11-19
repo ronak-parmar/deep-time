@@ -1,0 +1,17 @@
+{
+  "name": "capacitor-play-games",
+  "version": "0.1.0",
+  "description": "Local Capacitor 6 plugin: Google Play Games Services v2 sign-in and saved games (Android only).",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": { ".": "./src/index.js", "./package.json": "./package.json" },
+  "files": ["src", "android/src", "android/build.gradle", "README.md"],
+  "capacitor": {
+    "android": { "src": "android" }
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^6.0.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

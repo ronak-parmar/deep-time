@@ -85,13 +85,15 @@ export function spawnCell(group, info, swappedTo = -1) {
   return run ? run.cells[Math.floor(run.cells.length / 2)] : group.cells[Math.floor(group.cells.length / 2)];
 }
 
-// A swap is legal when it makes a match, swaps two specials, or involves a rainbow. Used for hints and dead-board checks.
+// A swap is legal when it makes a match or involves a special: since M10 a special swapped with ANY adjacent tile fires (a rainbow
+// cannot take an artefact's colour, so rainbow + artefact stays illegal). Used for hints, the bot and dead-board checks.
 export function legalSwaps(cells, w, h) {
   const out = [];
   const test = (a, b) => {
     const pa = cells[a], pb = cells[b];
     if (!pa || !pb) return;
-    if ((pa.s && pb.s) || pa.s === 'rainbow' || pb.s === 'rainbow') { out.push([a, b]); return; }
+    if ((pa.s === 'rainbow' && pb.a) || (pb.s === 'rainbow' && pa.a)) return;
+    if (pa.s || pb.s) { out.push([a, b]); return; }
     [cells[a], cells[b]] = [pb, pa];
     const ok = findRuns(cells, w, h).length > 0;
     [cells[a], cells[b]] = [pa, pb];

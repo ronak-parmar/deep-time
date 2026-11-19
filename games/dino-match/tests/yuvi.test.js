@@ -52,9 +52,9 @@ describe('Yuvi lines', () => {
     for (const c of COMBO_INTROS) { expect(c.text.length, c.id).toBeGreaterThan(0); expect(c.text.length, c.id).toBeLessThanOrEqual(130); }
     expect(poseFor(INTROS.hint)).toBe('think'); expect(poseFor(INTROS['bst-pick'])).toBe('point');
   });
-  it('the welcome is 4 to 6 short bubbles: hello first, cheer last, every pose exists', () => {
-    expect(WELCOME.length).toBeGreaterThanOrEqual(4); expect(WELCOME.length).toBeLessThanOrEqual(6);
-    expect(WELCOME[0]).toMatchObject({ action: 'wave', say: GREETING }); expect(WELCOME.at(-1).action).toBe('cheer');
+  it('the welcome is 4 to 7 short bubbles (M10: hello + who Yuvi is, then the mini how-to): hello first, cheer last, every pose exists', () => {
+    expect(WELCOME.length).toBeGreaterThanOrEqual(4); expect(WELCOME.length).toBeLessThanOrEqual(7);
+    expect(WELCOME[0].action).toBe('wave'); expect(WELCOME[0].say).toMatch(/^Hi! I'm Yuvi, a pint-sized palaeontologist/); expect(GREETING).toMatch(/pint-sized palaeontologist/); expect(WELCOME.at(-1).action).toBe('cheer');
     for (const s of WELCOME) { expect(ACTIONS).toContain(s.action); expect(s.say.length).toBeLessThanOrEqual(130); }
   });
   it('win / lose lists are not empty', () => { for (const k of ['win', 'threeStars', 'part', 'lose', 'nearMiss', 'noLives', 'digPart', 'shop']) expect(LINES[k].length, k).toBeGreaterThan(0); });

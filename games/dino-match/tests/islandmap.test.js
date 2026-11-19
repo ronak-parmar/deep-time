@@ -27,19 +27,28 @@ describe('island map layout', () => {
 });
 
 describe('island map with island pictures', () => {
-  const art = new Map(ERAS.map((e) => [e.id, { w: 800, h: 600 }]));
+  const art = new Map(ERAS.map((e) => [e.id, { w: 900, h: 1010 }]));   // the real pictures are ~900 x 950-1060 (tools/prep-islands.py)
   const A = buildLayout(art);
   it('stacks the pictures with the nearest island at the bottom and no ground overlap', () => {
     expect(A.islands).toHaveLength(10);
     for (let i = 1; i < 10; i++) expect(A.islands[i].box.y1).toBeLessThan(A.islands[i - 1].box.y0);
-    for (const isl of A.islands) { expect(isl.art.w).toBeGreaterThan(300); expect(isl.art.y).toBeGreaterThanOrEqual(0); }
+    for (const isl of A.islands) { expect(isl.art.w).toBeGreaterThanOrEqual(280); expect(isl.art.x).toBeGreaterThanOrEqual(0); expect(isl.art.x + isl.art.w).toBeLessThanOrEqual(360); expect(isl.art.y).toBeGreaterThanOrEqual(0); }
     expect(A.islands[0].art.y + A.islands[0].art.h).toBeLessThan(A.H);
   });
   it('puts every node on the ground of its picture, in order, with room between them', () => {
     expect(A.nodes).toHaveLength(L.nodes.length);
     A.nodes.forEach((n, i) => { expect(n.level).toBe(L.nodes[i].level); expect(insideIsland(A.islands[n.island], n.x, n.y)).toBe(true); expect(n.x).toBeGreaterThan(20); expect(n.x).toBeLessThan(340); });
     for (const isl of A.islands) expect(isl.minGap).toBeGreaterThan(26);
-    for (let i = 1; i < A.nodes.length; i++) if (A.nodes[i].island === A.nodes[i - 1].island) expect(A.nodes[i].y <= A.nodes[i - 1].y + 14).toBe(true);
+    // the trail climbs each island: it may dip a little along the front edge or the back (perspective), never much, and ends well above its start
+    for (let i = 1; i < A.nodes.length; i++) if (A.nodes[i].island === A.nodes[i - 1].island) expect(A.nodes[i].y <= A.nodes[i - 1].y + 22).toBe(true);
+    for (const isl of A.islands) expect(isl.nodes.at(-1).y).toBeLessThan(isl.nodes[0].y - 0.15 * isl.h);
+  });
+  it('puts the era card on the front edge under the fossil pin, inside the picture and clear of the island above', () => {
+    for (const isl of A.islands) {
+      expect(isl.card.y).toBeGreaterThan(isl.pin.y + 40); expect(isl.pin.y).toBeGreaterThan(isl.art.y + isl.art.h * 0.3);
+      expect(isl.card.y).toBeLessThan(isl.art.y + isl.art.h * 0.8);
+    }
+    for (let i = 1; i < 10; i++) expect(A.islands[i].art.y + A.islands[i].art.h).toBeLessThan(A.islands[i - 1].card.y - 24);
   });
   it('mixes picture islands with code-drawn ones', () => {
     const M = buildLayout(new Map([['jurassic', { w: 800, h: 600 }]]));

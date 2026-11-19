@@ -1,4 +1,5 @@
 import { h } from '../ui/dom.js';
+import { Ribbon } from '../ui/kit.js';
 import { Button, RewardButton, watchAd } from '../ui/components.js';
 import { glyph } from '../ui/glyphs.js';
 import { leftLabel } from '../core/targets.js';
@@ -10,7 +11,7 @@ export function mountOffer(root, { offer, progress, coins, ads, onCoins, onAd, o
   adBtn.addEventListener('click', async () => { if (await watchAd(ads, adBtn)) onAd(); });
   const lines = (progress || []).filter((t) => !t.done).map(leftLabel);
   const card = h('div', { class: 'dt-modal__card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'offer-title' },
-    h('h2', { class: 'title', id: 'offer-title' }, 'So close'),
+    Ribbon('So close', 'offer-title'),
     h('p', { class: 'body' }, `Get ${offer.extraMoves} more moves?`),
     h('ul', { class: 'remaining', id: 'offer-left' }, ...lines.map((l) => h('li', { class: 'body-small' }, l))),
     h('div', { class: 'dt-modal__actions' },

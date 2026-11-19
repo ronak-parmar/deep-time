@@ -19,9 +19,15 @@ export const PARTICLES = {
 };
 export const SWAP = { overshoot: 0.04 };
 export const FALL = { settleAmp: 0.12, settleAt: 0.8, maxCells: 4 };   // settle bounce = 12% of fall height, once
-export const HOLD = { lastBlock: 120, banner: 220, skipAfter: 600 };   // last-block hold, banner hold, huge-reward skip gate
+export const HOLD = { lastBlock: 120, banner: 220, skipAfter: 600, goalTick: 700 };   // last-block hold, banner hold, huge-reward skip gate, goal count 0 + tick before the win (M10)
 export const HINT_AFTER = 6000;                                         // idle ms before the hint pulses
 export const LOOP = { hint: 160, ambient: 1000, scene: 12000 };                        // loop periods for looping ambient / hint
+// Loading screen (M10, docs/09 section 4): the bar is shown at least `minShow` (the logo is seen and the bar fills smoothly), the game
+// goes on after `maxWait` even if critical art is still loading (the rest keeps loading in the background), tips rotate every `tip`,
+// the bar eases toward its target with `follow` (fraction per 60 fps frame), `stall` caps how long a screen waits on art after boot.
+export const BOOT = { minShow: 2500, maxWait: 10000, tip: D.celebrate * 3, follow: 0.12, out: D.dramatic, stall: 2500 };
+// Special pieces at rest (painted art): a slow scale pulse and a glint sweep across the piece. None under reduced motion.
+export const SPECIAL_IDLE = { pulse: D.celebrate * 2, pulseAmp: 0.045, glint: D.celebrate * 3, glintFrac: 0.28 };
 
 // ---- easings -----------------------------------------------------------------------------------------
 export function bezier(x1, y1, x2, y2) {

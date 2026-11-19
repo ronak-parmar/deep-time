@@ -1,7 +1,9 @@
 // Drawing for board obstacles and the artefact piece (docs/11 phase B). Presentation only: the rules live in core/obstacles.js.
 // Painted tiles (art/ui tile-sand, tile-stone, tile-dirt) are used when present; every obstacle also has a vector look,
 // so the game never depends on art being there. Shapes differ as well as colours, so none relies on colour alone.
+// Painted obstacle pictures (art/obstacles/<kind>[-<hp>].webp, render/obstacleArt.js) replace the vector look per stage when present.
 import { slot, drawSlot } from './art.js';
+import { obstacleImage, drawChunks } from './obstacleArt.js';
 
 const rr = (c, x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
 
@@ -42,6 +44,8 @@ export function drawObstacle(c, o, x, y, cs, i, now, reduced = false) {
   const h = cs * 0.5 - 2, s = o.s ?? 1; if (s <= 0 || (o.a ?? 1) <= 0) return;
   c.save(); c.globalAlpha = o.a ?? 1; c.translate(x + (o.jolt || 0) * 3 * (i % 2 ? 1 : -1), y); c.scale(s, s);
   const stage = (o.max || 1) - o.hp;
+  const im = obstacleImage(o.k, o.hp, o.max);
+  if (im) { drawPainted(c, im, o, h, i, now, reduced); c.restore(); return; }
   switch (o.k) {
     case 'sandstone': tileBase(c, 'tile-sand', h, i, '#E2C48A', '#B58D58'); strata(c, h); if (stage > 0) drawCracks(c, h, stage, i); break;
     case 'fossil': tileBase(c, 'tile-sand', h, i, '#D9BB84', '#AA8350'); strata(c, h); ammonite(c, h, 0.5 - stage * 0.1); if (stage > 0) drawCracks(c, h, stage, i); break;
@@ -86,9 +90,36 @@ export function drawObstacle(c, o, x, y, cs, i, now, reduced = false) {
   c.restore();
 }
 
+// painted obstacle: the stage picture (a touch larger than the cell's inner square, the art has soft edges), the lava heat glow and
+// tar wobble on top, hit-point pips; o.brk (0..1) = break animation: the picture flies apart in 4 chunks
+function drawPainted(c, im, o, h, i, now, reduced) {
+  const d = h * 1.08;
+  if (o.brk > 0) { drawChunks(c, im, d, o.brk, i); return; }
+  if (o.k === 'tar' && !reduced) { const w = Math.sin(now / 420 + i) * 0.025; c.scale(1 + w, 1 - w); }
+  c.drawImage(im, -d, -d, d * 2, d * 2);
+  if (o.k === 'lava') {
+    const heat = (o.heat || 0) / 3, pulse = reduced ? 0 : 0.5 + 0.5 * Math.sin(now / 260);
+    if (heat > 0 || pulse > 0) {
+      c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha *= 0.12 + heat * 0.35 + pulse * 0.08;
+      const g = c.createRadialGradient(0, 0, h * 0.1, 0, 0, h); g.addColorStop(0, '#FF9A3A'); g.addColorStop(1, 'rgba(255,90,20,0)');
+      c.fillStyle = g; c.fillRect(-h, -h, h * 2, h * 2); c.restore();
+    }
+  }
+  if (o.hp !== Infinity && o.max > 1) {
+    c.fillStyle = '#FFE9A8'; c.strokeStyle = 'rgba(30,18,8,.8)'; c.lineWidth = 1;
+    for (let k = 0; k < o.hp; k++) { c.beginPath(); c.arc((k - (o.hp - 1) / 2) * 6, h - 4, 2, 0, 6.283); c.fill(); c.stroke(); }
+  }
+}
+
 // The artefact piece: a golden relic (diamond with a ring), clearly not a gem. r = the piece radius used for gems.
 export function drawArtefact(c, r, now, reduced = false) {
   const glint = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(now / 300);
+  const im = obstacleImage('artefact', 1, 1);
+  if (im) {
+    c.drawImage(im, -r * 1.15, -r * 1.15, r * 2.3, r * 2.3);
+    c.fillStyle = `rgba(255,255,255,${0.15 + glint * 0.45})`; c.beginPath(); c.arc(-r * 0.42, -r * 0.48, r * 0.1, 0, 6.283); c.fill();
+    return;
+  }
   c.save();
   c.beginPath(); c.arc(0, 0, r * 1.05, 0, 6.283); const g = c.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.1, 0, 0, r * 1.1); g.addColorStop(0, '#FFE9A0'); g.addColorStop(1, '#A8741C'); c.fillStyle = g; c.fill(); stroke(c, '#4A300A', 2);
   c.beginPath(); c.moveTo(0, -r * 0.62); c.lineTo(r * 0.5, 0); c.lineTo(0, r * 0.62); c.lineTo(-r * 0.5, 0); c.closePath(); c.fillStyle = '#5A3A10'; c.fill();

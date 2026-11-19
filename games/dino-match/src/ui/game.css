@@ -26,10 +26,40 @@ button:not(:disabled):active, button.is-pressed { transform: scale(var(--m-press
 .dim { color: var(--text-dim, #9DB4CF); }
 button { font-family: inherit; }
 
-/* boot */
-.boot { align-items: center; justify-content: center; gap: var(--space-4, 16px); background: var(--bg-0); }
-.boot .dt-progress { width: 200px; height: 28px; flex: none; }
-.boot__sub { color: var(--text-dim); }
+/* boot / loading screen (M10): see screens/boot.js */
+.boot { align-items: center; justify-content: center; background: #2A1A0C; overflow: hidden; }
+.boot__bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.boot__col { position: relative; display: flex; flex-direction: column; align-items: center; gap: 26px; margin-top: -8%; }
+.boot__title { color: #FFE9B0; text-shadow: 0 3px 0 #4A2A0C; }
+.boot__load { --boot-in-l: 35px; --boot-in-r: 7px; width: 272px; display: flex; flex-direction: column; gap: 8px; }
+.boot__bar { position: relative; box-sizing: border-box; height: 35px; border-radius: 18px; border: 0 solid transparent;
+  background: linear-gradient(180deg, #2A221C, #4A3E35 60%, #2A221C); box-shadow: inset 0 3px 6px rgba(0,0,0,.6), 0 0 0 3px #8E8A84, 0 0 0 5px #3A2A1A, 0 6px 12px rgba(0,0,0,.45); }
+.boot__bar--art { background: none; box-shadow: none; border-radius: 0; border-image-repeat: stretch; filter: drop-shadow(0 6px 8px rgba(0,0,0,.45)); }
+.boot__fill { position: absolute; left: var(--boot-in-l); top: 7px; bottom: 7px; width: 0; min-width: 14px; box-sizing: border-box; opacity: 0; border-radius: 10px;
+  background: linear-gradient(180deg, #FFE08A, #F2A23A 55%, #B8641C); box-shadow: inset 0 2px 0 rgba(255,255,255,.45); }
+.boot__bar--art .boot__fill { background: none; box-shadow: none; border: 0 solid transparent; border-radius: 0; }
+.boot__fill::after { content: ''; position: absolute; inset: 2px 4px auto; height: 35%; border-radius: 6px; background: linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,0)); }
+.boot__edge { position: absolute; top: -17px; left: var(--boot-in-l); width: 34px; height: 34px; margin-left: -12px; pointer-events: none; transform-origin: 70% 90%;
+  animation: bootpick calc(var(--m-celebrate) * .8) var(--m-ease-in) infinite; filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
+.boot__edge img { width: 100%; height: 100%; display: block; transform: scaleX(-1); }
+.boot__fossil { display: block; width: 18px; height: 18px; margin: 10px 0 0 6px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #F6E7C4, #C99A5A); box-shadow: 0 0 0 2px #4A2A0A; }
+@keyframes bootpick { 0%, 100% { transform: rotate(-16deg); } 55% { transform: rotate(-16deg); } 75% { transform: rotate(14deg); } }
+.boot__row { display: flex; justify-content: space-between; align-items: baseline; padding: 0 6px; }
+.boot__sub { color: #F6E7C4; font-size: 14px; font-weight: 700; text-shadow: 0 1px 0 rgba(30,14,4,.9), 0 0 6px rgba(30,14,4,.6); }
+.boot__pct { color: #FFE08A; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 #4A2A0A, 0 0 8px rgba(30,14,4,.7); }
+.boot__tip { position: absolute; left: 24px; right: 24px; bottom: max(40px, 7%); margin: 0; padding: 12px 16px; border-radius: 14px; text-align: center; display: flex; flex-direction: column; gap: 4px;
+  background: rgba(30,18,8,.72); box-shadow: inset 0 0 0 2px rgba(201,154,90,.55), 0 6px 14px rgba(0,0,0,.4); color: #F6E7C4; font-size: 15px; line-height: 1.35; min-height: 62px; justify-content: center; }
+.boot__tiphead { color: #FFE08A; font-weight: 800; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+.boot__tiptext { transition: opacity var(--m-base) var(--m-ease-out), transform var(--m-base) var(--m-ease-out); }
+.boot__tip--out .boot__tiptext { opacity: 0; transform: translateY(6px); }
+/* leaving: the logo scales up, everything fades, the map shows through */
+.boot.leaving { animation: bootout var(--m-dramatic) var(--m-ease-in) forwards; z-index: 5; }
+.boot.leaving .boot__logo { animation: bootlogoout var(--m-dramatic) var(--m-ease-in) forwards; }
+@keyframes bootout { 0%, 25% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes bootlogoout { to { transform: scale(1.18); } }
+.is-reduced .boot__edge, .is-reduced .boot.leaving .boot__logo { animation: none; }
+.is-reduced .boot__tiptext { transition: none; }
+@media (prefers-reduced-motion: reduce) { .boot__edge, .boot.leaving .boot__logo { animation: none; } .boot__tiptext { transition: none; } }
 
 /* home */
 .home { padding: var(--space-4, 16px); gap: var(--space-4, 16px); background: linear-gradient(180deg, rgba(11,18,32,.72), rgba(11,18,32,.35) 45%, rgba(11,18,32,.85)); }
@@ -415,8 +445,7 @@ html.ai-kit .bmed .bmed__face, html.ai-kit .bmed .bmed__lab { color: #FFF6DA; te
 
 /* ---- logo: splash and title lockup -------------------------------------------------------------------------------- */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-html.ai-kit .boot { background: radial-gradient(ellipse at 50% 38%, #5A3F22 0, #2A1A0C 55%, #120A04 100%); }
-.boot__logo { position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; }
+.boot__logo { position: relative; width: 248px; height: 248px; display: flex; align-items: center; justify-content: center; }
 .boot__img { position: relative; z-index: 1; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .55)); animation: logoin var(--m-slow) var(--m-ease-pop) both; }
 .boot__glow { position: absolute; inset: -30%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 214, 110, .55) 0, rgba(255, 190, 80, .22) 40%, rgba(255, 190, 80, 0) 68%); animation: logoglow calc(var(--m-slow) * 4) ease-in-out infinite; }
 @keyframes logoin { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
@@ -449,8 +478,14 @@ html.ai-kit .history__barfill { background: linear-gradient(180deg, #FFE08A, #E8
 .isle__world { position: relative; width: 100%; }
 .isle__top { position: absolute; z-index: 5; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px 18px; background: linear-gradient(180deg, rgba(28,16,6,.85), rgba(28,16,6,0)); }
 .isle__title { display: flex; flex-direction: column; color: #FFF1D0; }
+.isle__art { margin-left: auto; width: 70px; height: auto; max-height: 84px; object-fit: contain; flex: none; margin-top: -4px; margin-bottom: -14px; filter: drop-shadow(0 6px 6px rgba(0,0,0,.45)); animation: islebob calc(var(--m-celebrate) * 4) ease-in-out infinite; pointer-events: none; }
+@keyframes islebob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.is-reduced .isle__art { animation: none; }
 .isle__title .heading { font-size: 22px; color: #FFE08A; text-shadow: 0 2px 0 #4A2A0A, 1px 0 0 #4A2A0A, -1px 0 0 #4A2A0A; }
-.isle__title .caption { color: #F3DDB0; text-shadow: 0 1px 2px #000; display: flex; align-items: center; gap: 3px; }
+.isle__title { flex: 1; min-width: 0; }
+.isle__title .caption { color: #F3DDB0; text-shadow: 0 1px 2px #000; display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 0; }
+.isle__title .caption > span { white-space: nowrap; display: inline-flex; align-items: center; }
+.isle__title .caption .isle__tstar { margin-left: 0; margin-right: 3px; }
 .isle__tstar, .inode__stars i { display: inline-block; width: 13px; height: 13px; margin-left: 8px; background: #FFD54A; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
 /* level node: wood-rimmed gold coin, number on it, best stars under it */
 .inode { position: absolute; z-index: 2; width: 46px; height: 46px; margin: -23px 0 0 -23px; padding: 0; border-radius: 50%; border: 4px solid transparent; font: 800 15px Nunito, system-ui, sans-serif; color: #4A2A0C; text-shadow: 0 1px 0 rgba(255,240,190,.8);
@@ -481,7 +516,7 @@ html.ai-kit .history__barfill { background: linear-gradient(180deg, #FFE08A, #E8
 .isle__mile--done { box-shadow: inset 0 0 0 2px #FFD36B, inset 0 0 0 3.5px #4A2C0C, 0 0 14px rgba(255,200,80,.55), 0 4px 8px rgba(0,0,0,.5); }
 .isle__mile--locked { filter: saturate(.6) brightness(.85); }
 .is-reduced .inode--current { animation: none; }
-@media (prefers-reduced-motion: reduce) { .inode--current, .isle--zoom { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .inode--current, .isle--zoom, .isle__art { animation: none; } }
 
 /* ---- world map island cards ------------------------------------------------------------------------------------ */
 .wcard { --bh: 50px; position: absolute; z-index: 2; transform: translate(-50%, -50%); min-width: 176px; padding: 4px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-family: inherit; cursor: pointer;
@@ -508,3 +543,15 @@ html.ai-kit .wcard--locked { filter: grayscale(.7) brightness(.85) drop-shadow(0
 .result__well { position: relative; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: radial-gradient(circle at 50% 40%, #4A3018, #1C1008 80%); box-shadow: inset 0 2px 3px rgba(0,0,0,.7), 0 1px 0 rgba(255,236,190,.4); }
 .result__tick { position: absolute; right: -5px; top: -5px; width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: radial-gradient(circle at 40% 35%, #8CF0A8, #2E9A52); box-shadow: 0 0 0 1.5px #0F3A1E; }
 .result__target:not(.result__target--done) .result__well { box-shadow: inset 0 2px 3px rgba(0,0,0,.7), 0 0 0 2px rgba(220,70,50,.7); }
+
+/* ---- Settings > Google Play Games row and the cloud-save toast (ui/playgames.js) ---------------------------------- */
+.pg-row { display: flex; align-items: center; gap: 10px; padding: 6px 2px; }
+.pg-row[hidden] { display: none; }
+.pg-row__t { flex: 1; display: flex; flex-direction: column; text-align: left; min-width: 0; }
+.pg-row__t b { font-size: 16px; font-weight: 800; color: #4A2A0C; }
+.pg-row__t small { font-size: 13px; color: #6A4520; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-row .kit-btn { flex: none; }
+.pg-toast { position: absolute; left: 0; right: 0; bottom: 92px; z-index: 30; display: flex; justify-content: center; pointer-events: none; transition: opacity var(--m-slow) var(--m-ease-in); }
+.pg-toast .dt-toast { background: rgba(20,34,58,.94); }
+.pg-toast--out { opacity: 0; }
+.is-reduced .pg-toast { transition: none; }

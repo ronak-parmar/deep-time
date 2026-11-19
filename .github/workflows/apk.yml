@@ -1,7 +1,13 @@
 name: Build debug APK
 
-# Builds Dino Match and packages it as a DEBUG Android APK (not for the Play Store).
+# Builds Dino Match and packages it as an Android APK (sideload / test build).
 # Run it by hand: GitHub > Actions > "Build debug APK" > Run workflow. It also runs on every push to main.
+#
+# Optional repository settings (Settings > Secrets and variables > Actions), see docs/17-play-games.md and tools/make-keystore.md:
+#   variable (or secret) PLAY_GAMES_APP_ID      Play Games Services project id. Unset = "0": the game runs with local saves only.
+#   secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#       Set all four and the APK is signed with your upload key (needed for Google sign-in), and a signed release AAB
+#       (for Google Play) is built too. Missing = the build works exactly as before (debug key, APK only).
 on:
   push:
     branches: [main]
@@ -14,6 +20,9 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' }}
+      PLAY_GAMES_APP_ID: ${{ vars.PLAY_GAMES_APP_ID || secrets.PLAY_GAMES_APP_ID || '0' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,11 +59,82 @@ jobs:
         working-directory: games/dino-match
         run: npx --yes @capacitor/assets@3 generate --android
 
+      # The Play Games plugin (packages/capacitor-play-games) puts the APP_ID meta-data in the manifest; its value comes from here.
+      - name: Write the Play Games App ID (games-ids.xml)
+        working-directory: games/dino-match
+        run: |
+          ID="$(printf '%s' "$PLAY_GAMES_APP_ID" | tr -d '[:space:]')"
+          if ! printf '%s' "$ID" | grep -Eq '^[0-9]+$'; then echo "::warning::PLAY_GAMES_APP_ID is not a number; using 0 (cloud save off)"; ID=0; fi
+          if [ "$ID" = "0" ]; then echo "Play Games App ID not set: the game keeps local saves only."; fi
+          mkdir -p android/app/src/main/res/values
+          cat > android/app/src/main/res/values/games-ids.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="game_services_project_id" translatable="false">$ID</string>
+          </resources>
+          XML
+          sed -i 's/^          //' android/app/src/main/res/values/games-ids.xml
+
+      - name: Decode the upload keystore and set the version code
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "Upload key certificate (register this SHA-1 in Play Console > Play Games Services > Credentials):"
+          keytool -list -v -keystore "$RUNNER_TEMP/upload.jks" -storepass:env KS_PASS | grep -E 'Alias name|SHA1:|SHA256:' || true
+          # Google Play needs a higher versionCode on every upload: use the workflow run number
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/" games/dino-match/android/app/build.gradle
+          grep -n 'versionCode' games/dino-match/android/app/build.gradle
+
       - name: Build the debug APK
         working-directory: games/dino-match/android
         run: |
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon
+
+      # Re-sign the debug APK with the upload key so Google sign-in recognises it (its SHA-1 is registered in Play Console).
+      - name: Sign the APK with the upload key
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: games/dino-match/android/app/build/outputs/apk/debug
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/upload.jks" --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KS_PASS --key-pass env:KEY_PASS --out app-debug-signed.apk app-debug.apk
+          mv -f app-debug-signed.apk app-debug.apk
+          "$BT/apksigner" verify --print-certs app-debug.apk | grep -E 'SHA-1|SHA-256' || true
+
+      - name: Build the release AAB (signed with the upload key)
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: games/dino-match/android
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          ./gradlew bundleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/upload.jks" \
+            -Pandroid.injected.signing.store.password="$KS_PASS" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASS"
+          AAB=app/build/outputs/bundle/release/app-release.aab
+          test -f "$AAB"
+          # belt and braces: if Gradle left the bundle unsigned, sign it with jarsigner (how AABs are signed)
+          if ! jarsigner -verify "$AAB" > /dev/null 2>&1 || jarsigner -verify "$AAB" 2>&1 | grep -q 'jar is unsigned'; then
+            echo "Signing the AAB with jarsigner"
+            jarsigner -keystore "$RUNNER_TEMP/upload.jks" -storepass:env KS_PASS -keypass:env KEY_PASS \
+              -sigalg SHA256withRSA -digestalg SHA-256 "$AAB" "$KEY_ALIAS"
+          fi
+          jarsigner -verify "$AAB"
+
+      - name: Remove the keystore from the runner
+        if: always() && env.HAS_KEYSTORE == 'true'
+        run: rm -f "$RUNNER_TEMP/upload.jks"
 
       - name: Upload the APK
         uses: actions/upload-artifact@v4
@@ -64,14 +144,31 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish a GitHub Release with the APK
+      - name: Upload the release AAB
+        if: env.HAS_KEYSTORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dino-match-release-aab
+          path: games/dino-match/android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish a GitHub Release with the APK (and the AAB when signed)
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="build-${{ github.run_number }}"
           cp games/dino-match/android/app/build/outputs/apk/debug/app-debug.apk "dino-match-${TAG}.apk"
-          gh release create "$TAG" "dino-match-${TAG}.apk" \
+          FILES="dino-match-${TAG}.apk"
+          NOTES="Debug APK built from commit ${GITHUB_SHA::7}. Install by sideloading."
+          AAB=games/dino-match/android/app/build/outputs/bundle/release/app-release.aab
+          if [ "$HAS_KEYSTORE" = "true" ] && [ -f "$AAB" ]; then
+            cp "$AAB" "dino-match-${TAG}.aab"
+            FILES="$FILES dino-match-${TAG}.aab"
+            NOTES="$NOTES APK and AAB are signed with the upload key (versionCode ${{ github.run_number }}); upload the .aab to Google Play."
+          fi
+          gh release create "$TAG" $FILES \
             --title "Dino Match build ${{ github.run_number }}" \
-            --notes "Debug APK built from commit ${GITHUB_SHA::7}. Install by sideloading." \
+            --notes "$NOTES" \
             --target "$GITHUB_SHA"

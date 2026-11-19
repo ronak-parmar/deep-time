@@ -5,7 +5,7 @@ import { judge, starsFor, digStep, dugCount, makeBlock } from './rules.js';
 import { findGroups, classify, spawnCell, legalSwaps } from './match.js';
 import { runChain } from './chain.js';
 import { comboFor, unlockedKinds, SPECIALS } from './specials.js';
-import { defaultTargets, creditClear } from './targets.js';
+import { defaultTargets, creditClear, targetProgress } from './targets.js';
 import { buildObstacles, hitObstacles, hazards, freshCounters, strikeObstacles } from './obstacles.js';
 import { boosterTargets } from './boosters.js';
 import { BOOSTERS } from '../data/boosters.js';
@@ -21,6 +21,16 @@ const randColor = (state) => int(state.rng, state.colors);
 // Levels without a block list (old tests, saves) get plain tar blocks cycling through the colours.
 const legacyBlocks = (level) => Array.from({ length: level.dirtTotal }, (_, i) => ({ t: 'tar', c: i % level.colors }));
 
+// HUD goal ticks (M10): whenever a target's progress changes during a move, a { t: 'targets', got: [...] } event is logged right where it
+// happened (after the clear / hit / collect that caused it), clamped to n, so the HUD counts down to 0 and ticks BEFORE the 'end' event.
+const shownTargets = new WeakMap();
+export function noteTargets(state, events) {
+  const got = targetProgress(state).map((t) => t.got), last = shownTargets.get(state);
+  if (last && last.length === got.length && last.every((v, i) => v === got[i])) return;
+  shownTargets.set(state, got);
+  if (last) events.push({ t: 'targets', got, left: targetProgress(state).map((t) => t.left) });
+}
+
 export function createState(level) {
   const state = {
     level: level.level, w: level.w, h: level.h, colors: level.colors,
@@ -34,6 +44,7 @@ export function createState(level) {
   const built = level.layout ? buildObstacles(level.layout, level.w, level.h) : { obst: new Array(level.w * level.h).fill(null), artefacts: [] };
   state.obst = built.obst; state.artefacts = built.artefacts;
   fillBoard(state);
+  shownTargets.set(state, targetProgress(state).map((t) => t.got));
   return state;
 }
 
@@ -57,7 +68,11 @@ function fillBoard(state) {
 }
 
 export const hasMove = (state) => legalSwaps(state.cells, state.w, state.h).length > 0;
-export const hintMove = (state) => legalSwaps(state.cells, state.w, state.h)[0] || null;
+// hint: a swap that makes a match first (the player learns the core move); a special swap when there is no such move
+export const hintMove = (state) => {
+  const all = legalSwaps(state.cells, state.w, state.h), c = state.cells;
+  return all.find(([a, b]) => !c[a].s && !c[b].s) || all[0] || null;
+};
 
 // ---- one move ---------------------------------------------------------------------------
 // swap(state, a, b) mutates the state to its final position and returns a result with an event
@@ -80,6 +95,7 @@ export function swap(state, a, b) {
   let mode = null;
   if (pa.s === 'rainbow' || pb.s === 'rainbow') mode = 'rainbow';
   else if (pa.s && pb.s) mode = 'combo';
+  else if (pa.s || pb.s) mode = 'fire';             // M10: a special swapped with ANY tile moves there and fires (no colour match needed)
   else if (findMatches(state.cells, w, h).length) mode = 'match';
   if (!mode) {
     [state.cells[a], state.cells[b]] = [pa, pb];
@@ -91,7 +107,7 @@ export function swap(state, a, b) {
   const move = { groups: [], steps: 0, biggest: 0 };
   const fired = new Set();                          // each special fires at most once per move
   let activation = mode === 'match' ? null : activationFor(state, mode, a, b, pa, pb);
-  if (activation) events.push({ t: 'combo', a, b, kinds: [pa.s, pb.s].filter(Boolean), mode });
+  if (activation && mode !== 'fire') events.push({ t: 'combo', a, b, kinds: [pa.s, pb.s].filter(Boolean), mode });   // a single special firing is not a combo
   for (;;) {
     let groups = [];
     if (!activation) { groups = findGroups(state.cells, w, h); if (!groups.length) break; }
@@ -104,7 +120,7 @@ export function swap(state, a, b) {
   state.status = judge(state);
   if (state.status === 'playing') {                // hazards act after the board settled: lava heats, tar spreads
     const hz = hazards(state, move.tarCleared);
-    if (hz.length) { events.push(...hz); events.push(gravity(state)); while (collectArtefacts(state, events)) events.push(gravity(state)); }
+    if (hz.length) { events.push(...hz); noteTargets(state, events); events.push(gravity(state)); while (collectArtefacts(state, events)) events.push(gravity(state)); }
     for (let guard = 0; hz.length && guard < 20; guard++) {   // a refill after an eruption can make a match: resolve it like any cascade
       const groups = findGroups(state.cells, w, h); if (!groups.length) break;
       move.steps += 1; clearStep(state, move, groups, null, -1, fired, events); events.push(gravity(state));
@@ -113,6 +129,7 @@ export function swap(state, a, b) {
     state.status = judge(state);
   }
   if (state.status === 'playing' && !hasMove(state)) events.push(reshuffle(state));
+  noteTargets(state, events);
   events.push({ t: 'end', status: state.status, stars: state.status === 'won' ? starsFor(state) : 0 });
   return { valid: true, events, dug: state.dug, status: state.status };
 }
@@ -132,6 +149,10 @@ function activationFor(state, mode, a, b, pa, pb) {
       return { cells: [...base], seeds: [{ i: ri, ids: [rb.id], kind: 'rainbow', effect: { shape: 'colour' }, colour: -2 }], converted: true };
     }
     return { cells: [...base], seeds: [{ i: ri, ids: [rb.id], kind: 'rainbow', effect: { shape: 'colour' }, colour: other.c }] };   // rainbow + gem
+  }
+  if (mode === 'fire') {                            // the special now sits in the other cell and detonates from there
+    const sp = pa.s ? pa : pb, si = sp === pa ? b : a;
+    return { cells: [si], seeds: [{ i: si, ids: [sp.id], kind: sp.s, effect: SPECIALS[sp.s].effect, o: sp.o || 'h' }] };
   }
   const combo = comboFor(pa.s, pb.s);
   return { cells: [...base], seeds: [{ i: b, ids: [pa.id, pb.id], kind: 'combo', effect: combo || SPECIALS[pa.s].effect, o: pa.o || 'h', combo: [pa.s, pb.s] }] };
@@ -173,6 +194,7 @@ function clearStep(state, move, groups, activation, swappedTo, fired, events) {
     events.push({ t: 'create', step, i: c.i, id: p.id, c: p.c, s: p.s, o: p.o });
   }
   if (hitEvent) events.push(hitEvent);
+  noteTargets(state, events);
 }
 
 // Gems fall within the free stretch of their column (obstacles are fixed); every stretch refills from its own top.
@@ -216,7 +238,7 @@ function collectArtefacts(state, events) {
     const i = (h - 1) * w + x, p = state.cells[i];
     if (p && p.a) { items.push({ i, id: p.id, kind: 'artefact' }); state.cells[i] = null; state.found.artefact += 1; }
   }
-  if (items.length) events.push({ t: 'collect', items });
+  if (items.length) { events.push({ t: 'collect', items }); noteTargets(state, events); }
   return items.length > 0;
 }
 
@@ -270,10 +292,11 @@ export function useBooster(state, id, target) {
   if (id === 'brush') {                                   // no gem moves: obstacles lose a layer, broken ones leave a hole that refills
     const hits = strikeObstacles(state, tg.strike);
     events.push({ t: 'obstacle', step: 1, hits });
+    noteTargets(state, events);
     events.push(gravity(state));
   } else {
     const struck = strikeObstacles(state, tg.strike);     // the pickaxe's direct hit on what lies under the tile
-    if (struck.length) events.push({ t: 'obstacle', step: 1, hits: struck });
+    if (struck.length) { events.push({ t: 'obstacle', step: 1, hits: struck }); noteTargets(state, events); }
     move.steps = 1;
     clearStep(state, move, [], { cells: tg.gems, seeds: [], area: id === 'pick' ? [] : tg.area }, -1, fired, events);
     events.push(gravity(state));
@@ -286,6 +309,7 @@ export function useBooster(state, id, target) {
   }
   state.status = judge(state);
   if (state.status === 'playing' && !hasMove(state)) events.push(reshuffle(state));
+  noteTargets(state, events);
   events.push({ t: 'end', status: state.status, stars: state.status === 'won' ? starsFor(state) : 0 });
   return { valid: true, events, dug: state.dug, status: state.status };
 }

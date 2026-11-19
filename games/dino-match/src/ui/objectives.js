@@ -13,6 +13,7 @@ const BLOCK_FALLBACK = { tar: ['#5A4230', '#2F2118'], sand: ['#C9A064', '#8A6338
 let currentEra = 'cambrian';
 const PICK = (() => { const u = aiUrl('pickaxe'); if (!u || typeof Image === 'undefined') return null; const im = new Image(); im.src = u; return im; })();
 export const setObjectiveEra = (id) => { currentEra = id || currentEra; };
+export const objectiveEra = () => currentEra;
 
 // paints the objective art centred in a size x size box at (0,0); clear = false keeps what is under it (intro cards animate it)
 export function paintObjective(g, art, size, era = currentEra, clear = true) {

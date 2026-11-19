@@ -12,6 +12,7 @@ import { PROPS, LOOK } from '../render/islandmap.js';
 import { drawFossilArt } from '../render/fossilArt.js';
 import { hasThumb, loadThumb, drawThumb } from '../render/fossilThumbs.js';
 import { loadEra } from '../render/art.js';
+import { artOf, loadIslandArt } from '../render/islandart.js';
 import { reducedMotion } from '../ui/motion.js';
 import { rng01 } from '../render/util.js';
 
@@ -21,13 +22,18 @@ export function mountIsland(root, { profile, eraId, onBack, onPlayLevel, origin 
   const canvas = h('canvas', { class: 'isle__canvas', 'aria-hidden': 'true' });
   const world = h('div', { class: 'isle__world' });
   const scroller = h('div', { class: 'isle__scroll', tabindex: '-1' }, world);
+  // header art: the era's island picture (art/islands/<era>.webp), bobbing gently; absent (no picture) = title only
+  const isleArt = h('img', { class: 'isle__art', alt: '', 'aria-hidden': 'true', hidden: true, draggable: 'false' });
+  const showArt = (a) => { if (a?.img) { isleArt.src = a.img.src; isleArt.hidden = false; } };
+  if (artOf(era.id)) showArt(artOf(era.id)); else loadIslandArt([era.id]).then(() => showArt(artOf(era.id)));
   const done = new Set(profile.completedFossils || []), digging = Object.keys(profile.fossilProgress || {});
   const el = h('main', { class: 'screen isle', 'data-era': era.id, 'aria-label': `${era.name} levels` },
     bg, canvas, scroller,
     h('header', { class: 'isle__top' },
       h('button', { type: 'button', class: 'icon-btn', id: 'isle-back', 'aria-label': 'Back to the world map', onClick: onBack }, glyph('back', 22)),
       h('div', { class: 'isle__title' }, h('span', { class: 'heading' }, era.name),
-        h('span', { class: 'caption dt-num' }, `${st.won}/${st.levels} levels`, h('i', { class: 'isle__tstar' }), `${st.stars}/${st.maxStars}`, '  ', `${st.fossils}/${st.totalFossils} fossils`))));
+        h('span', { class: 'caption dt-num' }, h('span', {}, `${st.won}/${st.levels} levels`), h('span', {}, h('i', { class: 'isle__tstar' }), `${st.stars}/${st.maxStars}`), h('span', {}, `${st.fossils}/${st.totalFossils} fossils`))),
+      isleArt));
   if (origin) { el.style.transformOrigin = `${origin.x}px ${origin.y}px`; el.classList.add('isle--zoom'); }
   root.append(el);
   loadEra(era.id).then((e) => { if (e?.bg) bg.style.backgroundImage = `url(${e.bg.src})`; });

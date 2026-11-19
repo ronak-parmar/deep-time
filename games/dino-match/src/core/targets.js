@@ -4,6 +4,8 @@ import { CONFIG } from './config.js';
 import { OBSTACLES, countKind } from './obstacles.js';
 
 export const MAX_TARGETS = 3;
+// what the HUD shows for a target: how many are LEFT, never negative (clearing 3 when 2 are left shows 0)
+export const goalLeft = (n, got) => Math.max(0, n - Math.min(n, Math.max(0, got || 0)));
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const plural = (n, one, many = one + 's') => (n === 1 ? one : many);
 

@@ -1,11 +1,13 @@
 {
-  "appId": "com.deeptime.dinomatch",
+  "appId": "com.ronki.dinomatch",
   "appName": "Dino Match",
   "webDir": "dist",
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "backgroundColor": "#2A1A0C"
   },
   "server": {
     "androidScheme": "https"
-  }
+  },
+  "backgroundColor": "#2A1A0C"
 }

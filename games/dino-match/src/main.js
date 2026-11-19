@@ -1,6 +1,6 @@
-import { injectDesignSystem, loadFonts } from './ui/tokens.js';
+import { injectDesignSystem } from './ui/tokens.js';
 import { reducedMotion } from './ui/motion.js';
-import { D, dur, RECIPES, YUVI as YUVI_T } from './render/motion.js';
+import { D, dur, RECIPES, YUVI as YUVI_T, BOOT } from './render/motion.js';
 import { cue, unlock, setMuted, setHaptics } from './render/sound.js';
 import { Renderer } from './render/renderer.js';
 import { createState, swap, hintMove, addMoves, useBooster } from './core/game.js';
@@ -16,6 +16,10 @@ import { digPart, FOSSILS } from './core/fossils.js';
 import { starsFor, nearMissOffer } from './core/rules.js';
 import { CONFIG } from './core/config.js';
 import { mountBoot } from './screens/boot.js';
+import { createLoader, bootTips, within } from './core/preload.js';
+import { bootTasks } from './render/bootplan.js';
+import { ROSTER } from './data/roster.js';
+import { setSpecialUrls, specialUrls } from './render/specialArt.js';
 import { mountHome } from './screens/home.js';
 import { mountIsland } from './screens/island.js';
 import { loadIslandArt } from './render/islandart.js';
@@ -39,7 +43,9 @@ import { mountOutOfLives } from './screens/lives.js';
 import { mountOffer } from './screens/offer.js';
 import { mountHistory } from './screens/history.js';
 import { mountMuseum } from './screens/museum.js';
-import { createLocalSaveStore } from './ports/save.js';
+import { createLocalSaveStore, createCloudSaveStore, CLOUD_TOASTS } from './ports/save.js';
+import { createPlayGamesPort } from './ports/playgames.js';
+import { showToast } from './ui/playgames.js';
 import { createMockAdPort, AD_EVENTS } from './ports/ads.js';
 import * as yuvi from './ui/helper.js';
 import { h } from './ui/dom.js';
@@ -50,7 +56,16 @@ injectDesignSystem();
 const stage = document.getElementById('stage');
 const ui = document.getElementById('ui');
 const renderer = new Renderer(document.getElementById('game'));
-const save = createLocalSaveStore();
+// Saves: always local; plus Google Play Games saved games when signed in (Android, docs/17). The Play Games port loads lazily.
+const gamesPort = createPlayGamesPort();
+const games = Object.fromEntries(['available', 'isAuthenticated', 'signIn', 'saveGame', 'loadGame'].map((k) => [k, async (a) => (await gamesPort)[k](a)]));
+const save = createCloudSaveStore({
+  local: createLocalSaveStore(), games,
+  toast: (m) => showToast(ui, m, m === CLOUD_TOASTS.saved || m === CLOUD_TOASTS.restored ? 'success' : 'info'),
+  // the cloud had progress this phone did not: adopt the merged profile; the map redraws with it (a level in play is left alone)
+  onRemote: (p) => { profile = p; applySettings(); if (!game && /\b(home|isle)\b/.test(screen?.el?.className || '')) showHome(); }
+});
+addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') save.flush(); });
 const ads = createMockAdPort();
 // Injectable clock (debug: window.__clockOffset shifts time, used by the scripted tests)
 const now = () => Date.now() + (window.__clockOffset || 0);
@@ -98,9 +113,10 @@ async function showHome() {
   setTall(true);
   game?.tut?.destroy(); game = null; renderer.clearLevel();
   await refreshLives();
-  await renderer.setEra(eraOf(profile.level).id);
-  await loadIslandArt(ERAS.map((e) => e.id));
-  swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onMeetYuvi: () => showWelcome(),  onPlay: () => startLevel(profile.level), onPlayLevel: (n) => startLevel(n), onHowTo: () => showHowTo(showHome), onDig: () => showDig(showHome), onMuseum: () => showMuseum(showHome), onShop: () => openShop({ onClose: showHome }), onCredits: () => mountCredits(ui, {}), onIsland: (id, origin) => showIsland(id, origin) }));
+  const stall = (p) => within(p, BOOT.stall, (ms) => new Promise((r) => setTimeout(r, ms)));   // slow art never holds the map (it pops in)
+  await stall(renderer.setEra(eraOf(profile.level).id));
+  await stall(loadIslandArt(ERAS.map((e) => e.id)));
+  swapScreen(mountHome(ui, { profile, now, onSetting: setSetting, onMeetYuvi: () => showWelcome(),  onPlay: () => startLevel(profile.level), onPlayLevel: (n) => startLevel(n), onHowTo: () => showHowTo(showHome), onDig: () => showDig(showHome), onMuseum: () => showMuseum(showHome), onShop: () => openShop({ onClose: showHome }), onCredits: () => mountCredits(ui, {}), cloud: save, onIsland: (id, origin) => showIsland(id, origin) }));
   // a newly opened island gets a surprised + wave (the first launch goes to the first island instead: see boot / showIsland)
   const open = islandsOpen(profile);
   if (open > profile.yuvi.islands) { await setYuvi({ islands: open }); yuvi.island(ERAS[open - 1].name); }
@@ -377,7 +393,7 @@ async function runBooster(i) {
   const wasForced = g.force === id;
   renderer.setTargeting(null); g.pending = null; g.force = null; g.view.boosters?.setActive(null); g.view.boosters?.setForce(null); g.view.prompt(null);
   g.view.boosters?.update(profile.boosters);
-  await renderer.play(r.events, { onMove: () => g.view.update({ moves: g.state.moves }), onDig: (dug, total) => g.view.update({ dug, total }) });
+  await renderer.play(r.events, { onMove: () => g.view.update({ moves: g.state.moves }), onDig: (dug, total) => g.view.update({ dug, total }), onTargets: (ev) => g.view.update({ got: ev.got }) });
   if (game !== g) return;
   g.view.update({ moves: g.state.moves, state: g.state });
   void wasForced;
@@ -411,7 +427,7 @@ async function onSwap(a, b) {
   if (coached) { g.guard = null; g.coach?.done(); g.coach = null; }
   await renderer.play(r.events, {
     onMove: () => g.view.update({ moves: g.state.moves }),
-    onDig: (dug, total) => g.view.update({ dug, total })
+    onDig: (dug, total) => g.view.update({ dug, total }), onTargets: (ev) => g.view.update({ got: ev.got })
   });
   if (game !== g) return; // left the level while animating
   g.view.update({ moves: g.state.moves, state: g.state });
@@ -483,20 +499,23 @@ async function settle(g, won) {
   else if (won) yuvi.win({ stars, part: !!g.state.hasDig }); else yuvi.lose('lose');   // every time (unless Yuvi tips are off)
 }
 
+// Loading screen (M10): mounts at once (painted backdrop + logo), reads the save, then preloads the critical art for the first screen
+// with a counted loader; the bar shows real progress, at least BOOT.minShow, at most BOOT.maxWait (the rest loads in the background).
 async function boot() {
-  const view = mountBoot(ui);
-  view.setProgress(0.1);
-  await loadFonts();
-  view.setProgress(0.5);
+  const view = mountBoot(ui, { tips: bootTips(ROSTER), reduced: reducedMotion });
   profile = await save.load();
   await persist(syncLives(profile, now()));
-  await renderer.setEra(eraOf(profile.level).id);
-  view.setProgress(1);
+  const era = eraOf(profile.level).id;
+  view.chooseBackground(profile, era);   // this launch's loading painting (crossfades in, never waited for)
+  const loader = createLoader(bootTasks(era));
+  await view.run(loader);
+  await within(renderer.setEra(era), BOOT.stall, (ms) => new Promise((r) => setTimeout(r, ms)));   // instant once the loader is done
   applySettings();
   yuvi.initHelper({ stage, isOn: () => profile?.settings?.yuvi !== false, isReduced: reducedMotion });
-  await new Promise((r) => setTimeout(r, dur(D.base)));
   screen = view;
+  document.documentElement.classList.remove('booting');
   await (firstLaunch() ? showIsland(ERAS[0].id, null, { hello: true }) : showHome());   // first launch: the first island, Yuvi says hello
+  save.start();   // Play Games: silent sign-in check + cloud merge in the background; play never waits for it
 }
 boot().then(() => { if (location.search.includes('motion')) import('./render/motionlab.js').then((l) => l.mountLab({ renderer, ui, stage, fit, getProfile: () => profile })); });
 
@@ -509,6 +528,7 @@ if (import.meta.env.DEV || location.search.includes('debug')) {
     result: (won = true) => { const g = game; if (!g) return; g.state.status = won ? 'won' : 'lost'; if (won) g.state.score = g.state.score || 12480; return settle(g, won); },
     offer: () => { const g = game; if (g) return showNearMiss(g, { extraMoves: 5, coinCost: 50, blocksLeft: 2 }); },
     tests: ALL_TESTS,
+    specialArt: { set: setSpecialUrls, urls: specialUrls },   // M10: swap the painted specials (debug screenshots: fallback / stand-ins)
     yuvi: { welcome: () => showWelcome(), helper: yuvi }
   };
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Play Games Services project id. Merged into the app manifest. The string defaults to "0" (res/values/games-ids-default.xml);
+             CI writes the real one to the app's res/values/games-ids.xml, which overrides this library default. -->
+        <meta-data
+            android:name="com.google.android.gms.games.APP_ID"
+            android:value="@string/game_services_project_id" />
+    </application>
+</manifest>

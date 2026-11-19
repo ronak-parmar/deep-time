@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fallback when the app does not supply its own value: "0" means "not configured" (the plugin reports NOT_CONFIGURED). -->
+    <string name="game_services_project_id" translatable="false">0</string>
+</resources>

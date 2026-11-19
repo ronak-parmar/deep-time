@@ -7,3 +7,8 @@ games/dino-match/android/build/
 games/dino-match/android/app/build/
 games/dino-match/android/.gradle/
 games/dino-match/android/local.properties
+# Android signing keys never go in the repo (tools/make-keystore.md)
+*.jks
+*.keystore
+*.base64.txt
+games/dino-match/android/app/src/main/res/values/games-ids.xml
