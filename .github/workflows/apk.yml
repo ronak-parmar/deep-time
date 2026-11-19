@@ -24,6 +24,8 @@ jobs:
     env:
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' }}
       PLAY_GAMES_APP_ID: ${{ vars.PLAY_GAMES_APP_ID || secrets.PLAY_GAMES_APP_ID || '0' }}
+      # Ads: Google test ads unless the repository variable ADS_LIVE is 1 (set it only for the production release, docs/20)
+      VITE_ADS_LIVE: ${{ vars.ADS_LIVE == '1' && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -62,6 +64,16 @@ jobs:
       - name: Make the launcher icons from assets/icon-*.png
         working-directory: games/dino-match
         run: npx --yes @capacitor/assets@3 generate --android
+
+      # AdMob needs its app ID in the manifest (the app crashes on start without it); AD_ID keeps the advertising ID on Android 13+.
+      - name: Add the AdMob app ID and the AD_ID permission to the manifest
+        working-directory: games/dino-match
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q 'com.google.android.gms.ads.APPLICATION_ID' $M || sed -i 's#</application>#    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-5244654412310526~2506824278"/>\n    </application>#' $M
+          grep -q 'com.google.android.gms.permission.AD_ID' $M || sed -i 's#</manifest>#    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>\n</manifest>#' $M
+          grep -n 'APPLICATION_ID\|AD_ID' $M
+          echo "Ads live: $VITE_ADS_LIVE (0 = Google test ads)"
 
       # The Play Games plugin (packages/capacitor-play-games) puts the APP_ID meta-data in the manifest; its value comes from here.
       - name: Write the Play Games App ID (games-ids.xml)

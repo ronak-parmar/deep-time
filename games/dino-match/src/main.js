@@ -46,7 +46,7 @@ import { mountMuseum } from './screens/museum.js';
 import { createLocalSaveStore, createCloudSaveStore, CLOUD_TOASTS } from './ports/save.js';
 import { createPlayGamesPort } from './ports/playgames.js';
 import { showToast } from './ui/playgames.js';
-import { createMockAdPort, AD_EVENTS } from './ports/ads.js';
+import { createAdPort, AD_EVENTS } from './ports/ads.js';
 import * as yuvi from './ui/helper.js';
 import { h } from './ui/dom.js';
 import { mountWelcome } from './screens/welcome.js';
@@ -66,7 +66,8 @@ const save = createCloudSaveStore({
   onRemote: (p) => { profile = p; applySettings(); if (!game && /\b(home|isle)\b/.test(screen?.el?.className || '')) showHome(); }
 });
 addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') save.flush(); });
-const ads = createMockAdPort();
+// Ads: the mock until AdMob is ready (Android build). Test ads unless the build is live (VITE_ADS_LIVE=1, docs/20).
+const ads = createAdPort({ live: import.meta.env.VITE_ADS_LIVE === '1' });
 // Injectable clock (debug: window.__clockOffset shifts time, used by the scripted tests)
 const now = () => Date.now() + (window.__clockOffset || 0);
 
@@ -478,6 +479,8 @@ function showNearMiss(g, offer) {
 }
 
 async function settle(g, won) {
+  let leaving = false;   // one tap only: the interstitial (if any) closes, then we move on
+  const between = (go) => async () => { if (leaving) return; leaving = true; await ads.maybeInterstitial(n); go(); };
   activeCoach()?.destroy(); g.guard = null;
   const n = g.level.level;
   const stars = won ? starsFor(g.state) : 0;
@@ -489,7 +492,10 @@ async function settle(g, won) {
   let current = p;
   swapScreen(mountResult(ui, {
     won, level: g.level, state: g.state, stars, rewards, lives: p.lives, ads,
-    onNext: () => startLevel(n + 1), onRetry: () => startLevel(n, { skipPre: true }), onHome: backToMap,
+    // an interstitial may show only here, between levels (ports/ads.js INTERSTITIAL_RULES decide when)
+    onNext: between(() => startLevel(n + 1)),
+    onRetry: () => startLevel(n, { skipPre: true }),
+    onHome: between(backToMap),
     onDig: () => showDig(showHome),
     onWait: () => showOutOfLives(n),
     onDouble: async () => { ads.report(AD_EVENTS.rewardedCompleted, { kind: 'double_coins' }); current = doubleCoins(profile, rewards.coins); await persist(current); }

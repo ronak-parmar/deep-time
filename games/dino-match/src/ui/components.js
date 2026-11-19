@@ -56,11 +56,11 @@ export function RewardButton({ benefit, onClick, disabled, id }) {
     h('span', { class: 'dt-adtag caption' }, 'AD'));
 }
 
-// Runs the mock rewarded ad on a button: disables it, shows "Playing ad", resolves with true when completed.
+// Runs a rewarded ad (AdMob on Android, the mock elsewhere) on a button: disables it, shows "Playing ad", resolves with true when completed.
 export async function watchAd(ads, btn) {
   const label = btn.querySelector('.dt-reward__benefit');
   const old = label?.textContent;
-  btn.disabled = true; if (label) label.textContent = 'Playing ad (mock)';
+  btn.disabled = true; if (label) label.textContent = 'Loading ad…';
   const r = await ads.showRewarded();
   if (!r.completed) { btn.disabled = false; if (label) label.textContent = old; }
   return !!r.completed;
