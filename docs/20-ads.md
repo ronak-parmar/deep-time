@@ -7,7 +7,7 @@ AdMob app "Dino Match": `ca-app-pub-5244654412310526~2506824278`.
 | Rewarded - extra moves | `ca-app-pub-5244654412310526/2999272155` | every opt-in "Watch a short ad" button: +5 moves (So close), double coins (win), refill lives |
 | Interstitial - between levels | `ca-app-pub-5244654412310526/6661691707` | only after Next/Home on the result screen, from level 8, at most every 3 finished levels, 150 s apart, never within 90 s of a rewarded ad |
 
-Code: `src/ports/ads.js` (`createAdPort`, `wrapAdMob`, `INTERSTITIAL_RULES`), plugin `@capacitor-community/admob` 6.2.0 (Capacitor 6).
+Code: `src/ports/ads.js` (`createAdPort`, `wrapAdMob`, `INTERSTITIAL_RULES`), plugin `@capacitor-community/admob` 8.4.2 (Capacitor 8).
 The web build and tests use the mock. Consent (EEA/UK) uses Google's UMP form when required: set up the message in AdMob > Privacy & messaging.
 
 ## Test vs live

@@ -13,14 +13,14 @@
     "android:sync": "vite build && cap sync android"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.3",
+    "@capacitor/cli": "^8.6.2",
     "vite": "^5.4.0",
     "vitest": "^2.1.0"
   },
   "dependencies": {
-    "@capacitor-community/admob": "6.2.0",
-    "@capacitor/android": "^6.2.3",
-    "@capacitor/core": "^6.2.3",
+    "@capacitor-community/admob": "8.4.2",
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "capacitor-play-games": "0.1.0"
   }
 }
