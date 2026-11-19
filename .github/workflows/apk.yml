@@ -55,6 +55,9 @@ jobs:
         run: |
           if [ ! -d android ]; then npx cap add android; fi
           npx cap sync android
+          # Play automatic protection needs minSdk 24+ (Capacitor 6 defaults to 22)
+          sed -i 's/minSdkVersion = [0-9]*/minSdkVersion = 24/' android/variables.gradle
+          grep -n minSdkVersion android/variables.gradle
 
       - name: Make the launcher icons from assets/icon-*.png
         working-directory: games/dino-match
