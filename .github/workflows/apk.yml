@@ -19,6 +19,7 @@ permissions:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    environment: release   # the signing secrets and PLAY_GAMES_APP_ID are saved in the "release" environment
     timeout-minutes: 40
     env:
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' }}
