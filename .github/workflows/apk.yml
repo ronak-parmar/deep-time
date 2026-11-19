@@ -76,6 +76,18 @@ jobs:
           XML
           sed -i 's/^          //' android/app/src/main/res/values/games-ids.xml
 
+      # Fixes "cannot access AppCompatActivity" in :capacitor-play-games. Capacitor's Plugin.getActivity() returns an
+      # AppCompatActivity, so the plugin module must have androidx.appcompat on its compile classpath.
+      - name: Give the Play Games plugin the androidx.appcompat dependency
+        run: |
+          F=packages/capacitor-play-games/android/build.gradle
+          test -f "$F" || { echo "::error::$F not found"; exit 1; }
+          if ! grep -q 'androidx.appcompat:appcompat' "$F"; then
+            sed -i '0,/^dependencies {/s//dependencies {\n    implementation "androidx.appcompat:appcompat:1.6.1"/' "$F"
+          fi
+          grep -q 'androidx.appcompat:appcompat' "$F" || { echo "::error::Could not add appcompat to $F; add it to the dependencies block by hand"; exit 1; }
+          grep -n 'appcompat' "$F"
+
       - name: Decode the upload keystore and set the version code
         if: env.HAS_KEYSTORE == 'true'
         env:
