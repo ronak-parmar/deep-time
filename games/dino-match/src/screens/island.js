@@ -8,16 +8,16 @@ import { FOSSILS } from '../core/fossils.js';
 import { tierOf } from '../core/difficulty.js';
 import { levelState, bestStars, eraStats } from '../core/journey.js';
 import { islandPath, visibleRange, PW } from '../render/islandpath.js';
-import { PROPS, LOOK } from '../render/islandmap.js';
 import { drawFossilArt } from '../render/fossilArt.js';
 import { hasThumb, loadThumb, drawThumb } from '../render/fossilThumbs.js';
 import { loadEra } from '../render/art.js';
 import { artOf, loadIslandArt } from '../render/islandart.js';
 import { reducedMotion } from '../ui/motion.js';
-import { rng01 } from '../render/util.js';
+import { drawAmbientLife, preloadAmbient } from '../render/ambientArt.js';
+import { applyMapArt, drawStone, stoneImg, loadCanvasPieces } from '../render/mapArt.js';
 
 export function mountIsland(root, { profile, eraId, onBack, onPlayLevel, origin }) {
-  const era = ERAS.find((e) => e.id === eraId) || ERAS[0], path = islandPath(era), st = eraStats(profile, era), L = LOOK[era.id];
+  const era = ERAS.find((e) => e.id === eraId) || ERAS[0], path = islandPath(era), st = eraStats(profile, era);
   const bg = h('div', { class: 'isle__bg', 'aria-hidden': 'true' });
   const canvas = h('canvas', { class: 'isle__canvas', 'aria-hidden': 'true' });
   const world = h('div', { class: 'isle__world' });
@@ -36,6 +36,7 @@ export function mountIsland(root, { profile, eraId, onBack, onPlayLevel, origin 
       isleArt));
   if (origin) { el.style.transformOrigin = `${origin.x}px ${origin.y}px`; el.classList.add('isle--zoom'); }
   root.append(el);
+  const stopArt = applyMapArt(el, 'isle--art'); loadCanvasPieces();
   loadEra(era.id).then((e) => { if (e?.bg) bg.style.backgroundImage = `url(${e.bg.src})`; });
 
   // fossil milestones: few, always in the DOM
@@ -46,7 +47,7 @@ export function mountIsland(root, { profile, eraId, onBack, onPlayLevel, origin 
     g.scale(2, 2);   // the carving thumbnail (art sheet) when there is one, else the code-drawn fossil
     if (hasThumb(f.id)) loadThumb(f.id).then((im) => { if (!im || !drawThumb(g, f.id, 1, 1, 58, 32, { ...o, margin: 0.02 })) drawFossilArt(g, f.shape, 2, 2, 56, 30, o); });
     else drawFossilArt(g, f.shape, 2, 2, 56, 30, o);
-    return { m, el: h('div', { class: `isle__mile isle__mile--${state}`, 'aria-label': `Fossil after level ${m.after}: ${f.name}` }, c,
+    return { m, el: h('div', { class: `isle__mile isle__mile--${state}`, 'aria-label': `Fossil after level ${m.after}: ${f.name}` }, h('span', { class: 'isle__mframe' }, c),
       h('span', { class: 'isle__mtext' }, h('b', {}, state === 'locked' ? 'Fossil dig' : f.name), h('small', {}, `Levels ${m.after - 49}-${m.after}`))) };
   });
   world.append(...ms.map((x) => x.el));
@@ -75,20 +76,27 @@ export function mountIsland(root, { profile, eraId, onBack, onPlayLevel, origin 
     for (const [lv, e] of live) if (!want.has(lv)) { e.remove(); live.delete(lv); }
   };
 
-  // canvas: glowing trail dots and the props beside the path, for the part on screen
+  preloadAmbient(era.id);
+  // canvas: the ambient life (painted elements drifting across the screen, behind everything; none = nothing) and the trail
+  // (stepping stones or glowing dots) for the part on screen. The code-drawn props beside the path are gone here (world map only).
   const ctx = canvas.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
   const curIdx = path.nodes.findIndex((n) => levelState(profile, n.level) === 'current');
   const draw = (t) => {
     const y0 = scroller.scrollTop / s, y1 = y0 + vh / s, motion = !reducedMotion();
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); drawAmbientLife(ctx, era.id, vw, vh, t * 1000, !motion);
     ctx.setTransform(dpr * s, 0, 0, dpr * s, 0, -y0 * dpr * s);
-    for (const d of path.decor) {
-      if (d.y < y0 - 80 || d.y > y1 + 80) continue;
-      const kind = L.props[d.k % L.props.length]; ctx.save(); ctx.globalAlpha = 0.95; PROPS[kind](ctx, d.x, d.y, 30 * d.s, L, rng01(d.k + 7)); ctx.restore();
-    }
-    const [a, b] = visibleRange(path, y0 - 100, y1 + 100);
+    const [a, b] = visibleRange(path, y0 - 100, y1 + 100), stones = !!stoneImg(0) && !!stoneImg(1);
     for (let i = Math.max(1, a); i < Math.min(path.nodes.length, b + 1); i++) {
       const p = path.nodes[i - 1], q = path.nodes[i], len = Math.hypot(q.x - p.x, q.y - p.y), k = Math.max(2, Math.floor(len / 13)), lit = curIdx < 0 || i <= curIdx;
+      if (stones) {   // painted stepping stones, evenly spaced between the two coins (clear of them), alternating the two stones
+        const free = len - 2 * 26, m = Math.max(0, Math.round(free / 14));
+        for (let j = 0; j < m; j++) {
+          const f = (26 + (j + 0.5) * free / m) / len;
+          ctx.globalAlpha = lit ? 1 : 0.55; drawStone(ctx, i * 7 + j, p.x + (q.x - p.x) * f, p.y + (q.y - p.y) * f, 12);
+        }
+        continue;
+      }
       for (let j = 1; j < k; j++) {
         const f = j / k, x = p.x + (q.x - p.x) * f, y = p.y + (q.y - p.y) * f, wave = motion ? 0.75 + 0.25 * Math.sin(t * 2.4 - (i * k + j) * 0.35) : 1;
         ctx.globalAlpha = (lit ? 1 : 0.45) * wave;
@@ -116,5 +124,5 @@ export function mountIsland(root, { profile, eraId, onBack, onPlayLevel, origin 
   const frame = (now) => { if (!alive) return; draw((now - t0) / 1000); raf = requestAnimationFrame(frame); };
   raf = requestAnimationFrame(frame);
   addEventListener('resize', place);
-  return { el, path, destroy() { alive = false; cancelAnimationFrame(raf); removeEventListener('resize', place); el.remove(); } };
+  return { el, path, destroy() { stopArt(); alive = false; cancelAnimationFrame(raf); removeEventListener('resize', place); el.remove(); } };
 }

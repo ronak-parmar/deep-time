@@ -17,9 +17,16 @@ export const UI_SLOTS = {
   'progress-fill':  { w: 180, h: 14, nine: [6, 4, 6, 4], note: 'orange bar piece' },
   'star-on':        { w: 40, h: 40, note: 'lit gold star' },
   'star-off':       { w: 40, h: 40, note: 'dark empty star' },
-  'booster-pick':   { w: 56, h: 56, note: 'round teal medallion with the skull pickaxe' },
-  'booster-burst':  { w: 56, h: 56, note: 'round red medallion with the volcano' },
-  'booster-brush':  { w: 56, h: 56, note: 'round green medallion with the brush' },
+  // booster medallions: one per booster (data/boosters.js slot), cut from the owner sheet art/sheets/boosters.png by
+  // tools/prep-boosters-sheet.py at 256 px (sheet: not built by tools/gen-ui.py; do not regenerate them with it)
+  'booster-pick':      { w: 56, h: 56, sheet: 'boosters', note: 'round teal medallion with the pickaxe' },
+  'booster-rockslide': { w: 56, h: 56, sheet: 'boosters', note: 'round red medallion with tumbling boulders' },
+  'booster-brush':     { w: 56, h: 56, sheet: 'boosters', note: 'round green medallion with the brush' },
+  'booster-amber':     { w: 56, h: 56, sheet: 'boosters', note: 'round amber medallion with an insect in an amber drop' },
+  'booster-tremor':    { w: 56, h: 56, sheet: 'boosters', note: 'round violet medallion with cracked ground' },
+  'booster-moves5':    { w: 56, h: 56, sheet: 'boosters', note: 'round blue medallion, "+5" painted in' },
+  'booster-lucky':     { w: 56, h: 56, sheet: 'boosters', note: 'round gold medallion with a shining ammonite' },
+  'booster-start3':    { w: 56, h: 56, sheet: 'boosters', note: 'round light blue medallion, "+3" painted in' },
   'count-badge-blue':  { w: 20, h: 20, note: 'small round badge, blank' },
   'count-badge-red':   { w: 20, h: 20, note: 'small round badge, blank' },
   'count-badge-green': { w: 20, h: 20, note: 'small round badge, blank' },
@@ -31,13 +38,31 @@ export const UI_SLOTS = {
   'tablet-skull':     { w: 48, h: 48, note: 'carved tablet with a skull impression (reserved for the Dig site)' },
   'tablet-footprint': { w: 48, h: 48, note: 'carved tablet with a footprint (reserved)' },
   'tablet-fern':      { w: 48, h: 48, note: 'carved tablet with a fern (reserved)' },
-  'dirt-crumbs':      { w: 64, h: 64, note: 'pile of loose dirt crumbs (reserved for dig effects)' }
+  'dirt-crumbs':      { w: 64, h: 64, note: 'pile of loose dirt crumbs (reserved for dig effects)' },
+  // journey map pieces, cut from art/sheets/map-pieces.png by tools/prep-pieces-sheet.py map. Coins: the coin fills 70% of the square
+  // (the rest is room for the halo / flame badges); game.css draws them round the node buttons (.isle--art / .map--art).
+  'node-done':      { w: 58, h: 58, sheet: 'map', note: 'golden coin, blank centre: a played level' },
+  'node-open':      { w: 58, h: 58, sheet: 'map', note: 'cream sandstone coin: open, not played yet' },
+  'node-locked':    { w: 58, h: 58, sheet: 'map', note: 'blue-grey slate coin: locked level' },
+  'node-current':   { w: 58, h: 58, sheet: 'map', note: 'glowing amber coin with a soft halo: the next level' },
+  'node-hard':      { w: 58, h: 58, sheet: 'map', note: 'crimson coin with one flame badge: hard level' },
+  'node-superhard': { w: 58, h: 58, sheet: 'map', note: 'violet coin with two flame badges: super hard level' },
+  'map-pin':        { w: 44, h: 44, sheet: 'map', note: 'amber map pin with a footprint: where the player is' },
+  'step-stone-1':   { w: 20, h: 15, sheet: 'map', note: 'round stepping stone (trail)' },
+  'step-stone-2':   { w: 20, h: 14, sheet: 'map', note: 'oval mossy stepping stone (trail)' },
+  'cloud-1':        { w: 150, h: 95, sheet: 'map', note: 'big white cloud' },
+  'cloud-2':        { w: 110, h: 73, sheet: 'map', note: 'small white cloud' },
+  'mist-1':         { w: 220, h: 112, sheet: 'map', note: 'wispy see-through fog band' },
+  // painted icons (ui/glyphs.js glyph() uses them in place of the svg), cut from art/sheets/ui-icons.png: prep-pieces-sheet.py icons
+  ...Object.fromEntries(['dig', 'shop', 'museum', 'settings', 'back', 'play', 'howto', 'info', 'lock', 'check', 'video', 'hand']
+    .map((n) => ['icon-' + n, { w: 24, h: 24, sheet: 'icons', file: `ui/icons/${n}.png`, note: `painted ${n} icon` }]))
 };
 export const SLOT_NAMES = Object.keys(UI_SLOTS);
 
 // Relative files for a slot: ['ui/hud-sign.png'] or ['ui/tile-cream-1.png', ...].
 export const slotFiles = (name) => {
   const s = UI_SLOTS[name];
+  if (s.file) return [s.file];
   return s.n ? Array.from({ length: s.n }, (_, i) => `ui/${name}-${i + 1}.png`) : [`ui/${name}.png`];
 };
 

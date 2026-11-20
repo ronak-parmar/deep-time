@@ -5,6 +5,7 @@
 // Optional: a hand pointer showing a swap (hand = { a: [x, y], b: [x, y] } in screen px), Skip (onSkip) and a second button
 // (alt = { label, fn }, e.g. "Not now"). With Yuvi tips off the line shows in a plain parchment card instead.
 // Returns { promise, done(result), destroy() }; promise resolves with 'tap' | 'action' | 'skip' | 'alt' | 'gone'.
+import { handArt } from '../ui/glyphs.js';
 import { h } from '../ui/dom.js';
 import { KButton } from '../ui/kit.js';
 import { reducedMotion } from '../ui/motion.js';
@@ -38,7 +39,7 @@ export function coachStep({ say, action = 'point', then = null, dir = 'right', w
   if (hand) {
     const [ax, ay] = hand.a, [bx, by] = hand.b;
     const trail = h('div', { class: 'tut__trail', style: { left: ax + 'px', top: ay + 'px', width: Math.hypot(bx - ax, by - ay) + 'px', transform: `rotate(${Math.atan2(by - ay, bx - ax)}rad)` } });
-    const hd = h('div', { class: 'tut__hand', 'aria-hidden': 'true' }); hd.innerHTML = HAND;
+    const hd = h('div', { class: 'tut__hand', 'aria-hidden': 'true' }); const hi = handArt(); if (hi) hd.append(hi); else hd.innerHTML = HAND;
     for (const [k, v] of [['--x0', ax - 10], ['--y0', ay - 4], ['--x1', bx - 10], ['--y1', by - 4]]) hd.style.setProperty(k, v + 'px');
     if (reducedMotion()) { hd.style.animation = 'none'; hd.style.transform = `translate(${bx - 10}px, ${by - 4}px)`; }
     el.append(trail, hd);

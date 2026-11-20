@@ -4,6 +4,7 @@
 import { h } from '../ui/dom.js';
 import { Panel, KButton, Medal } from '../ui/kit.js';
 import { glyph } from '../ui/glyphs.js';
+import { BoosterMedal } from '../ui/boosters.js';
 import { paintIntroArt } from '../render/introart.js';
 import { reducedMotion } from '../ui/motion.js';
 import { D } from '../render/motion.js';
@@ -62,7 +63,7 @@ export function mountIntro({ entries, renderer, state, soft = false, onDone, onS
   function show() {
     if (dead) return;
     const e = entries[i], bst = e.booster ? BOOSTERS[e.booster] : null; art?.stop();
-    if (bst) { art = artBox(e, 112); bhost.replaceChildren(art.el); } else { art = artBox(e); artHost.replaceChildren(art.el); }
+    if (bst) { art = artBox(e, 112); bhost.replaceChildren(art.el, BoosterMedal(e.booster, { size: 46 })); }   // the demo, with the booster's medallion pinned on its corner else { art = artBox(e); artHost.replaceChildren(art.el); }
     medal.hidden = !!bst; bhost.hidden = !bst; how.hidden = !bst || soft;
     if (bst) how.textContent = bst.kind === 'pre' ? 'Pick it on the start screen, before you play.' : bst.target === 'none' ? 'Tap the booster to use it.' : 'Tap the booster, then tap where to use it.';
     title.textContent = e.title; text.textContent = e.text;

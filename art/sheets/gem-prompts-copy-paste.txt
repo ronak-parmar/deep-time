@@ -1,0 +1,243 @@
+PERMIAN  ->  save as art/sheets/gems-permian.png
+
+Use the attached image as the EXACT style reference. It shows 18 finished gems from my match-3 game. Make 6 NEW gems in precisely the same style for the PERMIAN era (299 to 252 million years ago).
+
+LAYOUT (very important):
+- One landscape image, 3:2 ratio, flat solid dark navy background #0F1424 everywhere, no gradient, no texture, no vignette.
+- A grid of 3 columns x 2 rows, 6 gems total, evenly spaced. Each gem is centred in its own cell and fills about 75% of the cell.
+- Wide empty gaps of plain background between gems. Gems, glows and sparkles must NEVER touch or overlap each other or the image edge.
+- Top row, left to right: red, green, blue. Bottom row, left to right: yellow, purple, amber.
+
+GEM SHAPES AND COLOURS (copy them exactly from the reference, same column = same shape and colour):
+1. Red OCTAGON, ruby red.
+2. Green upright OVAL, emerald green.
+3. Blue DIAMOND / rhombus standing on a point, sapphire blue.
+4. Yellow TRIANGLE pointing DOWN, golden yellow.
+5. Purple PENTAGON with a row of small crystal spikes along its top edges, amethyst purple.
+6. Amber TEARDROP with the point at the top, orange amber, translucent.
+
+STYLE (match the reference exactly):
+- Glossy faceted gemstone, crisp facet planes, a thick dark outline around the whole gem, a soft inner glow, light from the top left, a few small white star sparkles on the edges.
+- In the centre of each gem, one bold engraved EMBLEM as a clean single-colour silhouette in a darker tone of the gem's own colour, slightly recessed, lower contrast than the gem outline, readable at 48 pixels. Side view where it is an animal. No fine hair-thin detail.
+- Same size, same outline weight and same lighting on all 6 gems. Each gem must look like it belongs in the same set as the reference.
+
+EMBLEMS for the Permian era:
+1. Red octagon: Inostrancevia, a big sabre-toothed gorgonopsian predator walking, long fangs showing
+2. Green oval: a single Glossopteris leaf, long tongue-shaped leaf with a central vein
+3. Blue diamond: Dimetrodon walking, with its tall spined sail on its back
+4. Yellow triangle: the spiral tooth-whorl of Helicoprion, a coiled spiral of triangular teeth
+5. Purple pentagon: Scutosaurus, a stocky armoured plant-eater with a bumpy head
+6. Amber teardrop: a small beetle seen from above, as if trapped inside the amber
+
+DO NOT: add text, letters, numbers, labels, a title, a watermark, a frame, a border, a shadow on the background, extra objects, extra gems, or any background scenery. Do not change any gem's shape or colour. Do not reuse emblems from the reference.
+
+======================================================================
+
+TRIASSIC  ->  save as art/sheets/gems-triassic.png
+
+Use the attached image as the EXACT style reference. It shows 18 finished gems from my match-3 game. Make 6 NEW gems in precisely the same style for the TRIASSIC era (252 to 201 million years ago).
+
+LAYOUT (very important):
+- One landscape image, 3:2 ratio, flat solid dark navy background #0F1424 everywhere, no gradient, no texture, no vignette.
+- A grid of 3 columns x 2 rows, 6 gems total, evenly spaced. Each gem is centred in its own cell and fills about 75% of the cell.
+- Wide empty gaps of plain background between gems. Gems, glows and sparkles must NEVER touch or overlap each other or the image edge.
+- Top row, left to right: red, green, blue. Bottom row, left to right: yellow, purple, amber.
+
+GEM SHAPES AND COLOURS (copy them exactly from the reference, same column = same shape and colour):
+1. Red OCTAGON, ruby red.
+2. Green upright OVAL, emerald green.
+3. Blue DIAMOND / rhombus standing on a point, sapphire blue.
+4. Yellow TRIANGLE pointing DOWN, golden yellow.
+5. Purple PENTAGON with a row of small crystal spikes along its top edges, amethyst purple.
+6. Amber TEARDROP with the point at the top, orange amber, translucent.
+
+STYLE (match the reference exactly):
+- Glossy faceted gemstone, crisp facet planes, a thick dark outline around the whole gem, a soft inner glow, light from the top left, a few small white star sparkles on the edges.
+- In the centre of each gem, one bold engraved EMBLEM as a clean single-colour silhouette in a darker tone of the gem's own colour, slightly recessed, lower contrast than the gem outline, readable at 48 pixels. Side view where it is an animal. No fine hair-thin detail.
+- Same size, same outline weight and same lighting on all 6 gems. Each gem must look like it belongs in the same set as the reference.
+
+EMBLEMS for the Triassic era:
+1. Red octagon: Coelophysis, a slim early dinosaur running on two legs, long neck and tail
+2. Green oval: a cycad plant, a short thick trunk with a crown of stiff feathery fronds
+3. Blue diamond: Shonisaurus, a huge ichthyosaur swimming, dolphin-like body with long flippers
+4. Yellow triangle: Eudimorphodon, a small pterosaur with wings spread and a long tail with a diamond tip
+5. Purple pentagon: Placerias, a heavy tusked plant-eater with a beak, walking
+6. Amber teardrop: a small early fly with clear wings, as if trapped inside the amber
+
+DO NOT: add text, letters, numbers, labels, a title, a watermark, a frame, a border, a shadow on the background, extra objects, extra gems, or any background scenery. Do not change any gem's shape or colour. Do not reuse emblems from the reference.
+
+======================================================================
+
+JURASSIC  ->  save as art/sheets/gems-jurassic.png
+
+Use the attached image as the EXACT style reference. It shows 18 finished gems from my match-3 game. Make 6 NEW gems in precisely the same style for the JURASSIC era (201 to 145 million years ago).
+
+LAYOUT (very important):
+- One landscape image, 3:2 ratio, flat solid dark navy background #0F1424 everywhere, no gradient, no texture, no vignette.
+- A grid of 3 columns x 2 rows, 6 gems total, evenly spaced. Each gem is centred in its own cell and fills about 75% of the cell.
+- Wide empty gaps of plain background between gems. Gems, glows and sparkles must NEVER touch or overlap each other or the image edge.
+- Top row, left to right: red, green, blue. Bottom row, left to right: yellow, purple, amber.
+
+GEM SHAPES AND COLOURS (copy them exactly from the reference, same column = same shape and colour):
+1. Red OCTAGON, ruby red.
+2. Green upright OVAL, emerald green.
+3. Blue DIAMOND / rhombus standing on a point, sapphire blue.
+4. Yellow TRIANGLE pointing DOWN, golden yellow.
+5. Purple PENTAGON with a row of small crystal spikes along its top edges, amethyst purple.
+6. Amber TEARDROP with the point at the top, orange amber, translucent.
+
+STYLE (match the reference exactly):
+- Glossy faceted gemstone, crisp facet planes, a thick dark outline around the whole gem, a soft inner glow, light from the top left, a few small white star sparkles on the edges.
+- In the centre of each gem, one bold engraved EMBLEM as a clean single-colour silhouette in a darker tone of the gem's own colour, slightly recessed, lower contrast than the gem outline, readable at 48 pixels. Side view where it is an animal. No fine hair-thin detail.
+- Same size, same outline weight and same lighting on all 6 gems. Each gem must look like it belongs in the same set as the reference.
+
+EMBLEMS for the Jurassic era:
+1. Red octagon: an Allosaurus skull in side view, big jaws with teeth and the bony crests above the eye
+2. Green oval: a single Ginkgo leaf, fan-shaped with a notch in the middle, on a short stem
+3. Blue diamond: Plesiosaurus swimming, long neck, small head, four paddle flippers
+4. Yellow triangle: Archaeopteryx with feathered wings spread wide and a long feathered tail
+5. Purple pentagon: Stegosaurus walking, with the row of tall back plates and the spiked tail
+6. Amber teardrop: a dragonfly with four wings spread, as if trapped inside the amber
+
+DO NOT: add text, letters, numbers, labels, a title, a watermark, a frame, a border, a shadow on the background, extra objects, extra gems, or any background scenery. Do not change any gem's shape or colour. Do not reuse emblems from the reference.
+
+======================================================================
+
+CRETACEOUS  ->  save as art/sheets/gems-cretaceous.png
+
+Use the attached image as the EXACT style reference. It shows 18 finished gems from my match-3 game. Make 6 NEW gems in precisely the same style for the CRETACEOUS era (145 to 66 million years ago).
+
+LAYOUT (very important):
+- One landscape image, 3:2 ratio, flat solid dark navy background #0F1424 everywhere, no gradient, no texture, no vignette.
+- A grid of 3 columns x 2 rows, 6 gems total, evenly spaced. Each gem is centred in its own cell and fills about 75% of the cell.
+- Wide empty gaps of plain background between gems. Gems, glows and sparkles must NEVER touch or overlap each other or the image edge.
+- Top row, left to right: red, green, blue. Bottom row, left to right: yellow, purple, amber.
+
+GEM SHAPES AND COLOURS (copy them exactly from the reference, same column = same shape and colour):
+1. Red OCTAGON, ruby red.
+2. Green upright OVAL, emerald green.
+3. Blue DIAMOND / rhombus standing on a point, sapphire blue.
+4. Yellow TRIANGLE pointing DOWN, golden yellow.
+5. Purple PENTAGON with a row of small crystal spikes along its top edges, amethyst purple.
+6. Amber TEARDROP with the point at the top, orange amber, translucent.
+
+STYLE (match the reference exactly):
+- Glossy faceted gemstone, crisp facet planes, a thick dark outline around the whole gem, a soft inner glow, light from the top left, a few small white star sparkles on the edges.
+- In the centre of each gem, one bold engraved EMBLEM as a clean single-colour silhouette in a darker tone of the gem's own colour, slightly recessed, lower contrast than the gem outline, readable at 48 pixels. Side view where it is an animal. No fine hair-thin detail.
+- Same size, same outline weight and same lighting on all 6 gems. Each gem must look like it belongs in the same set as the reference.
+
+EMBLEMS for the Cretaceous era:
+1. Red octagon: a Tyrannosaurus rex skull in side view, huge jaws full of teeth
+2. Green oval: an early magnolia flower, open petals on a short stem with one leaf
+3. Blue diamond: Triceratops walking, three horns and the big neck frill
+4. Yellow triangle: Pteranodon gliding, wide wings and the long backward head crest
+5. Purple pentagon: Ankylosaurus walking, armoured back and the club at the end of its tail
+6. Amber teardrop: a mosquito with long legs and thin wings, as if trapped inside the amber
+
+DO NOT: add text, letters, numbers, labels, a title, a watermark, a frame, a border, a shadow on the background, extra objects, extra gems, or any background scenery. Do not change any gem's shape or colour. Do not reuse emblems from the reference.
+
+======================================================================
+
+AGE OF MAMMALS  ->  save as art/sheets/gems-mammals.png
+
+Use the attached image as the EXACT style reference. It shows 18 finished gems from my match-3 game. Make 6 NEW gems in precisely the same style for the AGE OF MAMMALS era (66 to 2.6 million years ago).
+
+LAYOUT (very important):
+- One landscape image, 3:2 ratio, flat solid dark navy background #0F1424 everywhere, no gradient, no texture, no vignette.
+- A grid of 3 columns x 2 rows, 6 gems total, evenly spaced. Each gem is centred in its own cell and fills about 75% of the cell.
+- Wide empty gaps of plain background between gems. Gems, glows and sparkles must NEVER touch or overlap each other or the image edge.
+- Top row, left to right: red, green, blue. Bottom row, left to right: yellow, purple, amber.
+
+GEM SHAPES AND COLOURS (copy them exactly from the reference, same column = same shape and colour):
+1. Red OCTAGON, ruby red.
+2. Green upright OVAL, emerald green.
+3. Blue DIAMOND / rhombus standing on a point, sapphire blue.
+4. Yellow TRIANGLE pointing DOWN, golden yellow.
+5. Purple PENTAGON with a row of small crystal spikes along its top edges, amethyst purple.
+6. Amber TEARDROP with the point at the top, orange amber, translucent.
+
+STYLE (match the reference exactly):
+- Glossy faceted gemstone, crisp facet planes, a thick dark outline around the whole gem, a soft inner glow, light from the top left, a few small white star sparkles on the edges.
+- In the centre of each gem, one bold engraved EMBLEM as a clean single-colour silhouette in a darker tone of the gem's own colour, slightly recessed, lower contrast than the gem outline, readable at 48 pixels. Side view where it is an animal. No fine hair-thin detail.
+- Same size, same outline weight and same lighting on all 6 gems. Each gem must look like it belongs in the same set as the reference.
+
+EMBLEMS for the Age of mammals:
+1. Red octagon: Hyaenodon, a big wolf-like early predator mid-stride, jaws open
+2. Green oval: a tuft of tall grass stalks with seed heads
+3. Blue diamond: Basilosaurus, an early whale, a very long eel-like body with a small tail fluke, swimming
+4. Yellow triangle: Eohippus, the tiny early horse, standing side view
+5. Purple pentagon: Paraceratherium, the giant hornless rhino with a long neck, walking
+6. Amber teardrop: an ant, as if trapped inside the amber
+
+DO NOT: add text, letters, numbers, labels, a title, a watermark, a frame, a border, a shadow on the background, extra objects, extra gems, or any background scenery. Do not change any gem's shape or colour. Do not reuse emblems from the reference.
+
+======================================================================
+
+ICE AGE  ->  save as art/sheets/gems-iceage.png
+
+Use the attached image as the EXACT style reference. It shows 18 finished gems from my match-3 game. Make 6 NEW gems in precisely the same style for the ICE AGE era (2.6 million to 11,700 years ago).
+
+LAYOUT (very important):
+- One landscape image, 3:2 ratio, flat solid dark navy background #0F1424 everywhere, no gradient, no texture, no vignette.
+- A grid of 3 columns x 2 rows, 6 gems total, evenly spaced. Each gem is centred in its own cell and fills about 75% of the cell.
+- Wide empty gaps of plain background between gems. Gems, glows and sparkles must NEVER touch or overlap each other or the image edge.
+- Top row, left to right: red, green, blue. Bottom row, left to right: yellow, purple, amber.
+
+GEM SHAPES AND COLOURS (copy them exactly from the reference, same column = same shape and colour):
+1. Red OCTAGON, ruby red.
+2. Green upright OVAL, emerald green.
+3. Blue DIAMOND / rhombus standing on a point, sapphire blue.
+4. Yellow TRIANGLE pointing DOWN, golden yellow.
+5. Purple PENTAGON with a row of small crystal spikes along its top edges, amethyst purple.
+6. Amber TEARDROP with the point at the top, orange amber, translucent.
+
+STYLE (match the reference exactly):
+- Glossy faceted gemstone, crisp facet planes, a thick dark outline around the whole gem, a soft inner glow, light from the top left, a few small white star sparkles on the edges.
+- In the centre of each gem, one bold engraved EMBLEM as a clean single-colour silhouette in a darker tone of the gem's own colour, slightly recessed, lower contrast than the gem outline, readable at 48 pixels. Side view where it is an animal. No fine hair-thin detail.
+- Same size, same outline weight and same lighting on all 6 gems. Each gem must look like it belongs in the same set as the reference.
+- A faint frosty sparkle on the gem edges is welcome, but keep the gem colours exactly as in the reference.
+
+EMBLEMS for the Ice age:
+1. Red octagon: a Smilodon sabre-toothed cat skull in side view, with the two very long fangs
+2. Green oval: a spruce branch with a hanging pine cone
+3. Blue diamond: a woolly mammoth walking, long curved tusks and raised trunk
+4. Yellow triangle: an Irish elk head with its enormous wide palm-shaped antlers
+5. Purple pentagon: a woolly rhinoceros walking, with its two horns, long front horn
+6. Amber teardrop: a small beetle, as if trapped inside the amber
+
+DO NOT: add text, letters, numbers, labels, a title, a watermark, a frame, a border, a shadow on the background, extra objects, extra gems, or any background scenery. Do not change any gem's shape or colour. Do not reuse emblems from the reference.
+
+======================================================================
+
+EARLY HUMANS  ->  save as art/sheets/gems-humans.png
+
+Use the attached image as the EXACT style reference. It shows 18 finished gems from my match-3 game. Make 6 NEW gems in precisely the same style for the EARLY HUMANS era (about 4 million to 40,000 years ago).
+
+LAYOUT (very important):
+- One landscape image, 3:2 ratio, flat solid dark navy background #0F1424 everywhere, no gradient, no texture, no vignette.
+- A grid of 3 columns x 2 rows, 6 gems total, evenly spaced. Each gem is centred in its own cell and fills about 75% of the cell.
+- Wide empty gaps of plain background between gems. Gems, glows and sparkles must NEVER touch or overlap each other or the image edge.
+- Top row, left to right: red, green, blue. Bottom row, left to right: yellow, purple, amber.
+
+GEM SHAPES AND COLOURS (copy them exactly from the reference, same column = same shape and colour):
+1. Red OCTAGON, ruby red.
+2. Green upright OVAL, emerald green.
+3. Blue DIAMOND / rhombus standing on a point, sapphire blue.
+4. Yellow TRIANGLE pointing DOWN, golden yellow.
+5. Purple PENTAGON with a row of small crystal spikes along its top edges, amethyst purple.
+6. Amber TEARDROP with the point at the top, orange amber, translucent.
+
+STYLE (match the reference exactly):
+- Glossy faceted gemstone, crisp facet planes, a thick dark outline around the whole gem, a soft inner glow, light from the top left, a few small white star sparkles on the edges.
+- In the centre of each gem, one bold engraved EMBLEM as a clean single-colour silhouette in a darker tone of the gem's own colour, slightly recessed, lower contrast than the gem outline, readable at 48 pixels. Side view where it is an animal. No fine hair-thin detail.
+- Same size, same outline weight and same lighting on all 6 gems. Each gem must look like it belongs in the same set as the reference.
+
+EMBLEMS for Early humans:
+1. Red octagon: a cave lion walking, drawn like a simple cave painting
+2. Green oval: an ear of wild wheat with long whiskers
+3. Blue diamond: a cave-art hand print, an open human hand
+4. Yellow triangle: a burning torch, a wooden stick with a bright flame
+5. Purple pentagon: a stone hand axe, teardrop-shaped flint tool with chipped facets
+6. Amber teardrop: a honeybee, as if trapped inside the amber
+
+DO NOT: add text, letters, numbers, labels, a title, a watermark, a frame, a border, a shadow on the background, extra objects, extra gems, or any background scenery. Do not change any gem's shape or colour. Do not reuse emblems from the reference.

@@ -14,5 +14,7 @@ export const aiKitOn = () => aiHas('panel', 'panel-small', 'btn-gold', 'btn-ston
 export function applyAiKit(root = document.documentElement) {
   for (const [n, u] of Object.entries(urls)) root.style.setProperty('--ai-' + n, `url(${u})`);
   root.classList.toggle('ai-kit', aiKitOn());
+  // the extra pieces of the second AI sheet (tools/prep-pieces-sheet.py kit): one class each, so their CSS only applies when the file is there
+  for (const n of ['medallion-teal', 'slot', 'bubble', 'card', 'toast', 'star-slot']) root.classList.toggle('ai-has-' + n, !!urls[n] && aiKitOn());
 }
 if (typeof document !== 'undefined') applyAiKit();

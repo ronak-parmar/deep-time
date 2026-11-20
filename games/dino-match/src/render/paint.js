@@ -2,6 +2,7 @@
 // Motion uses LOOP.scene from motion.js (slow, subtle) and is frozen under reduced motion. No per-frame allocations.
 import { slot, slotsReady, drawSlot } from './art.js';
 import { HUD_LAYOUT, BOOSTER_LAYOUT, PROP_W } from './artManifest.js';
+import { BOOSTERS as BOOSTER_DEFS, LEVEL_BOOSTERS } from '../data/boosters.js';
 import { LOOP } from './motion.js';
 
 const W = 360, H = 640, TAU = Math.PI * 2, OVER = 0.06;      // background is drawn 6% larger so it can drift without edges showing
@@ -45,8 +46,9 @@ export function drawHud(c) {
   drawSlot(c, 'back-button', L.back.x, L.back.y, L.back.w, L.back.h);
 }
 
-const BOOSTERS = [['booster-pick', 'count-badge-blue', 'pick'], ['booster-burst', 'count-badge-red', 'burst'], ['booster-brush', 'count-badge-green', 'brush']];
-export const boostersPainted = () => BOOSTERS.every(([m]) => !!slot(m));
+const BOOSTERS = [['booster-pick', 'count-badge-blue', 'pick'], ['booster-rockslide', 'count-badge-red', 'rockslide'], ['booster-brush', 'count-badge-green', 'brush']];
+// every in-level booster has its painted medallion (the DOM bar, ui/boosters.js, then drops the pill look)
+export const boostersPainted = () => LEVEL_BOOSTERS.every((id) => !BOOSTER_DEFS[id].slot || !!slot(BOOSTER_DEFS[id].slot));
 export function drawBoosters(c, counts, enabled, label) {
   const B = BOOSTER_LAYOUT;
   BOOSTERS.forEach(([m, badge, k], i) => {

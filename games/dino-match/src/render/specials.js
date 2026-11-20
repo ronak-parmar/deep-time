@@ -4,6 +4,7 @@ import { aiUrl } from '../ui/kitart.js';
 import { LOOP, EASE, SPECIAL_IDLE } from './motion.js';
 import { specialArt } from './specialArt.js';
 import { GEM_COLORS } from './gems.js';
+import { drawFxFrame, fxReady, tailFade } from './fxArt.js';
 
 const TAU = Math.PI * 2;
 const OUT = '#1A100A';
@@ -120,13 +121,44 @@ function drawPickStrike(c, f, t) {
   else { c.rotate(0.97); c.strokeStyle = '#7A5A3A'; c.lineWidth = 4; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -S * 0.7); c.stroke(); c.strokeStyle = '#C8CFD8'; c.lineWidth = 5; c.beginPath(); c.moveTo(-S * 0.3, -S * 0.62); c.quadraticCurveTo(0, -S * 0.8, S * 0.3, -S * 0.62); c.stroke(); }
   c.restore();
 }
+// Painted frames (render/fxArt.js) for an effect, when its atlas is in: explosion for bomb / dynamite / TNT / area combos, fire beams for
+// firecrackers and line combos, the rainbow ring under the white rays. f.plife = the painted life (motion.js FX), f.shape / f.r / f.t =
+// the effect shape (core/specials.js), f.board = the board rect. Returns which code parts it replaced.
+const half = (f) => f.shape === 'square' || f.shape === 'diamond' ? (f.r ?? 1) + 0.5 : f.kind === 'tnt' ? 3.5 : f.kind === 'dynamite' ? 2.5 : 1.5;
+function drawPainted(c, f, now) {
+  const done = { beam: false, blast: false }, b = f.board; if (!f.plife || !b) return done;
+  const t = (now - f.t0) / f.plife; if (t < 0 || t > 1) return done;
+  const beams = f.kind === 'firecracker' || (f.kind === 'combo' && (f.shape === 'line' || f.shape === 'cross'));
+  const blast = !beams && (f.kind === 'bomb' || f.kind === 'dynamite' || f.kind === 'tnt' || f.kind === 'combo');
+  const a = tailFade(t);
+  if (beams && fxReady('beam')) {
+    const thick = f.cs * 1.5 * Math.pow(2 * (f.shape === 'cross' ? f.t || 0 : 0) + 1, 0.8), grow = EASE.out(Math.min(1, t * 3));
+    const axes = f.shape === 'cross' ? ['h', 'v'] : [f.o === 'v' ? 'v' : 'h'];
+    for (const o of axes) {
+      const L = (o === 'h' ? b.w : b.h) * 1.06, cx = o === 'h' ? b.x + b.w / 2 : f.x, cy = o === 'h' ? f.y : b.y + b.h / 2;
+      const s0 = o === 'h' ? f.x - cx : f.y - cy, h = thick / 0.6;   // the flames fill ~60% of a beam frame's height
+      const clip = [s0 - L * grow, -h, 2 * L * grow, 2 * h];            // the beam runs out from the piece both ways
+      drawFxFrame(c, 'beam', t, o === 'h' ? cx : cx, cy, L, h, { rot: o === 'v' ? Math.PI / 2 : 0, alpha: a, clip });
+    }
+    done.beam = true;
+  }
+  if (blast && fxReady('explosion')) {
+    const whole = f.shape === 'board', x = whole ? b.x + b.w / 2 : f.x, y = whole ? b.y + b.h / 2 : f.y;
+    const side = whole ? Math.max(b.w, b.h) * 1.15 : (2 * half(f) * f.cs) / 0.85;   // the cloud fills ~85% of a frame at its peak
+    drawFxFrame(c, 'explosion', t, x, y, side, side, { alpha: a }); done.blast = true;
+  }
+  if (f.kind === 'rainbow' && fxReady('rainbow')) drawFxFrame(c, 'rainbow', t, f.x, f.y, f.cs * 5.5, f.cs * 5.5, { alpha: a });
+  return done;
+}
+
 export function drawFx(c, list, now) {
   for (const f of list) {
+    const p = f.kind === 'pickstrike' ? null : drawPainted(c, f, now);
     const t = (now - f.t0) / f.life; if (t < 0 || t > 1) continue;
     if (f.kind === 'pickstrike') { drawPickStrike(c, f, t); continue; }
     const e = EASE.out(t), fade = 1 - t * t, cs = f.cs;
     c.save(); c.globalAlpha = Math.max(0, fade); c.lineCap = 'round';
-    if (f.kind === 'firecracker' || f.kind === 'combo' && f.cells.length) {
+    if (!p.beam && !p.blast && (f.kind === 'firecracker' || f.kind === 'combo' && f.cells.length)) {
       // light beams from the source to every cell it hit (firecracker lines become a straight bar)
       c.strokeStyle = '#FFE9A8'; c.lineWidth = cs * 0.5 * (1 - t) + 2;
       for (const q of f.cells) { c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(f.x + (q.x - f.x) * e, f.y + (q.y - f.y) * e); c.stroke(); }
@@ -135,7 +167,7 @@ export function drawFx(c, list, now) {
       c.strokeStyle = '#FFFFFF'; c.lineWidth = 3 * (1 - t) + 1;
       for (const q of f.cells) { c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(f.x + (q.x - f.x) * e, f.y + (q.y - f.y) * e); c.stroke(); }
     }
-    if (f.kind === 'bomb' || f.kind === 'dynamite' || f.kind === 'tnt' || f.big) {
+    if (!p.blast && (f.kind === 'bomb' || f.kind === 'dynamite' || f.kind === 'tnt' || f.big)) {
       const R = cs * (f.big ? 3.2 : f.kind === 'tnt' ? 3.6 : f.kind === 'dynamite' ? 2.6 : 1.8) * e;
       const g = c.createRadialGradient(f.x, f.y, R * 0.1, f.x, f.y, Math.max(1, R));
       g.addColorStop(0, 'rgba(255,244,214,.9)'); g.addColorStop(0.6, 'rgba(255,170,60,.5)'); g.addColorStop(1, 'rgba(255,120,40,0)');

@@ -7,13 +7,18 @@ import { drawBackdrop } from '../src/render/paint.js';
 import { eraIds, THEMES } from '../src/render/eraTheme.js';
 
 const REQUIRED = ['hud-sign', 'hud-plaque', 'moves-medallion', 'target-sign', 'gear-button', 'back-button', 'progress-frame', 'progress-fill', 'star-on', 'star-off',
-  'booster-pick', 'booster-burst', 'booster-brush', 'count-badge-blue', 'count-badge-red', 'count-badge-green', 'tile-cream', 'tile-dirt', 'tile-sand', 'tile-stone', 'tile-cracked',
+  'booster-pick', 'booster-rockslide', 'booster-brush', 'booster-amber', 'booster-tremor', 'booster-moves5', 'booster-lucky', 'booster-start3', 'count-badge-blue', 'count-badge-red', 'count-badge-green', 'tile-cream', 'tile-dirt', 'tile-sand', 'tile-stone', 'tile-cracked',
   'tablet-skull', 'tablet-footprint', 'tablet-fern', 'dirt-crumbs'];
 const root = join(import.meta.dirname, '..');
 const here = (r) => existsSync(join(root, 'art-standins', r)) || existsSync(join(root, '../../art', r));
 
 describe('art manifest', () => {
-  it('names every slot in the brief', () => { for (const n of REQUIRED) expect(UI_SLOTS[n], n).toBeTruthy(); expect(SLOT_NAMES.sort()).toEqual([...REQUIRED].sort()); });
+  it('names every slot in the brief', () => { for (const n of REQUIRED) expect(UI_SLOTS[n], n).toBeTruthy(); expect(SLOT_NAMES.filter((n) => !UI_SLOTS[n].sheet || REQUIRED.includes(n)).sort()).toEqual([...REQUIRED].sort()); });
+  it('slots cut from owner sheets (boosters, map pieces, icons) name their sheet and exist in art/', () => {
+    const cut = SLOT_NAMES.filter((n) => UI_SLOTS[n].sheet);
+    for (const k of ['booster-rockslide', 'node-current', 'map-pin', 'step-stone-1', 'cloud-1', 'mist-1', 'icon-hand', 'icon-back']) expect(cut, k).toContain(k);
+    for (const n of cut) for (const f of slotFiles(n)) expect(existsSync(join(root, '../../art', f)), f).toBe(true);
+  });
   it('every slot has a size, and 9-slice insets that fit inside it', () => {
     for (const [n, s] of Object.entries(UI_SLOTS)) {
       expect(s.w > 0 && s.h > 0, n).toBe(true);
@@ -32,7 +37,7 @@ describe('art manifest', () => {
   });
   it('tools/gen-ui.py has a builder for every manifest slot, and art/ui holds every generated file', () => {
     const py = readFileSync(join(root, '../../tools/gen-ui.py'), 'utf8');
-    for (const n of SLOT_NAMES) { expect(py.includes(`'${n}':`), n).toBe(true); for (const f of slotFiles(n)) expect(existsSync(join(root, '../../art', f)), f).toBe(true); }
+    for (const n of SLOT_NAMES.filter((k) => !UI_SLOTS[k].sheet)) { expect(py.includes(`'${n}':`), n).toBe(true); for (const f of slotFiles(n)) expect(existsSync(join(root, '../../art', f)), f).toBe(true); }
   });
   it('HUD layout fits the 360 px stage without overlaps', () => {
     const r = Object.values(HUD_LAYOUT).sort((a, b) => a.x - b.x);

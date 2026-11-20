@@ -33,7 +33,7 @@ export function runChain(cells, w, h, base, seeds = [], opts = {}) {
     if (cells[it.i]) clear(it.i);
     const list = [];
     for (const j of hit) { if (cells[j] && !cells[j].a) { clear(j); list.push(j); enqueue(j, it.depth + 1); } }
-    fires.push({ i: it.i, id: it.ids[0] ?? -1, kind: it.kind, o: it.o, depth: it.depth, cells: list, area: it.effect.shape === 'colour' ? list : hit, colour });
+    fires.push({ i: it.i, id: it.ids[0] ?? -1, kind: it.kind, o: it.o, depth: it.depth, cells: list, area: it.effect.shape === 'colour' ? list : hit, colour, shape: it.effect.shape, r: it.effect.r, t: it.effect.t });
   }
   return { cleared: order, fires, capped };
 }

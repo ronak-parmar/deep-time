@@ -5,8 +5,9 @@ import { UI_SLOTS, SLOT_NAMES, slotFiles, bgFiles, propsPrefix, parseProp } from
 // art/ (owner art) overrides games/dino-match/art-standins/ (temporary). Missing folders just give empty maps.
 const standins = import.meta.glob('../../art-standins/{backgrounds,props,ui}/**/*.{png,webp}', { eager: true, query: '?url', import: 'default' });
 // backgrounds/_*.png (contact sheets) are working files and never shipped
-const owner = import.meta.glob(['../../../../art/{backgrounds/runtime/*.webp,backgrounds/*.png,props/**/*.png,ui/**/*.png}', '!../../../../art/backgrounds/_*.png'], { eager: true, query: '?url', import: 'default' });
-const rel = (p) => p.replace(/^.*\/((backgrounds|props|ui)\/.*)$/, '$1');
+// fx/*.webp: painted effect frame atlases (render/fxArt.js); ambient/<era>/<n>.webp: drifting island elements (render/ambientArt.js)
+const owner = import.meta.glob(['../../../../art/{backgrounds/runtime/*.webp,backgrounds/*.png,props/**/*.png,ui/**/*.png,fx/*.webp,ambient/*/*.webp}', '!../../../../art/backgrounds/_*.png'], { eager: true, query: '?url', import: 'default' });
+const rel = (p) => p.replace(/^.*\/((backgrounds|props|ui|fx|ambient)\/.*)$/, '$1');
 
 let URLS = new Map(), SOURCE = new Map();
 const cache = new Map();           // rel -> Promise<img|null>, and `ready` for sync reads
@@ -19,7 +20,10 @@ export function registerUrls(map, source = 'art') {
   artVersion++;
 }
 export function resetArt() { URLS = new Map(); SOURCE = new Map(); cache.clear(); ready.clear(); artVersion++; }
-registerUrls(standins, 'standin'); registerUrls(owner, 'art');
+// the stand-in era props (art-standins/props: leaf + lava glow overlays) only with ?standins in the URL; production builds drop the whole
+// stand-in glob (vite.config.js runtimeArtOnly), so no stand-in ships
+const standinProps = typeof location !== 'undefined' && /[?&]standins\b/.test(location.search || '');
+registerUrls(Object.fromEntries(Object.entries(standins).filter(([p]) => standinProps || !p.includes('/props/'))), 'standin'); registerUrls(owner, 'art');
 
 export const sourceOf = (r) => SOURCE.get(r) || null;
 export const hasFile = (r) => URLS.has(r);

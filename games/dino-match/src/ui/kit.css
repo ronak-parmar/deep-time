@@ -32,7 +32,7 @@
 .kit-btn:disabled, .dt-btn:disabled { filter: grayscale(.85) brightness(.8) drop-shadow(0 2px 2px rgba(0,0,0,.4)); cursor: default; }
 .kit-btn--full, .dt-btn.dt-btn--full { width: 100%; }
 .kit-btn__t { display: inline-flex; align-items: center; gap: 6px; }
-.kit-btn svg, .dt-btn svg { flex: none; }
+.kit-btn svg, .dt-btn svg, .kit-btn .dt-glyph, .dt-btn .dt-glyph { flex: none; }
 
 /* ---- medallion with a glow and a sparkle on arrival */
 .kit-medal { position: relative; width: var(--s, 64px); height: var(--s, 64px); flex: none; display: flex; align-items: center; justify-content: center; background: var(--kit-medallion) center / 100% 100% no-repeat; color: var(--kit-gold); filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)) drop-shadow(0 0 10px rgba(255,200,90,.45)); }
@@ -218,3 +218,53 @@ html.ai-kit .kit-slot { --bh: 80px; padding: 2px 0; border-width: calc(var(--bh)
 .museum__grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .museum__card .museum__name { font-size: 14px; line-height: 1.15; }
 .museum__card .museum__sub { font-size: 11px; line-height: 1.2; }
+
+/* ---- painted icons (art/ui/icons, ui/glyphs.js): same box as the svg glyph, aspect kept, a soft shadow on painted plates */
+.dt-glyph--icon { object-fit: contain; flex: none; filter: drop-shadow(0 1px 1px rgba(30,14,4,.6)); }
+.screen:not(.play) .icon-btn .dt-glyph--icon { margin-top: -3px; }
+html.ai-kit .screen:not(.play) .icon-btn .dt-glyph--icon { margin-top: 0; }
+.kit-btn .dt-glyph--icon, .dt-btn .dt-glyph--icon { margin: -4px 0; width: 24px !important; height: 24px !important; }
+
+/* =====================================================================================================================
+   Second AI sheet (art/sheets/kit-extra.png -> art/ui/kit/*.webp, tools/prep-pieces-sheet.py kit). kitart.js sets html.ai-has-<name>
+   per file, so nothing below applies when a picture is missing. Insets measured on the cut pictures (px at their size):
+     slot       560x267  9-slice 80 180 80 140 (vines top right / bottom left stay in the corners); plain face from x 60..500, y 80..205
+     bubble     480x366  9-slice 70 70 110 170 (the tail, bottom left, stays in its corner); text face inset ~35, tail below y 300
+     toast      560x142  9-slice 40 75 40 75 (gold rounded ends)
+     card       300x360  fossil frame, dark face x 75..235, y 100..280 (centre 51.7%, 52.8%)
+   ===================================================================================================================== */
+/* pressed buttons with the AI kit: the same picture, a touch darker and 2 px lower (no -down stand-ins) */
+html.ai-kit :is(.kit-btn--gold, .dt-btn.dt-btn--primary, .kit-btn--stone, .dt-btn.dt-btn--secondary):active:not(:disabled) { transform: translateY(2px); filter: brightness(.86) drop-shadow(0 1px 2px rgba(0, 0, 0, .4)); }
+
+/* teal medallion: the painted teal ammonite (owner webp through --kit-medallion-teal) also with the AI kit on */
+html.ai-kit .kit-medal--teal { background-image: var(--kit-medallion-teal); background-size: 100% 100%; }
+
+/* carved rows: the sandstone slot plate behind the row (a ::before frame, so the row keeps its own padding) */
+html.kit-owner-slot .kit-slot { position: relative; isolation: isolate; border: 0; border-image: none; background: none; padding: 20px 20px 18px 20px; min-height: 76px; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .4)); }
+html.kit-owner-slot .kit-slot::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; box-sizing: border-box; border: solid transparent; border-width: 24px 54px 24px 42px;
+  border-image: var(--kit-slot) 80 180 80 140 fill / 24px 54px 24px 42px stretch; }
+html.kit-owner-slot .kit-slot :is(.heading, .howto__txt .heading) { color: var(--kit-ink); text-shadow: 0 1px 0 rgba(255, 240, 200, .8); }
+html.kit-owner-slot .kit-slot :is(.body-small, p, .caption) { color: #5B3A18; text-shadow: 0 1px 0 rgba(255, 240, 200, .6); }
+
+/* Yuvi's speech bubble (ui/yuvi.css; coach, tutorial, welcome and intro cards reuse it): the parchment bubble, tail bottom left toward
+   Yuvi; the css tail goes */
+html.ai-has-bubble .yuvi__bubble { isolation: isolate; border: 0; border-radius: 0; background: none; box-shadow: none; padding: 14px 15px 30px 14px; margin-left: -8px; min-height: 64px;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, .35)); }
+html.ai-has-bubble .yuvi__bubble::before { left: 0; top: 0; right: 0; bottom: 0; z-index: -1; border-width: 21px 21px 33px 51px; border-style: solid; border-color: transparent; pointer-events: none;
+  border-image: var(--ai-bubble) 70 70 110 170 fill / 21px 21px 33px 51px stretch; }
+html.ai-has-bubble .yuvi__bubble::after { display: none; }
+html.ai-has-bubble .yuvi__name { top: -10px; left: 16px; }
+
+/* toasts (cloud-save toast, in-level tips): the slim slate bar with the gold edge */
+html.ai-has-toast .dt-toast { box-sizing: border-box; min-height: 44px; padding: 0 6px; border-radius: 0; background: none; border: solid transparent; border-width: 12px 23px;
+  border-image: var(--ai-toast) 40 75 40 75 fill / 12px 23px stretch; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45)); }
+html.ai-has-toast .dt-toast, html.ai-has-toast .dt-toast .body-small { color: #F6EBD2; text-shadow: 0 1px 1px rgba(0, 0, 0, .7); }
+
+/* empty stars: the carved star hollow (result stars: components.js Stars; island nodes: .inode__stars) */
+.dt-stars .dt-star-img--slot { width: 58px; height: 54px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(60, 30, 5, .4)); }
+html.ai-has-star-slot .inode__stars i:not(.on) { background: var(--ai-star-slot) center / contain no-repeat; clip-path: none; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .5)); }
+
+/* fossil milestone on the island path: the fossil card frame round the carving */
+.isle__mframe { display: contents; }
+html.ai-has-card .isle__mframe { position: relative; display: block; flex: none; width: 74px; height: 88px; margin: -16px 0 -16px -4px; background: var(--ai-card) center / 100% 100% no-repeat; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .45)); }
+html.ai-has-card .isle__mframe canvas { position: absolute; left: calc(51.7% - 21px); top: calc(52.8% - 12px); width: 42px; height: 24px; border-radius: 3px; background: none; }

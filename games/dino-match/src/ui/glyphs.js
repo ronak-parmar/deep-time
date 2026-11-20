@@ -24,16 +24,36 @@ const P = {
   star: (() => { const p = []; for (let i = 0; i < 10; i++) { const r = i % 2 ? 4.9 : 11, a = (-90 + i * 36) * Math.PI / 180; p.push((12 + r * Math.cos(a)).toFixed(2) + ',' + (12.8 + r * Math.sin(a)).toFixed(2)); } return `<polygon points="${p.join(' ')}" />`; })()
 };
 import { aiUrl, aiKitOn } from './kitart.js';
+import { urlOf, artEnabled } from '../render/art.js';
+import { UI_SLOTS } from '../render/artManifest.js';
 const PAINTED = { heart: 'heart', star: 'star', pick: 'pickaxe', coin: 'coin' };   // painted icons from the AI kit when present
-export function glyph(name, size = 20) {
-  if (PAINTED[name] && aiKitOn() && aiUrl(PAINTED[name])) {
-    const im = document.createElement('img'); im.src = aiUrl(PAINTED[name]); im.alt = ''; im.draggable = false; im.width = im.height = size;
-    im.setAttribute('class', 'dt-glyph dt-glyph--img dt-glyph--' + name); im.style.width = im.style.height = size + 'px'; im.setAttribute('aria-hidden', 'true');
-    return im;
-  }
+// painted icons (art/ui/icons, artManifest 'icon-*' slots) by glyph name. Names only used in ONE meaning are mapped; the dock's own
+// names (dig, shop, settings) have the svg of pick / coin / gear as their fallback, so the coin currency glyph stays the coin.
+const ICON = { back: 'back', play: 'play', book: 'howto', info: 'info', lock: 'lock', check: 'check', video: 'video', museum: 'museum', dig: 'dig', shop: 'shop', settings: 'settings', hand: 'hand' };
+const FALLBACK = { dig: 'pick', shop: 'coin', settings: 'gear' };
+export const iconUrl = (name) => { const s = UI_SLOTS['icon-' + ICON[name]]; return s && artEnabled() ? urlOf(s.file) : null; };
+const img = (src, name, size) => {
+  const im = document.createElement('img'); im.src = src; im.alt = ''; im.draggable = false; im.width = im.height = size;
+  im.setAttribute('class', 'dt-glyph dt-glyph--img dt-glyph--' + name); im.style.width = im.style.height = size + 'px'; im.setAttribute('aria-hidden', 'true');
+  return im;
+};
+// opts.painted: false = always the svg (the in-level back button sits on the painted HUD art). Painted icons only from 16 px up:
+// tiny ticks (12 px on a green badge) read better as the plain svg.
+export function glyph(name, size = 20, { painted = true } = {}) {
+  if (PAINTED[name] && aiKitOn() && aiUrl(PAINTED[name])) return img(aiUrl(PAINTED[name]), name, size);
+  const icon = painted && size >= 16 ? iconUrl(name) : null;
+  if (icon) { const im = img(icon, name, size); im.classList.add('dt-glyph--icon'); return im; }
+  name = FALLBACK[name] || name;
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   s.setAttribute('width', size); s.setAttribute('height', size); s.setAttribute('viewBox', '0 0 24 24');
   s.setAttribute('aria-hidden', 'true'); s.setAttribute('focusable', 'false'); s.setAttribute('class', 'dt-glyph');
   s.innerHTML = P[name] || '';
   return s;
+}
+
+// The tutorial / coach pointer: the painted hand (finger up-left) placed so its fingertip lands where the svg hand's did (22, 2 in
+// the 44 px .tut__hand box; game.css .tut__handimg), or null (callers keep their svg).
+export function handArt() {
+  const u = iconUrl('hand'); if (!u) return null;
+  const im = document.createElement('img'); im.src = u; im.alt = ''; im.draggable = false; im.className = 'tut__handimg'; return im;
 }

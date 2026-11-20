@@ -555,3 +555,40 @@ html.ai-kit .wcard--locked { filter: grayscale(.7) brightness(.85) drop-shadow(0
 .pg-toast .dt-toast { background: rgba(20,34,58,.94); }
 .pg-toast--out { opacity: 0; }
 .is-reduced .pg-toast { transition: none; }
+
+/* painted tutorial hand (ui/glyphs.js handArt): 44 x 52, fingertip at (22, 2) of the 44 px hand box like the svg */
+.tut__handimg { position: absolute; left: 12.6px; top: 0; width: 44px; height: 52px; display: block; }
+/* painted dock icons: a little bigger than the line glyphs */
+.map__dockbtn .dt-glyph--icon { width: 30px !important; height: 30px !important; margin: -3px 0 -1px; }
+
+/* ---- painted journey-map pieces (render/mapArt.js sets --pic-* and .isle--art / .map--art when every node picture is in) ------
+   The coin fills 70% of its picture, so the picture is drawn 1/0.7 of the button (inset -21.43%): the halo of the current coin and
+   the flame badges of the hard coins sit in that margin. Tier and state: a played / open / current hard level shows the crimson
+   (super hard: violet) coin with its painted flames; a LOCKED hard level stays the slate coin and keeps the small code-drawn flame. */
+.isle--art .inode, .map--art .map__node { box-sizing: border-box; border-width: 0; background: none; box-shadow: none; isolation: isolate; --pic: var(--pic-node-done); }
+.isle--art .inode::after, .map--art .map__node::after { content: ''; position: absolute; inset: -21.43%; z-index: -1; pointer-events: none; background: var(--pic) center / 100% 100% no-repeat; }
+.isle--art .inode--open { --pic: var(--pic-node-open); }
+.isle--art .inode--locked, .map--art .map__node--locked { --pic: var(--pic-node-locked); }
+.isle--art .inode--current, .map--art .map__node--current { --pic: var(--pic-node-current); }
+.isle--art .inode--t-hard:not(.inode--locked) { --pic: var(--pic-node-hard); }
+.isle--art .inode--t-super-hard:not(.inode--locked) { --pic: var(--pic-node-superhard); }
+.isle--art .inode:not(.inode--locked) .inode__badge { display: none; }
+.isle--art .inode--locked .inode__badge { right: -12px; top: -12px; }
+/* numbers on the pictures: dark ink with a light halo on gold / cream / amber, light ink on slate, light with a dark outline on crimson / violet */
+.isle--art .inode, .map--art .map__node { color: #3E2108; text-shadow: 1px 0 0 rgba(255,244,205,.85), -1px 0 0 rgba(255,244,205,.85), 0 1px 0 rgba(255,244,205,.85), 0 -1px 0 rgba(255,244,205,.85); }
+.isle--art .inode--locked, .map--art .map__node--locked { color: #EEF1F6; opacity: 1; text-shadow: 0 1px 0 #262C38, 1px 0 0 #262C38, -1px 0 0 #262C38, 0 -1px 0 #262C38; }
+.isle--art .inode--t-hard:not(.inode--locked) { color: #FFF1E8; text-shadow: 0 1px 0 #4A0C08, 1px 0 0 #4A0C08, -1px 0 0 #4A0C08, 0 -1px 0 #4A0C08; }
+.isle--art .inode--t-super-hard:not(.inode--locked) { color: #FBF1FF; text-shadow: 0 1px 0 #2E0E52, 1px 0 0 #2E0E52, -1px 0 0 #2E0E52, 0 -1px 0 #2E0E52; }
+/* the current coin pulses with a filter (its halo is in the picture) instead of the code-drawn box-shadow glow */
+.isle--art .inode--current, .map--art .map__node--current { animation: nodeart var(--m-slow) ease-in-out infinite; }
+@keyframes nodeart { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.12) drop-shadow(0 0 6px rgba(255,214,102,.7)); } }
+.is-reduced .isle--art .inode--current, .is-reduced .map--art .map__node--current { animation: none; }
+@media (prefers-reduced-motion: reduce) { .isle--art .inode--current, .map--art .map__node--current { animation: none; } }
+/* the pin: the painted amber pin (tip on the same spot as the css teardrop's), same bob; the css teardrop and its sun go */
+:is(.isle--art, .map--art) .map__pin { left: -22px; top: -84px; width: 44px; height: 44px; border: 0; border-radius: 0; transform: none; box-shadow: none;
+  background: var(--pic-map-pin) center / contain no-repeat; filter: drop-shadow(0 0 7px rgba(255,190,70,.65)) drop-shadow(0 4px 3px rgba(60,20,0,.4)); }
+:is(.isle--art, .map--art) .map__sun { display: none; }
+
+/* booster intro card: the booster's medallion pinned on the corner of the demo board */
+.intro__bart { position: relative; }
+.intro__bart > .bmed { position: absolute; left: -16px; top: -16px; z-index: 1; }

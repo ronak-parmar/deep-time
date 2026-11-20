@@ -22,7 +22,7 @@ export function mountPlay(root, { level, state, onHome, tip, boosters: bp }) {
   moves.el.classList.toggle('stat--low', state.moves <= 5 && state.moves > 3); moves.el.classList.toggle('stat--crit', state.moves <= 3);
   const targets = TargetPanel(state);
   const tgtEl = h('div', { class: 'stat stat--target' }, h('span', { class: 'caption' }, state.targets.length && state.targets.every((t) => t.type === 'collect') ? 'Break' : 'Target'), targets.el);   // collect-only levels read "Break" over the gem icons and counts
-  const home = h('button', { type: 'button', class: 'icon-btn play-back', 'aria-label': 'Back to home', onClick: onHome }, glyph('back', 22));
+  const home = h('button', { type: 'button', class: 'icon-btn play-back', 'aria-label': 'Back to home', onClick: onHome }, glyph('back', 22, { painted: false }));
   const kinds = bp ? unlockedBoosters(level.level, 'level') : [];
   const bar = kinds.length ? BoosterBar({ kinds, counts: { ...bp.counts }, onTap: bp.onTap }) : null;
   const promptText = h('span', {}), promptBtn = h('button', { type: 'button', id: 'booster-cancel', onClick: () => bp?.onCancel?.() }, 'Cancel');

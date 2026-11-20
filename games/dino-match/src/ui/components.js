@@ -14,7 +14,9 @@ export function Stars(count) {
   const wrap = h('div', { class: 'dt-stars', role: 'img', 'aria-label': `${count} of 3 stars` });
   for (let i = 0; i < 3; i++) {
     if (aiKitOn() && aiUrl('star')) {    // the painted star from the AI kit; the empty one is the same star, dark
-      const im = h('img', { class: 'dt-star-img dt-star-img--ai' + (i < count ? ' pop-in' : ' dt-star-img--off'), src: aiUrl('star'), alt: '', draggable: 'false' });
+      // the empty one: the carved star hollow (star-slot) when there is one, else the same star, dark
+      const hollow = i >= count && aiUrl('star-slot');
+      const im = h('img', { class: 'dt-star-img dt-star-img--ai' + (i < count ? ' pop-in' : hollow ? ' dt-star-img--slot' : ' dt-star-img--off'), src: hollow || aiUrl('star'), alt: '', draggable: 'false' });
       im.style.animationDelay = `calc(var(--m-stagger-reward) * ${i + 1})`; wrap.append(im); continue;
     }
     if (slotsReady('star-on', 'star-off')) {    // painted stars; vector glyph otherwise

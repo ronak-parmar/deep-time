@@ -9,6 +9,7 @@ import { drawFossilArt, partCentre } from '../render/fossilArt.js';
 import { aiUrl } from '../ui/kitart.js';
 import { RECIPES, EASE, D, dur, sleep, shakeOf } from '../render/motion.js';
 import { ParticlePool } from '../render/particles.js';
+import { SpriteFx, preloadFx } from '../render/fxArt.js';
 import { cue } from '../render/sound.js';
 import { plaqueUrl, drawPlaque } from '../render/frame.js';
 import { themeFor } from '../render/eraTheme.js';
@@ -48,7 +49,7 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
 
   // animation state
   let celebrating = null, revealed = 0, animIdx = -1, animStart = 0, animMs = 0, animRes = null, completedAnim = false, glow = 0, busy = false, swing = null, shake = null, vt = 0, lastT = 0, alive = true;
-  const pool = new ParticlePool();
+  const pool = new ParticlePool(), sprites = new SpriteFx(); preloadFx();   // painted chips / sparkle / confetti (render/fxArt.js), particles stay
   let slab = null, slabId = null, W = CW, Hh = CH;
   const loadFor = () => { const f = fossil(); if (!f || f.id === slabId) return; slabId = f.id; loadSlab(f.id).then((sl) => { if (slabId !== f.id) return; slab = sl; el.classList.toggle('dig--slab', !!sl); resize(); }); };
   const resize = () => {
@@ -127,6 +128,7 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
       const big = k === STRIKES - 1;
       pool.emit('shard', c.x, c.y, '#5A4030', big ? 6 : 3, big ? 3.6 : 2.6); pool.emit('shard', c.x, c.y, '#C8955A', big ? 4 : 2, 3);
       pool.emit('dust', c.x, c.y, slab ? '#D8A25E' : '#9A7A55', big ? 12 : 5, big ? 2 : 1.3);
+      sprites.add('chips', c.x, c.y, box.w * (big ? 0.34 : 0.22), vt, { rot: k * 1.3 }); if (big) sprites.add('dust', c.x, c.y, box.w * 0.4, vt);
       addCracks(c.x, c.y, big ? 4 : 2, box.w * (big ? 0.16 : 0.1));
       const sk = shakeOf(R.shake); if (sk) shake = { px: sk.px * (big ? 1 : 0.5), ms: dur(sk.ms) * (big ? 1 : 0.6), t0: vt };
       if (!big) await sleep(D.instant * 0.75);
@@ -135,8 +137,8 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
     await new Promise((res) => { animIdx = part; animStart = vt; animMs = dur(R.reveal); animRes = res; completedAnim = completed; });
     cracks.length = 0;
     revealed = part + 1;
-    if (slab) pool.emit('sparkle', c.x, c.y, '#FFF1B8', 12, 3.4);   // a small shine when the part clears
-    if (completed) { cue('fossilComplete'); const F = RECIPES.fossilComplete; pool.emit('confetti', box.x + box.w / 2, box.y + box.h / 2, '#FFC24B', 40, 4); pool.emit('sparkle', box.x + box.w / 2, box.y + box.h / 2, '#FFE9A8', 10, 4); const k2 = shakeOf(F.shake); if (k2) shake = { px: k2.px, ms: dur(k2.ms), t0: vt }; }
+    if (slab) { pool.emit('sparkle', c.x, c.y, '#FFF1B8', 12, 3.4); sprites.add('sparkle', c.x, c.y, box.w * 0.3, vt); }   // a small shine when the part clears
+    if (completed) { cue('fossilComplete'); const F = RECIPES.fossilComplete; sprites.add('confetti', box.x + box.w / 2, box.y + box.h / 2, box.w * 1.1, vt); pool.emit('confetti', box.x + box.w / 2, box.y + box.h / 2, '#FFC24B', 40, 4); pool.emit('sparkle', box.x + box.w / 2, box.y + box.h / 2, '#FFE9A8', 10, 4); const k2 = shakeOf(F.shake); if (k2) shake = { px: k2.px, ms: dur(k2.ms), t0: vt }; }
   }
   // crack lines on the dirt where the pickaxe hits (fade out when the part is brushed away)
   const cracks = [];
@@ -168,7 +170,7 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
     slab.draw(c, box.x, box.y, box.w, box.h, { revealed: done ? CONFIG.fossils.parts : revealed, anim: animIdx >= 0 ? { index: animIdx, t: Math.min(1, (vt - animStart) / animMs) } : null, glow });
     drawCracks(c);
     if (swing) drawPick(c, swing, vt);
-    pool.draw(c); c.restore();
+    pool.draw(c); sprites.draw(c, vt); c.restore();
   }
   function draw() {
     const c = ctx, f = celebrating || fossil() || FOSSILS[FOSSILS.length - 1];
@@ -186,7 +188,7 @@ export function mountDig(root, { profile, dig, onBack, onComplete, onMuseum, onP
     drawFossilArt(c, f.shape, ART.x, ART.y, ART.w, ART.h, { revealed: done ? 10 : revealed, look: done || celebrating ? 'bone' : 'dig', anim: animIdx >= 0 ? { index: animIdx, t: Math.min(1, (vt - animStart) / animMs) } : null, glow });
     drawCracks(c);
     if (swing) drawPick(c, swing, vt);
-    pool.draw(c);
+    pool.draw(c); sprites.draw(c, vt);
     c.restore();
   }
   // the kit pickaxe picture (art/ui/kit/pickaxe.webp) swung about its handle end; code-drawn pick if the picture is missing

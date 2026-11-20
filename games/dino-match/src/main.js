@@ -1,4 +1,6 @@
 import { injectDesignSystem } from './ui/tokens.js';
+import { preloadFx } from './render/fxArt.js';   // painted effect frames + island ambient art: loaded after boot, never on the loading screen
+import { preloadAmbient } from './render/ambientArt.js';
 import { reducedMotion } from './ui/motion.js';
 import { D, dur, RECIPES, YUVI as YUVI_T, BOOT } from './render/motion.js';
 import { cue, unlock, setMuted, setHaptics } from './render/sound.js';
@@ -523,7 +525,7 @@ async function boot() {
   await (firstLaunch() ? showIsland(ERAS[0].id, null, { hello: true }) : showHome());   // first launch: the first island, Yuvi says hello
   save.start();   // Play Games: silent sign-in check + cloud merge in the background; play never waits for it
 }
-boot().then(() => { if (location.search.includes('motion')) import('./render/motionlab.js').then((l) => l.mountLab({ renderer, ui, stage, fit, getProfile: () => profile })); });
+boot().then(() => { preloadFx(); preloadAmbient(); if (location.search.includes('motion')) import('./render/motionlab.js').then((l) => l.mountLab({ renderer, ui, stage, fit, getProfile: () => profile })); });
 
 if (import.meta.env.DEV || location.search.includes('debug')) {
   window.__dino = {

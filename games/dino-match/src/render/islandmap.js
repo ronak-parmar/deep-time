@@ -12,6 +12,7 @@ import { drawThumb, thumbsReady } from './fossilThumbs.js';
 import { peek, loadEra } from './art.js';
 import { nodesFor, GROUND, groundOf } from '../data/islandNodes.js';
 import { artOf } from './islandart.js';
+import { cloudImg, mistImg, stoneImg, drawStone, loadCanvasPieces } from './mapArt.js';
 
 export const W = 360;
 export const NODES_PER_FOSSIL = 2;                    // one node per 25 levels
@@ -278,7 +279,10 @@ export function renderIsland(layout, isl, state, dpr, textureImg) {
 const SKY = [[0, '#B9A8E8'], [0.3, '#93B6F0'], [0.65, '#A4CDF3'], [1, '#EBCBE6']];
 const skyAt = (f) => { f = clamp(f, 0, 1); for (let i = 1; i < SKY.length; i++) if (f <= SKY[i][0]) { const a = SKY[i - 1], b = SKY[i]; return mix(a[1], b[1], (f - a[0]) / (b[0] - a[0])); } return SKY.at(-1)[1]; };
 const PUFFS = [[0, 0, 26], [-26, 7, 18], [24, 8, 20], [-8, -10, 18], [12, -8, 15], [-44, 12, 12], [42, 13, 12]];
-const cloud = (c, x, y, s, a) => {
+// painted cloud (art/ui/cloud-1/2.png) when present: about as wide as the puffs (112 units at s = 1), same centre and alpha
+const cloud = (c, x, y, s, a, k = 0) => {
+  const im = cloudImg(k);
+  if (im) { const w = 124 * s, h = w * im.height / im.width, g = c.globalAlpha; c.globalAlpha = g * a; c.drawImage(im, x - w / 2, y - h * 0.55, w, h); c.globalAlpha = g; return; }
   c.fillStyle = `rgba(190,176,232,${a * 0.5})`; PUFFS.forEach(([dx, dy, r]) => { c.beginPath(); c.ellipse(x + dx * s, y + (dy + 7) * s, r * s, r * s * 0.6, 0, 0, Math.PI * 2); c.fill(); });
   c.fillStyle = `rgba(255,255,255,${a})`; PUFFS.forEach(([dx, dy, r]) => { c.beginPath(); c.ellipse(x + dx * s, y + dy * s, r * s, r * s * 0.62, 0, 0, Math.PI * 2); c.fill(); });
 };
@@ -334,7 +338,7 @@ export function createMap(layout, { state, dpr = 1, reduced = () => false, world
       distant.push({ x, y, w, h, cv, k });
     });
   };
-  const ensure = async () => { await thumbsReady(); bitmaps.clear(); greyArt.clear(); buildDistant(); };   // fossil thumbnails first: bitmaps are painted once
+  const ensure = async () => { await Promise.all([thumbsReady(), loadCanvasPieces()]); bitmaps.clear(); greyArt.clear(); buildDistant(); };   // fossil thumbnails first: bitmaps are painted once
   const bitmapOf = (isl) => {
     if (!bitmaps.has(isl.index)) {
       const b = renderIsland(layout, isl, state, dpr, null);
@@ -357,7 +361,7 @@ export function createMap(layout, { state, dpr = 1, reduced = () => false, world
   };
   const drawClouds = (c, isl, list, t, motion) => {
     const r = rectOf(isl), span = r.w + 200;
-    list.forEach((cl, k) => { const x = r.x - 100 + ((cl.u * span + (motion ? t * cl.sp : 0)) % span), y = r.y + cl.v * r.h + (motion ? Math.sin(t * 0.4 + k + isl.index) * 2 : 0); cloud(c, x, y, cl.s, cl.a); });
+    list.forEach((cl, k) => { const x = r.x - 100 + ((cl.u * span + (motion ? t * cl.sp : 0)) % span), y = r.y + cl.v * r.h + (motion ? Math.sin(t * 0.4 + k + isl.index) * 2 : 0); cloud(c, x, y, cl.s, cl.a, k + isl.index); });
   };
 
   function draw(c, scrollUnits, viewW, viewH, t) {
@@ -382,16 +386,27 @@ export function createMap(layout, { state, dpr = 1, reduced = () => false, world
         const bx = isl.box, mx = (bx.x0 + bx.x1) / 2, my = (bx.y0 + bx.y1) / 2, hw = (bx.x1 - bx.x0) / 2, hh = (bx.y1 - bx.y0) / 2;
         c.save(); c.translate(mx, my + bob); c.scale(hw * 1.35, hh * 1.3); c.fillStyle = rad(c, 0, 0, 0.05, 1, [[0, 'rgba(222,228,246,.4)'], [0.6, 'rgba(210,218,242,.26)'], [1, 'rgba(210,218,242,0)']]);
         c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill(); c.restore();
-        for (let k = 0; k < 4; k++) { const px = mx + Math.sin(k * 2.3 + (motion ? t * 0.08 : 0) + isl.index) * hw * 0.8, py = bx.y0 + ((k + 0.5) / 4) * hh * 2 + bob; cloud(c, px, py, 0.9, 0.3); }
+        const mist = mistImg();
+        if (mist) for (let k = 0; k < 3; k++) {   // painted fog bands drifting slowly across the island
+          const w = hw * 1.7, h = w * mist.height / mist.width, px = mx + Math.sin(k * 2.3 + (motion ? t * 0.08 : 0) + isl.index) * hw * 0.5, py = bx.y0 + ((k + 0.5) / 3) * hh * 2 + bob;
+          c.globalAlpha = 0.75; c.drawImage(mist, px - w / 2, py - h / 2, w, h); c.globalAlpha = 1;
+        }
+        else for (let k = 0; k < 4; k++) { const px = mx + Math.sin(k * 2.3 + (motion ? t * 0.08 : 0) + isl.index) * hw * 0.8, py = bx.y0 + ((k + 0.5) / 4) * hh * 2 + bob; cloud(c, px, py, 0.9, 0.3); }
       }
       drawClouds(c, isl, cloudsOf[i].front, t, motion);
     }
-    // the trail: glowing dots, brighter along the road already travelled and the next step, dim beyond
+    // the trail: glowing dots (or stepping stones), brighter along the road already travelled and the next step, dim beyond
+    const stones = !!stoneImg(0) && !!stoneImg(1);
     for (const d of dots) {
       if (d.y < y0 - 20 || d.y > y1 + 20) continue;
       const locked = curIdx2 >= 0 && (groundTrail ? d.seg > curIdx2 : d.seg >= curIdx2 + (world ? 0 : 1)), wave = motion ? 0.8 + 0.2 * Math.sin(t * 2.4 - d.at * 0.35) : 1;
+      const dy = d.y + bobOf(d.a, t) * (1 - d.u) + bobOf(d.b, t) * d.u;
+      if (stones) {   // painted stepping stones: every second dot position, alternating the two stones, no twinkle
+        if (d.at % 2) continue;
+        c.globalAlpha = locked ? 0.5 : 1; drawStone(c, d.at / 2, d.x, dy, 11); continue;
+      }
       c.globalAlpha = (locked ? 0.4 : 1) * wave;
-      c.drawImage(sprite.cv, d.x - sprite.R, d.y + bobOf(d.a, t) * (1 - d.u) + bobOf(d.b, t) * d.u - sprite.R, sprite.R * 2, sprite.R * 2);
+      c.drawImage(sprite.cv, d.x - sprite.R, dy - sprite.R, sprite.R * 2, sprite.R * 2);
     }
     c.globalAlpha = 1;
     c.restore();

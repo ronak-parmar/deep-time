@@ -11,6 +11,7 @@ import { buildLayout, nodeStates, islandState, createMap, W } from '../render/is
 import { Logo, logoUrl } from '../ui/logo.js';
 import { artSizes } from '../render/islandart.js';
 import { PlayGamesRow } from '../ui/playgames.js';
+import { applyMapArt } from '../render/mapArt.js';
 
 // Home = the journey map. A vertical world of ten floating islands (Cambrian at the bottom), a winding trail of level
 // nodes, a slim top bar, a Play pill and an icon dock. The picture is a canvas painted by render/islandmap.js; the
@@ -62,7 +63,7 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
   const toggle = (id, label, on, change) => {
     const b = KButton({ id, variant: 'stone', full: true, icon: on ? 'check' : null }, `${label} ${on ? 'on' : 'off'}`);
     b.setAttribute('aria-pressed', String(on));
-    b.addEventListener('click', () => { on = !on; b.setAttribute('aria-pressed', String(on)); b.querySelector('.kit-btn__t').textContent = `${label} ${on ? 'on' : 'off'}`; b.querySelector('svg')?.remove(); if (on) b.prepend(glyph('check', 20)); change(on); });
+    b.addEventListener('click', () => { on = !on; b.setAttribute('aria-pressed', String(on)); b.querySelector('.kit-btn__t').textContent = `${label} ${on ? 'on' : 'off'}`; b.querySelector('.dt-glyph')?.remove(); if (on) b.prepend(glyph('check', 20)); change(on); });
     return b;
   };
   const sound = toggle('set-sound', 'Sound', !profile.settings.muted, (on) => onSetting?.('muted', !on));
@@ -86,12 +87,13 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
     waitHint,
     KButton({ id: 'play', class: 'map__play', icon: 'play', onClick: onPlay }, `Play ${lvlC}`),
     h('nav', { class: 'map__dock', 'aria-label': 'Menu' },
-      dockBtn('dig', 'pick', 'Dig site', onDig),
-      onShop ? dockBtn('shop', 'coin', 'Shop', onShop) : null,
+      dockBtn('dig', 'dig', 'Dig site', onDig),
+      onShop ? dockBtn('shop', 'shop', 'Shop', onShop) : null,
       dockBtn('museum', 'museum', `Museum ${profile.completedFossils.length}`, onMuseum),
-      dockBtn('settings', 'gear', 'Settings', () => { sheet.hidden = false; })),
+      dockBtn('settings', 'settings', 'Settings', () => { sheet.hidden = false; })),
     sheet);
   root.append(el);
+  const stopArt = applyMapArt(el, 'map--art');   // the painted pin (and coins, if level nodes come back to this map)
 
   // sizing: world units -> css px
   const ctx = canvas.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -120,5 +122,5 @@ export function mountHome(root, { profile, now, onPlay, onPlayLevel, onDig, onMu
   scroller.scrollTop = Math.max(0, layout.islands[curI].pin.y * s - vh * 0.5);
   map.ensure().then(() => { ready = true; dirty = true; });
   raf = requestAnimationFrame(frame);
-  return { el, destroy() { pgRow?.destroy(); alive = false; cancelAnimationFrame(raf); clearInterval(timer); removeEventListener('resize', place); el.remove(); } };
+  return { el, destroy() { stopArt(); pgRow?.destroy(); alive = false; cancelAnimationFrame(raf); clearInterval(timer); removeEventListener('resize', place); el.remove(); } };
 }

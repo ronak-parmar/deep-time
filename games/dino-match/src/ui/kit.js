@@ -2,7 +2,7 @@
 // tools/gen-kit.py (art-standins/ui/kit/). Drop a file with the SAME NAME into art/ui/kit/ and it replaces the stand-in: no code change.
 // The CSS (kit.css) reads the images from custom properties set here, and only needs the insets below.
 import './kit.css';
-import './kitart.js';
+import { aiKitOn } from './kitart.js';
 import { h } from './dom.js';
 import { glyph } from './glyphs.js';
 import { urlOf } from '../render/art.js';
@@ -19,13 +19,17 @@ export const KIT = {   // file -> { w, h logical size, nine: [left, top, right, 
   slot:            { w: 160, h: 64, nine: [18, 16, 18, 18] }
 };
 const standins = import.meta.glob('../../art-standins/ui/kit/*.png', { eager: true, query: '?url', import: 'default' });
-const owner = import.meta.glob('../../../../art/ui/kit/*.png', { eager: true, query: '?url', import: 'default' });
-const urls = {};
-for (const m of [standins, owner]) for (const [p, u] of Object.entries(m)) urls[p.split('/').pop().replace('.png', '')] = u;   // art/ (owner) wins
+// owner art: png, or webp from the AI sheets (medallion-teal.webp, slot.webp: tools/prep-pieces-sheet.py kit)
+const owner = import.meta.glob('../../../../art/ui/kit/{medallion-teal,slot,panel,panel-small,btn-gold,btn-gold-down,btn-stone,btn-stone-down,medallion}.{png,webp}', { eager: true, query: '?url', import: 'default' });
+const urls = {}, OWNER = new Set();
+for (const [p, u] of Object.entries(standins)) urls[p.split('/').pop().replace(/\.(png|webp)$/, '')] = u;
+for (const [p, u] of Object.entries(owner)) { const n = p.split('/').pop().replace(/\.(png|webp)$/, ''); urls[n] = u; OWNER.add(n); }   // art/ (owner) wins
 
 // Sets --kit-<name>: url(...) on :root. Called once at start; safe to call again after art changes.
 export function applyKit(root = document.documentElement) {
-  for (const name of Object.keys(KIT)) if (urls[name]) root.style.setProperty('--kit-' + name, `url(${urls[name]})`);
+  // the AI kit draws its pressed buttons from btn-gold / btn-stone (kit.css): the -down stand-ins are not used then
+  for (const name of Object.keys(KIT)) if (urls[name] && !(name.endsWith('-down') && aiKitOn())) root.style.setProperty('--kit-' + name, `url(${urls[name]})`);
+  root.classList.toggle('kit-owner-slot', OWNER.has('slot'));
   const sign = urlOf('ui/hud-sign.png'); if (sign) root.style.setProperty('--kit-ribbon', `url(${sign})`);   // the same wood sign as the in-level HUD
   root.classList.add('has-kit');
 }

@@ -26,6 +26,18 @@ export const LOOP = { hint: 160, ambient: 1000, scene: 12000 };                 
 // goes on after `maxWait` even if critical art is still loading (the rest keeps loading in the background), tips rotate every `tip`,
 // the bar eases toward its target with `follow` (fraction per 60 fps frame), `stall` caps how long a screen waits on art after boot.
 export const BOOT = { minShow: 2500, maxWait: 10000, tip: D.celebrate * 3, follow: 0.12, out: D.dramatic, stall: 2500 };
+// Painted effect frames (render/fxArt.js, art/fx/*.webp). The frames of each sheet are spread across `life`; `tail` = the fraction of the
+// life after which the last (dust / smoke) frames also fade out, so the board clears; fireSpecial still waits only its own dur.
+export const FX = {
+  blast: D.slow + D.quick,      // explosion: bomb, dynamite, TNT, big combos (~0.5 s)
+  beam: D.slow + D.quick,       // fire beam: firecracker rows / columns, line combos
+  rainbow: D.dramatic,          // rainbow ring
+  tail: 0.6,
+  small: { sparkle: PARTICLES.sparkle.life, dust: PARTICLES.dust.life, chips: PARTICLES.shard.life, confetti: PARTICLES.confetti.life }
+};
+// Ambient life on the island screens (render/ambientArt.js): drift periods. `cross` = time to cross the screen (sideways swimmers and
+// flyers), `fall` = time to fall / rise through it (petals, snow, embers, bubbles), `sway` / `bob` = side sway and bob periods.
+export const AMBIENT = { cross: LOOP.scene * 2, fall: LOOP.scene * 1.5, sway: LOOP.ambient * 4, bob: LOOP.ambient * 3 };
 // Special pieces at rest (painted art): a slow scale pulse and a glint sweep across the piece. None under reduced motion.
 export const SPECIAL_IDLE = { pulse: D.celebrate * 2, pulseAmp: 0.045, glint: D.celebrate * 3, glintFrac: 0.28 };
 

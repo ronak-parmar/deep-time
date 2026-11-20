@@ -16,8 +16,9 @@ import { eraPalette } from '../ui/tokens.js';
 import { themeFor } from './eraTheme.js';
 import { buildFrame, drawPlaque, drawHudPlate, drawAmbient, ringPath, FRAME_T, FRAME_M } from './frame.js';
 import { rgba } from './util.js';
-import { D, STAGGER, SQUASH, SHAKE, FALL, HOLD, HINT_AFTER, LOOP, EASE, RECIPES, dur, shakeOf, fallSquash, DEBUG } from './motion.js';
+import { D, STAGGER, SQUASH, SHAKE, FALL, HOLD, HINT_AFTER, LOOP, EASE, RECIPES, FX, dur, shakeOf, fallSquash, DEBUG } from './motion.js';
 import { drawFx } from './specials.js';
+import { SpriteFx, preloadFx } from './fxArt.js';
 import { ParticlePool } from './particles.js';
 import { cue, unlock } from './sound.js';
 import { loadEra, preloadUi, slot, slotsReady, drawSlot } from './art.js';
@@ -37,7 +38,7 @@ const TIER_TINT = {
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.scale = 1;
-    this.tweens = []; this.fx = []; this.pool = new ParticlePool();
+    this.tweens = []; this.fx = []; this.pool = new ParticlePool(); this.sprites = new SpriteFx();
     this.texts = Array.from({ length: TEXTS }, () => ({ on: false, x: 0, y: 0, s: 18, c: '#fff', t: '', age: 0, life: 0 }));
     this.shakeAmp = 0; this.shakeEnd = 0; this.flash = 0; this.glow = 0; this.obst = [];
     this.banner = { on: false, t: '', a: 0, y: 0, s: 1, c: '#FFC24B' };
@@ -81,7 +82,7 @@ export class Renderer {
       this.blockPos.push({ x: x0 + (i - r * cols) * this.bs, y: this.panel.y + 10 + r * this.bs });
     }
     this.blocks = state.blocks.map((b) => ({ s: 1, rot: 0, alive: b.hp > 0, hp: b.hp, max: b.max, t: b.t, c: b.c, jolt: 0 }));
-    this.fx = [];
+    this.fx = []; this.sprites.clear(); preloadFx();   // painted effect frames load lazily with the first level, never on the loading screen
     this.boardX = (W - w * this.cs) / 2; this.boardY = this.hasDig ? this.panel.y + this.panel.h + 14 : 124;
     this.glow = 0; this.flash = 0; this.sel = null; this.hasHint = false; this.banner.on = false; this.skip = false;
     this.pool.clear(); this.tweens.length = 0; this.pieces = new Map();
@@ -90,6 +91,9 @@ export class Renderer {
     this.lastInput = this.vnow;
   }
   clearLevel() { this.state = null; this.locked = true; }
+  boardRect() { return { x: this.boardX, y: this.boardY, w: this.state.w * this.cs, h: this.state.h * this.cs }; }
+  // a painted one-shot effect (sparkle / dust / chips / confetti, render/fxArt.js) centred at x, y, `cells` board cells wide; false = no art
+  sprite(name, x, y, cells = 1.4, opts) { return this.sprites.add(name, x, y, this.cs * cells, this.vnow, opts); }
   cx(i) { return this.boardX + (i % this.state.w) * this.cs + this.cs / 2; }
   cy(i) { return this.boardY + Math.floor(i / this.state.w) * this.cs + this.cs / 2; }
   obstView(state) { return (state.obst || []).map((o) => (o ? { k: o.k, hp: o.hp, max: o.max, heat: o.heat || 0, s: 1, a: 1, jolt: 0 } : null)); }
@@ -199,6 +203,7 @@ export class Renderer {
     const items = ev.cells.map((c) => this.pieces.get(c.id));
     let sx = 0, sy = 0;
     ev.cells.forEach((c, k) => { const p = items[k]; this.sparks(p.x, p.y, GEM_COLORS[c.c], 8); sx += p.x; sy += p.y; });
+    this.sprite('sparkle', sx / n, sy / n, 1.3 + Math.min(n, 6) * 0.1, { rot: (ev.step || 0) * 0.6 });   // the match shine (painted, if in)
     cue(ev.step > 1 ? 'cascadeStep' : 'matchClear', { step: ev.step, size: n });
     this.text('+' + ev.score, sx / n, sy / n, '#FFC24B', 18 + Math.min(ev.step, 4) * 3);
     if (ev.step >= RECIPES.cascadeStep.comboFrom) this.text('Combo x' + ev.step, W / 2, this.boardY + 16, '#6FD3FF', 20 + Math.min(ev.step, 5) * 4, D.slow * 3);
@@ -242,10 +247,10 @@ export class Renderer {
   async animBooster(ev, hooks) {
     const R = RECIPES.boosterUse; cue('boosterUse');
     const at = (i) => [this.cx(i), this.cy(i)], sp = (i, col, n = 6) => { const [x, y] = at(i); this.sparks(x, y, col, n); };
-    if (ev.id === 'pick') { const [x, y] = at(ev.target); if (!reducedMotion()) { const life = dur(D.base) * 1.4; this.fx.push({ kind: 'pickstrike', x, y, cells: [], t0: this.vnow, life, cs: this.cs }); await this.wait(D.base * 1.4 * 0.88); } this.pool.emit('dust', x, y, '#B89A6A', 8, 1.8); this.pool.emit('shard', x, y, '#5A4630', 5, 3); sp(ev.target, '#FFE9A8', 8); this.doShake(R.shake); await this.wait(D.quick); }
+    if (ev.id === 'pick') { const [x, y] = at(ev.target); if (!reducedMotion()) { const life = dur(D.base) * 1.4; this.fx.push({ kind: 'pickstrike', x, y, cells: [], t0: this.vnow, life, cs: this.cs }); await this.wait(D.base * 1.4 * 0.88); } this.pool.emit('dust', x, y, '#B89A6A', 8, 1.8); this.pool.emit('shard', x, y, '#5A4630', 5, 3); this.sprite('chips', x, y, 1.8); sp(ev.target, '#FFE9A8', 8); this.doShake(R.shake); await this.wait(D.quick); }
     else if (ev.id === 'rockslide') {
       const w = this.state.w, y = Math.floor(ev.target / w);
-      for (let x = 0; x < w; x++) { const i = y * w + x, [px, py] = at(i); this.pool.emit('dust', px, py, '#B89A6A', 6, 2); this.pool.emit('shard', px, py, '#7A6140', 3, 3); if (x % 2 === 0) this.doShake('tiny'); await this.wait(R.stagger * 0.6); }
+      for (let x = 0; x < w; x++) { const i = y * w + x, [px, py] = at(i); this.pool.emit('dust', px, py, '#B89A6A', 6, 2); this.pool.emit('shard', px, py, '#7A6140', 3, 3); if (x % 2 === 0) this.sprite('chips', px, py, 1.6, { rot: x }); if (x % 2 === 0) this.doShake('tiny'); await this.wait(R.stagger * 0.6); }
       this.doShake(R.shake);
     }
     else if (ev.id === 'brush') { for (const i of ev.area) { sp(i, '#9BE37A', 4); await this.wait(R.stagger * 0.25); } await this.wait(D.quick); }
@@ -270,11 +275,11 @@ export class Renderer {
       const b = this.blocks[h.b], pos = this.blockPos[h.b], x = pos.x + this.bs / 2, y = pos.y + this.bs / 2;
       b.hp = h.hp;
       if (!h.broke) {
-        cue('hitBlock'); this.pool.emit('dust', x, y, '#9A7A55', 4, 1.2); this.pool.emit('shard', x, y, '#4A3526', H.shards, 2.2); this.doShake(H.shake);
+        cue('hitBlock'); this.sprite('chips', x, y, this.bs * 1.3 / this.cs); this.pool.emit('dust', x, y, '#9A7A55', 4, 1.2); this.pool.emit('shard', x, y, '#4A3526', H.shards, 2.2); this.doShake(H.shake);
         await this.tween(H.dur, (t) => { b.jolt = Math.sin(t * Math.PI) * (1 - t); });
         b.jolt = 0; continue;
       }
-      cue('digBlock');
+      cue('digBlock'); this.sprite('dust', x, y, this.bs * 1.9 / this.cs, { rot: h.b * 1.7 }); if (b.max >= 3) this.sprite('chips', x, y, this.bs * 1.5 / this.cs);   // dirt / sand: a dust puff; stone also chips
       this.pool.emit('dust', x, y, '#9A7A55', 10, 1.8); this.pool.emit('shard', x, y, '#4A3526', R.shards, 3.2); this.pool.emit('shard', x, y, '#6B4A2F', 2, 2.6);
       this.doShake(R.shake);
       if (digImage(b.t, 1, b.max) && !reducedMotion()) {   // painted block: a quick shake, then it flies apart in chunks
@@ -294,10 +299,10 @@ export class Renderer {
       const o = this.obst[h.i]; if (!o) return;
       const x = this.cx(h.i), y = this.cy(h.i); o.hp = h.hp;
       if (!h.broke) {
-        cue('obstacleHit'); this.pool.emit('dust', x, y, '#B89A6A', 4, 1.2); this.pool.emit('shard', x, y, '#5A4630', H.shards, 2.2); this.doShake(H.shake);
+        cue('obstacleHit'); if (o.k !== 'tar') this.sprite('chips', x, y, 1.3, { rot: h.i }); this.pool.emit('dust', x, y, '#B89A6A', 4, 1.2); this.pool.emit('shard', x, y, '#5A4630', H.shards, 2.2); this.doShake(H.shake);
         await this.tween(H.dur, (t) => { o.jolt = Math.sin(t * Math.PI) * (1 - t); }); o.jolt = 0; return;
       }
-      cue('obstacleBreak'); this.pool.emit('dust', x, y, '#B89A6A', 10, 1.8); this.pool.emit('shard', x, y, '#5A4630', R.shards, 3.2); this.doShake(R.shake);
+      cue('obstacleBreak'); this.sprite(o.k === 'tar' ? 'dust' : 'chips', x, y, 1.8, { rot: h.i, alpha: o.k === 'tar' ? 0.6 : 1 }); this.pool.emit('dust', x, y, '#B89A6A', 10, 1.8); this.pool.emit('shard', x, y, '#5A4630', R.shards, 3.2); this.doShake(R.shake);
       if (h.drop) this.text('+' + h.drop.coins + ' coins', x, y - this.cs * 0.4, '#FFD86A', 16);
       if (obstacleImage(o.k, 1, o.max) && !reducedMotion()) {   // painted: a quick shake, then the picture flies apart in chunks
         await this.tween(R.dur * 0.35, (t) => { o.jolt = Math.sin(t * Math.PI * 4) * (1 - t); }); o.jolt = 0;
@@ -340,12 +345,15 @@ export class Renderer {
     cue('fireSpecial');
     for (const f of ev.fires) {
       const x = this.cx(f.i), y = this.cy(f.i);
-      this.fx.push({ kind: f.kind, o: f.o, x, y, cells: f.cells.map((i) => ({ x: this.cx(i), y: this.cy(i) })), t0: this.vnow + dur(gap) * (f.depth - 1), life: dur(R.dur), big: f.kind === 'combo', cs: this.cs });
+      // plife: the painted frames (render/fxArt.js) play a little longer than the turn waits; they fade out over the falling gems
+      const plife = f.kind === 'rainbow' ? FX.rainbow : f.kind === 'firecracker' || f.shape === 'line' || f.shape === 'cross' ? FX.beam : FX.blast;
+      this.fx.push({ kind: f.kind, o: f.o, x, y, cells: f.cells.map((i) => ({ x: this.cx(i), y: this.cy(i) })), t0: this.vnow + dur(gap) * (f.depth - 1), life: dur(R.dur), plife: reducedMotion() ? 0 : plife,
+        big: f.kind === 'combo', cs: this.cs, shape: f.shape, r: f.r, t: f.t, board: this.boardRect() });
       this.sparks(x, y, '#FFE9A8', 10);
     }
     this.doShake(R.shake);
     await this.wait(gap * (maxD - 1) + R.dur);
-    this.fx.length = 0;
+    this.fx = this.fx.filter((f) => f.plife && this.vnow < f.t0 + f.plife);   // painted frames finish on their own (pruned in draw)
   }
   async animCreate(ev) {
     const R = RECIPES.createSpecial, p = this.makePiece({ id: ev.id, c: ev.c, s: ev.s, o: ev.o }, ev.i);
@@ -369,7 +377,7 @@ export class Renderer {
       const glow = this.tween(L.dur, (t) => { this.glow = EASE.out(t); });
       await Promise.all([flash, glow]); this.flash = 0;
       cue('foundBanner');
-      { const C = RECIPES.fossilComplete; this.pool.emit('confetti', cx, this.boardY, '#FFC24B', 30, 4); this.pool.emit('confetti', cx, this.boardY, '#6FD3FF', 20, 4); this.doShake(C.shake); }
+      { const C = RECIPES.fossilComplete; this.sprite('confetti', cx, this.boardY + this.state.h * this.cs * 0.35, (this.state.w * 0.95)); this.pool.emit('confetti', cx, this.boardY, '#FFC24B', 30, 4); this.pool.emit('confetti', cx, this.boardY, '#6FD3FF', 20, 4); this.doShake(C.shake); }
       B.on = true; B.t = this.hasDig ? 'Fossil found!' : 'Level complete!'; B.c = '#FFC24B';   // the fossil banner only shows on dig levels
       const lift = reducedMotion() ? 0 : -48;
       await this.tween(F.dur, (t) => { const e = EASE[F.ease](t); B.a = Math.min(1, t * 3); B.y = lift * (1 - e); B.s = reducedMotion() ? 1 : 0.6 + 0.4 * e; }, true);
@@ -421,7 +429,8 @@ export class Renderer {
     c.save();
     if (this.shakeAmp && now < this.shakeEnd) { const k = (this.shakeEnd - now) / this.shakeLen * this.shakeAmp; c.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k); } else this.shakeAmp = 0;
     this.drawPanel(c); this.drawBoard(c, now);
-    if (this.fx.length) drawFx(c, this.fx, now);
+    if (this.fx.length) { drawFx(c, this.fx, now); this.fx = this.fx.filter((f) => now < f.t0 + Math.max(f.life, f.plife || 0)); }
+    this.sprites.draw(c, now);
     this.pool.draw(c);
     this.drawTexts(c);
     c.restore();

@@ -1,5 +1,6 @@
 // First-time tutorial overlay (levels 1-6, rules in core/tutorial.js). Dims the screen with a spotlight on the relevant part, an
 // animated hand pointer shows a real swap, tap to continue, Skip is always there. All timing comes from the docs/09 tokens (css vars).
+import { handArt } from '../ui/glyphs.js';
 import { h } from '../ui/dom.js';
 import { Button } from '../ui/components.js';
 import { CONFIG } from '../core/config.js';
@@ -17,7 +18,7 @@ export function mountTutorial({ level, state, renderer, onDone, onSkip }) {
   let i = 0, dead = false;
   const spot = h('div', { class: 'tut__spot' });
   const trail = h('div', { class: 'tut__trail' });
-  const hand = h('div', { class: 'tut__hand', 'aria-hidden': 'true' }); hand.innerHTML = HAND;
+  const hand = h('div', { class: 'tut__hand', 'aria-hidden': 'true' }); const handImg = handArt(); if (handImg) hand.append(handImg); else hand.innerHTML = HAND;
   const text = h('p', { class: 'body tut__text', id: 'tut-text' });
   const hint = h('p', { class: 'caption dim tut__hint' }, 'Tap to continue');
   const skip = Button({ variant: 'secondary', id: 'tut-skip', onClick: (e) => { e.stopPropagation(); skipNow(); } }, 'Skip tutorial');
